@@ -1,0 +1,6 @@
+@OtoBackend_HostAddress = http://localhost:5239
+
+GET {{OtoBackend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
