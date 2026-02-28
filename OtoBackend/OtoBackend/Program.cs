@@ -1,7 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore;
-using OtoBackend.Interfaces;
-using OtoBackend.Models; // Khai báo thư mục Models
-using OtoBackend.Repositories;
+﻿using SqlServer.Repositories;
+using LogicBusiness.Interfaces.Admin;
+using LogicBusiness.Interfaces.Customer;
+using LogicBusiness.Interfaces.Repositories;
+using LogicBusiness.Services.Admin;
+using LogicBusiness.Services.Customer;
+using Microsoft.EntityFrameworkCore;
+using SqlServer.DBContext;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,6 +28,9 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<ICarRepository, CarRepository>();
 builder.Services.AddScoped<ICarImageRepository, CarImageRepository>();
 
+
+builder.Services.AddScoped<ICarService, CarService>();
+builder.Services.AddScoped<ICarAdminService, CarAdminService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

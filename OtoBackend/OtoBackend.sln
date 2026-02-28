@@ -1,9 +1,17 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36908.2 d17.14
+VisualStudioVersion = 17.14.36908.2
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OtoBackend", "OtoBackend\OtoBackend.csproj", "{8A249475-E128-4731-8FBE-30E3EAE47DCE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreEntities", "CoreEntities\CoreEntities.csproj", "{10D813A5-581D-4BA6-84BD-8245132B2EC8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LogicBusiness", "LogicBusiness\LogicBusiness.csproj", "{DFCD295C-B6CC-4AF9-8A6A-B694918BBFA6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqlServer", "SqlServer\SqlServer.csproj", "{7E55B837-2104-4E38-8331-2A9329B3B80C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Plugin", "Plugin", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,9 +23,24 @@ Global
 		{8A249475-E128-4731-8FBE-30E3EAE47DCE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8A249475-E128-4731-8FBE-30E3EAE47DCE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8A249475-E128-4731-8FBE-30E3EAE47DCE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10D813A5-581D-4BA6-84BD-8245132B2EC8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10D813A5-581D-4BA6-84BD-8245132B2EC8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10D813A5-581D-4BA6-84BD-8245132B2EC8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10D813A5-581D-4BA6-84BD-8245132B2EC8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DFCD295C-B6CC-4AF9-8A6A-B694918BBFA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DFCD295C-B6CC-4AF9-8A6A-B694918BBFA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DFCD295C-B6CC-4AF9-8A6A-B694918BBFA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DFCD295C-B6CC-4AF9-8A6A-B694918BBFA6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7E55B837-2104-4E38-8331-2A9329B3B80C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E55B837-2104-4E38-8331-2A9329B3B80C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E55B837-2104-4E38-8331-2A9329B3B80C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E55B837-2104-4E38-8331-2A9329B3B80C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{7E55B837-2104-4E38-8331-2A9329B3B80C} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {74C18471-80D3-4488-B758-67E12AF89B1C}
