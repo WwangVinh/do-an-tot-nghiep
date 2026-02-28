@@ -13,6 +13,10 @@ public partial class CarImage
 
     public bool? IsMainImage { get; set; }
 
+    public string? ImageType { get; set; } // Phân loại: Nội thất, Ngoại thất...
+
+    public string? FileHash { get; set; }  // Mã vân tay của file để chống trùng
+
     public DateTime? CreatedAt { get; set; }
 
     public bool Is360Degree { get; set; }

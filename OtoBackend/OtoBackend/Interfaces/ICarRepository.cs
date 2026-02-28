@@ -6,6 +6,11 @@ namespace OtoBackend.Interfaces
 {
     public interface ICarRepository
     {
+        // Dùng cho Customer: Lấy chi tiết xe và bốc luôn cả kho ảnh đi kèm
+        Task<Car?> GetCarDetailForCustomerAsync(int id);
+
+        // Dành cho Admin: Lấy chi tiết xe + Toàn bộ ảnh (Bất chấp trạng thái Nháp hay Đã xóa)
+        Task<Car?> GetCarDetailForAdminAsync(int id);
         // Trả về cả danh sách xe và tổng số lượng xe để FE làm nút bấm trang 1, 2, 3...
         Task<(IEnumerable<Car> Cars, int TotalCount)> GetCustomerCarsAsync(
         string? search, 

@@ -42,6 +42,22 @@ namespace OtoBackend.Repositories
             return (cars, totalCount);
         }
 
+        public async Task<Car?> GetCarDetailForCustomerAsync(int id)
+        {
+            return await _context.Cars
+                .Include(c => c.CarImages) // 👈 Túm cổ luôn đám ảnh phụ và 360 đi theo
+                .FirstOrDefaultAsync(c => c.CarId == id
+                                       && c.IsDeleted == false // Chặn xe trong thùng rác
+                                       && c.Status != CarStatus.Draft); // Chặn xe bản nháp
+        }
+
+        public async Task<Car?> GetCarDetailForAdminAsync(int id)
+        {
+            return await _context.Cars
+                .Include(c => c.CarImages) // Túm cổ toàn bộ ảnh phụ và 360
+                .FirstOrDefaultAsync(c => c.CarId == id); // Bắt mọi loại xe
+        }
+
         public async Task<(IEnumerable<Car> Cars, int TotalCount)> GetAdminCarsAsync(string? search, CarStatus? status, bool? isDeleted, int page, int pageSize)
         {
             var query = _context.Cars.AsQueryable();

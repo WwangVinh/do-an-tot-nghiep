@@ -17,6 +17,14 @@ namespace OtoBackend.Controllers.admin
         private readonly ICarRepository _carRepo; // Dùng thủ kho dể lọc xe
         private readonly ICarImageRepository _imageRepo; // khai báo thêm thủ kho CarImages để sau này còn có ảnh 360
 
+        // Hàm tạo mã băm (Vân tay) cho file ảnh để chống trùng
+        private string GetFileHash(IFormFile file)
+        {
+            using var md5 = System.Security.Cryptography.MD5.Create();
+            using var stream = file.OpenReadStream();
+            var hash = md5.ComputeHash(stream);
+            return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+        }
         public CarsController(OtoContext context, ICarRepository carRepo,[FromForm] ICarImageRepository imageRepo)
         {
             _context = context;
@@ -67,82 +75,114 @@ namespace OtoBackend.Controllers.admin
         }
 
         // GET: api/admin/Cars/5
+        // GET: api/admin/Cars/1024
         [HttpGet("{id}")]
         public async Task<IActionResult> GetCarDetailForAdmin(int id)
         {
-            // 1. Nhờ Thủ kho lấy xe lên
-            var car = await _carRepo.GetCarByIdAsync(id);
+            // 1. Lấy Full thông tin xe dành riêng cho quyền Admin
+            var car = await _carRepo.GetCarDetailForAdminAsync(id);
 
-            // 2. CHỈ CHẶN KHI KHÔNG TỒN TẠI TRONG DATABASE
             if (car == null)
             {
-                return NotFound(new { message = "Không tìm thấy dữ liệu xe này trong hệ thống!" });
+                return NotFound(new { message = "Không tìm thấy xe này trong hệ thống!" });
             }
 
-            // 3. TRẢ VỀ TOÀN BỘ THÔNG TIN (Bao gồm cả "tâm linh" như ngày xóa, ngày sửa)
-            return Ok(new
+            try
             {
-                car.CarId,
-                car.Name,
-                car.Brand,
-                car.Model,
-                car.Year,
-                car.Price,
-                car.Color,
-                car.Mileage,
-                car.FuelType,
-                car.Description,
-                car.ImageUrl,
+                // 2. ĐÓNG GÓI DỮ LIỆU SIÊU CẤP CHO GIAO DIỆN ADMIN
+                var carDetail = new
+                {
+                    car.CarId,
+                    car.Name,
+                    car.Brand,
+                    car.Model,
+                    car.Year,
+                    car.Price,
+                    car.Color,
+                    car.Mileage,
+                    car.FuelType,
+                    car.Description,
+                    car.ImageUrl,
+                    Status = car.Status.ToString(),
+                    car.IsDeleted,
+                    car.CreatedAt,
+                    car.UpdatedAt,
 
-                // THÔNG TIN QUẢN TRỊ (Khách hàng không bao giờ được thấy cái này)
-                Status = car.Status.ToString(), // Ép kiểu chữ cho dễ đọc
-                car.IsDeleted,
-                DeletedAt = car.DeletedAt?.ToString("dd/MM/yyyy HH:mm:ss"),
-                car.DeletedBy,
-                CreatedAt = car.CreatedAt?.ToString("dd/MM/yyyy HH:mm:ss"),
-                UpdatedAt = car.UpdatedAt?.ToString("dd/MM/yyyy HH:mm:ss")
-            });
+                    // BÍ KÍP 1: Gom nhóm ảnh phụ theo ImageType (Nội thất, Ngoại thất...)
+                    GalleryImages = car.CarImages
+                        .Where(img => img.Is360Degree == false)
+                        .GroupBy(img => img.ImageType)
+                        .Select(group => new {
+                            Category = group.Key, // Tên thư mục (VD: "Nội thất")
+                            Images = group.Select(i => new {
+                                i.CarImageId, // BẮT BUỘC PHẢI CÓ để Admin còn gọi API Xóa
+                                i.ImageUrl,
+                                i.FileHash
+                            }).ToList()
+                        }).ToList(),
+
+                    // BÍ KÍP 2: Lấy mảng ảnh 360
+                    Images360 = car.CarImages
+                        .Where(img => img.Is360Degree == true)
+                        .Select(i => new {
+                            i.CarImageId, // BẮT BUỘC PHẢI CÓ để Admin còn gọi API Xóa
+                            i.ImageUrl
+                        }).ToList()
+                };
+
+                return Ok(carDetail);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Lỗi hệ thống: {ex.Message}");
+            }
         }
 
         // ================= KHU VỰC QUẢN LÝ ẢNH PHỤ =================
 
         // POST: api/admin/Cars/5/images
         [HttpPost("{carId}/images")]
-        [Consumes("multipart/form-data")] // BẮT BUỘC PHẢI CÓ ĐỂ SWAGGER KHÔNG BỊ "LÚ"
-        public async Task<IActionResult> UploadCarImage([FromRoute] int carId,  IFormFile file) // THÊM TỪ KHÓA Ở ĐÂY NỮA
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadCarImage([FromRoute] int carId, IFormFile file, [FromForm] string imageType) // 👈 Nhận thêm imageType
         {
-            // 1. Kiểm tra xe có tồn tại không
             var car = await _carRepo.GetCarByIdAsync(carId);
             if (car == null) return NotFound("Không tìm thấy xe để thêm ảnh!");
 
-            // 2. Kiểm tra file người dùng gửi lên có hợp lệ không
-            if (file == null || file.Length == 0)
-            {
-                return BadRequest("Vui lòng chọn một file ảnh!");
-            }
+            if (file == null || file.Length == 0) return BadRequest("Vui lòng chọn một file ảnh!");
 
             try
             {
-                // 3. Dùng FileHelper upload ảnh
+                // 1. TẠO VÂN TAY VÀ KIỂM TRA TRÙNG LẶP
+                string fileHash = GetFileHash(file);
+
+                // Vào DB lục xem chiếc xe này đã có bức ảnh nào mang vân tay này chưa
+                bool isDuplicate = await _context.CarImages.AnyAsync(img => img.CarId == carId && img.FileHash == fileHash);
+                if (isDuplicate)
+                {
+                    return BadRequest("Tấm ảnh này đã được tải lên rồi, vui lòng chọn ảnh khác!"); // 👈 Chặn đứng spam click!
+                }
+
+                // 2. Tải ảnh lên (Ổ cứng cứ cho vào chung folder Cars/TenXe là đủ)
                 string imagePath = await FileHelper.UploadFileAsync(file, "Cars", car.Name);
 
-                // 4. Tạo Object CarImage để lưu vào Database
+                // 3. Tạo Object CarImage để lưu vào DB
                 var carImage = new CarImage
                 {
                     CarId = carId,
                     ImageUrl = imagePath,
-                    Is360Degree = false, // Gắn cờ false cho ảnh thường để phân biệt
+                    Is360Degree = false,
                     IsMainImage = false,
-                    CreatedAt = DateTime.Now 
+                    ImageType = string.IsNullOrWhiteSpace(imageType) ? "Khác" : imageType.Trim(), // 👈 Dán nhãn phân loại
+                    FileHash = fileHash, // 👈 Lưu lại vân tay để lần sau còn chặn
+                    CreatedAt = DateTime.Now
                 };
 
-                // 5. Giao cho THỦ KHO ẢNH lưu vào Database
                 await _imageRepo.AddCarImageAsync(carImage);
 
                 return Ok(new
                 {
-                    message = "Thêm ảnh phụ thành công!",
-                    imageUrl = imagePath
+                    message = $"Thêm ảnh phụ loại '{carImage.ImageType}' thành công!",
+                    data = carImage
                 });
             }
             catch (Exception ex)

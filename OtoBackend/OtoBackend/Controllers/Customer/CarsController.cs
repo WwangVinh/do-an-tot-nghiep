@@ -113,54 +113,56 @@ namespace OtoBackend.Controllers.Customer
         [HttpGet("{id}")]
         public async Task<IActionResult> GetCarDetailForCustomer(int id)
         {
-            // 1. Nhờ Thủ kho đi tìm đúng chiếc xe có ID này
-            var car = await _carRepo.GetCarByIdAsync(id);
+            // 1. Nhờ thủ kho lấy xe + toàn bộ ảnh lên
+            var car = await _carRepo.GetCarDetailForCustomerAsync(id);
 
-            // 2. BẢO VỆ DỮ LIỆU: Chỉ cho khách xem xe nếu nó TỒN TẠI, CHƯA BỊ XÓA và ĐANG BÁN
-            if (car == null || car.IsDeleted == true || car.Status != CarStatus.Available)
+            // 2. Chặn ngay nếu không tìm thấy (hoặc xe đang nháp/thùng rác)
+            if (car == null)
             {
-                return NotFound(new { message = "Chiếc xe này không tồn tại hoặc đã ngừng bán!" });
+                return NotFound(new { message = "Chiếc xe này không tồn tại, đã bị xóa hoặc chưa được mở bán!" });
             }
 
-            // 3. Trả về TOÀN BỘ thông số chi tiết (Không cần giấu diếm nữa)
-            return Ok(new
+            try
             {
-                car.CarId,
-                car.Name,
-                car.Brand,
-                car.Model,
-                car.Year,
-                car.Price,
-                car.Color,
-                car.Mileage,       // Số km đã đi
-                car.FuelType,      // Loại nhiên liệu (Xăng, Điện...)
-                car.Description,   // Bài viết mô tả dài thoòng loòng
-                car.ImageUrl,      // Ảnh chính
-                Status = car.Status.ToString(), // Trạng thái (Available)
+                // 3. ĐÓNG GÓI DỮ LIỆU (DTO) SIÊU SẠCH CHO KHÁCH HÀNG (CUSTOMER)
+                var carDetail = new
+                {
+                    car.CarId,
+                    car.Name,
+                    car.Brand,
+                    car.Model,
+                    car.Year,
+                    car.Price,
+                    car.Color,
+                    car.Mileage,
+                    car.FuelType,
+                    car.Description,
+                    car.ImageUrl, // Tấm ảnh Đại diện chính
+                    Status = car.Status.ToString(),
 
-                // MẸO NÂNG CAO: Sau này ní làm thêm bảng Ảnh phụ (CarImages) 
-                // hay Bảng Thông số (CarSpecifications) thì cũng lôi ra nhét hết vào đây cho FE show!
-            });
-        }
+                    // BÍ KÍP: Lọc riêng Album ảnh và GOM NHÓM theo phân loại (Nội thất, Ngoại thất...)
+                    GalleryImages = car.CarImages
+                                       .Where(img => img.Is360Degree == false)
+                                       .GroupBy(img => img.ImageType)
+                                       .Select(group => new {
+                                           Category = group.Key, // Tên tab (VD: "Nội thất")
+                                                                 // Khách hàng CHỈ CẦN link ảnh để xem, không cần ID để xóa
+                                           Images = group.Select(i => i.ImageUrl).ToList()
+                                       }).ToList(),
 
-        // GET: api/Cars/5/360-view
-        [HttpGet("{carId}/360-view")]
-        public async Task<IActionResult> Get360View(int carId)
-        {
-            var images = await _imageRepo.Get360ImagesAsync(carId);
+                    // Lọc riêng bộ 360 độ cho FE nạp vào thư viện xoay
+                    Images360 = car.CarImages
+                                   .Where(img => img.Is360Degree == true)
+                                   .Select(img => img.ImageUrl)
+                                   .ToList()
+                };
 
-            if (images == null || images.Count == 0)
-                return NotFound("Xe này chưa có dữ liệu ảnh 360.");
-
-            // Chỉ trả về danh sách các đường link ảnh cho sạch
-            var imageUrls = images.Select(img => img.ImageUrl).ToList();
-
-            return Ok(new
+                return Ok(new { message = "Lấy thông tin chi tiết xe thành công!", data = carDetail });
+            }
+            catch (Exception ex)
             {
-                CarId = carId,
-                TotalImages = images.Count,
-                Images = imageUrls
-            });
+                return StatusCode(500, $"Lỗi hệ thống: {ex.Message}");
+            }
         }
 
         //// PUT: api/Cars/5
