@@ -16,27 +16,72 @@ namespace OtoBackend.Controllers.Customer
     {
         private readonly OtoContext _context;
         private readonly ICarRepository _carRepo;
+        private readonly ICarImageRepository _imageRepo;
 
-        public CarsController(OtoContext context, ICarRepository carRepo)
+        public CarsController(OtoContext context, ICarRepository carRepo, ICarImageRepository imageRepo)
         {
             _context = context;
             _carRepo = carRepo;
+            _imageRepo = imageRepo;
         }
+
+        //// GET: api/Cars
+        //[HttpGet]
+        //public async Task<IActionResult> GetCarsForCustomer(
+        //[FromQuery] string? search,
+        //[FromQuery] string? brand,
+        //[FromQuery] string? color,
+        //[FromQuery] decimal? minPrice,
+        //[FromQuery] decimal? maxPrice,
+        //[FromQuery] int page = 1,
+        //[FromQuery] int pageSize = 12)
+        //{
+        //    try
+        //    {
+        //        var result = await _carRepo.GetCustomerCarsAsync(search, brand, color, minPrice, maxPrice, page, pageSize);
+
+        //        // BÍ KÍP Ở ĐÂY: Chỉ lấy đúng những thông tin FE cần để vẽ lên giao diện
+        //        var cleanCars = result.Cars.Select(c => new
+        //        {
+        //            c.CarId,
+        //            c.Name,
+        //            c.Brand,
+        //            c.Price,
+        //            c.ImageUrl,
+        //            Status = c.Status.ToString() // Ép cái số 1, 2, 3 thành chữ cho dễ đọc
+        //        });
+
+        //        return Ok(new
+        //        {
+        //            TotalItems = result.TotalCount,
+        //            CurrentPage = page,
+        //            PageSize = pageSize,
+        //            TotalPages = (int)Math.Ceiling(result.TotalCount / (double)pageSize),
+        //            Data = cleanCars // Đưa mảng dữ liệu đã làm sạch vào đây!
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, $"Lỗi hệ thống: {ex.Message}");
+        //    }
+        //}
 
         // GET: api/Cars
         [HttpGet]
         public async Task<IActionResult> GetCarsForCustomer(
-        [FromQuery] string? search,
-        [FromQuery] string? brand,
-        [FromQuery] string? color,
-        [FromQuery] decimal? minPrice,
-        [FromQuery] decimal? maxPrice,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 12)
+            [FromQuery] string? search,
+            [FromQuery] string? brand,
+            [FromQuery] string? color,
+            [FromQuery] decimal? minPrice,
+            [FromQuery] decimal? maxPrice,
+            [FromQuery] CarStatus? status, // 👈 THÊM DÒNG NÀY ĐỂ HỨNG YÊU CẦU LỌC TỪ FE
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 12)
         {
             try
             {
-                var result = await _carRepo.GetCustomerCarsAsync(search, brand, color, minPrice, maxPrice, page, pageSize);
+                // 👈 NHỚ TRUYỀN THÊM 'status' VÀO CHO THỦ KHO TÌM KIẾM
+                var result = await _carRepo.GetCustomerCarsAsync(search, brand, color, minPrice, maxPrice, status, page, pageSize);
 
                 // BÍ KÍP Ở ĐÂY: Chỉ lấy đúng những thông tin FE cần để vẽ lên giao diện
                 var cleanCars = result.Cars.Select(c => new
@@ -46,7 +91,7 @@ namespace OtoBackend.Controllers.Customer
                     c.Brand,
                     c.Price,
                     c.ImageUrl,
-                    Status = c.Status.ToString() // Ép cái số 1, 2, 3 thành chữ cho dễ đọc
+                    Status = c.Status.ToString() // Ép cái số thành chữ cho FE dễ làm nhãn
                 });
 
                 return Ok(new
@@ -55,7 +100,7 @@ namespace OtoBackend.Controllers.Customer
                     CurrentPage = page,
                     PageSize = pageSize,
                     TotalPages = (int)Math.Ceiling(result.TotalCount / (double)pageSize),
-                    Data = cleanCars // Đưa mảng dữ liệu đã làm sạch vào đây!
+                    Data = cleanCars
                 });
             }
             catch (Exception ex)
@@ -95,6 +140,26 @@ namespace OtoBackend.Controllers.Customer
 
                 // MẸO NÂNG CAO: Sau này ní làm thêm bảng Ảnh phụ (CarImages) 
                 // hay Bảng Thông số (CarSpecifications) thì cũng lôi ra nhét hết vào đây cho FE show!
+            });
+        }
+
+        // GET: api/Cars/5/360-view
+        [HttpGet("{carId}/360-view")]
+        public async Task<IActionResult> Get360View(int carId)
+        {
+            var images = await _imageRepo.Get360ImagesAsync(carId);
+
+            if (images == null || images.Count == 0)
+                return NotFound("Xe này chưa có dữ liệu ảnh 360.");
+
+            // Chỉ trả về danh sách các đường link ảnh cho sạch
+            var imageUrls = images.Select(img => img.ImageUrl).ToList();
+
+            return Ok(new
+            {
+                CarId = carId,
+                TotalImages = images.Count,
+                Images = imageUrls
             });
         }
 

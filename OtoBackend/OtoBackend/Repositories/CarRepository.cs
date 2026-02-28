@@ -13,48 +13,30 @@ namespace OtoBackend.Repositories
             _context = context;
         }
 
-        public async Task<(IEnumerable<Car> Cars, int TotalCount)> GetCustomerCarsAsync(string? search, string? brand, string? color, decimal? minPrice, decimal? maxPrice, int page, int pageSize)
+        public async Task<(IEnumerable<Car> Cars, int TotalCount)> GetCustomerCarsAsync(string? search, string? brand, string? color, decimal? minPrice, decimal? maxPrice, CarStatus? status, int page, int pageSize)
         {
-            // 1. Lấy tất cả xe ra (dạng Query, chưa chạy SQL vội)
             var query = _context.Cars.AsQueryable();
 
-            // 2. LUẬT BẤT THÀNH VĂN: Khách hàng chỉ được xem xe ĐANG BÁN và CHƯA XÓA
-            // Giả sử CarStatus.Available tương ứng với trạng thái đang bán (Status = 1)
-            query = query.Where(c => c.IsDeleted == false && c.Status == CarStatus.Available);
+            // 1. Giấu xe thùng rác
+            query = query.Where(c => c.IsDeleted == false);
 
-            // 3. BỘ LỌC TÌM KIẾM
-            if (!string.IsNullOrEmpty(search))
+            // 2. Giấu bản nháp
+            query = query.Where(c => c.Status != CarStatus.Draft);
+
+            // 3. LỌC THEO TAB (Nếu FE truyền status 1, 2 hoặc 3 xuống)
+            if (status.HasValue)
             {
-                query = query.Where(c => c.Name.Contains(search) || c.Description.Contains(search));
+                query = query.Where(c => c.Status == status.Value);
             }
 
-            if (!string.IsNullOrEmpty(brand))
-            {
-                query = query.Where(c => c.Brand == brand);
-            }
+            // ... (Giữ nguyên các đoạn if lọc theo search, brand, color, giá của ní ở đây) ...
 
-            if (!string.IsNullOrEmpty(color))
-            {
-                query = query.Where(c => c.Color.Contains(color));
-            }
-
-            if (minPrice.HasValue)
-            {
-                query = query.Where(c => c.Price >= minPrice.Value);
-            }
-
-            if (maxPrice.HasValue)
-            {
-                query = query.Where(c => c.Price <= maxPrice.Value);
-            }
-
-            // 4. PHÂN TRANG (PAGINATION)
-            var totalCount = await query.CountAsync(); // Đếm tổng số xe thỏa mãn bộ lọc
+            int totalCount = await query.CountAsync();
 
             var cars = await query
-                .OrderByDescending(c => c.CreatedAt) // Xe mới nhất xếp lên đầu
-                .Skip((page - 1) * pageSize)         // Bỏ qua các xe ở trang trước
-                .Take(pageSize)                      // Lấy số lượng xe của trang hiện tại
+                .OrderByDescending(c => c.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
             return (cars, totalCount);
