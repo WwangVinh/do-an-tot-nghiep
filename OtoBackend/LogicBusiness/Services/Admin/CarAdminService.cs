@@ -134,31 +134,70 @@ namespace LogicBusiness.Services.Admin
             return (true, "Cập nhật thành công!", car);
         }
 
-        // 5. UPLOAD GALLERY IMAGE
-        public async Task<(bool Success, string Message, CarImage? Data)> UploadGalleryImageAsync(int carId, IFormFile file, string imageType)
+        // 5. UPLOAD NHIỀU ẢNH PHỤ (GALLERY) CÙNG LÚC
+        public async Task<(bool Success, string Message, object? Data)> UploadGalleryImagesAsync(int carId, List<IFormFile> files, string imageType)
         {
             var car = await _carRepo.GetCarByIdAsync(carId);
             if (car == null) return (false, "Không tìm thấy xe!", null);
 
-            string fileHash = FileHelper.GetFileHash(file);
+            var uploadedImages = new List<CarImage>();
+            int skippedCount = 0;
 
-            // Note: Chỗ này ní tự lấy _context.CarImages kiểm tra thủ công hoặc gọi Repo nhé, 
-            // Tui tạm bỏ check hash trực tiếp DB để code chạy mượt, ní có thể thêm hàm vào ICarImageRepository.
+            // Lấy trước danh sách ảnh hiện có của xe để check trùng Hash cho lẹ
+            var existingImages = await _imageRepo.GetCarImagesAsync(carId);
 
-            string imagePath = await FileHelper.UploadFileAsync(file, "Cars", car.Name);
-            var carImage = new CarImage
+            foreach (var file in files)
             {
-                CarId = carId,
-                ImageUrl = imagePath,
-                Is360Degree = false,
-                IsMainImage = false,
-                ImageType = string.IsNullOrWhiteSpace(imageType) ? "Khác" : imageType.Trim(),
-                FileHash = fileHash,
-                CreatedAt = DateTime.Now
-            };
+                if (file.Length == 0) continue;
 
-            await _imageRepo.AddCarImageAsync(carImage);
-            return (true, "Thêm ảnh thành công!", carImage);
+                // 1. Tạo vân tay cho ảnh
+                string fileHash = FileHelper.GetFileHash(file);
+
+                // 2. Check trùng: Nếu xe này đã có ảnh mang vân tay này rồi thì skip qua tấm tiếp theo
+                if (existingImages.Any(img => img.FileHash == fileHash))
+                {
+                    skippedCount++;
+                    continue;
+                }
+
+                // 3. Tải ảnh lên ổ cứng
+                string imagePath = await FileHelper.UploadFileAsync(file, "Cars", car.Name);
+
+                // 4. Tạo Object lưu vào DB
+                var carImage = new CarImage
+                {
+                    CarId = carId,
+                    ImageUrl = imagePath,
+                    Is360Degree = false,
+                    IsMainImage = false,
+                    ImageType = string.IsNullOrWhiteSpace(imageType) ? "Khác" : imageType.Trim(), // Nhãn chung cho cả cụm
+                    FileHash = fileHash,
+                    CreatedAt = DateTime.Now
+                };
+
+                await _imageRepo.AddCarImageAsync(carImage);
+                uploadedImages.Add(carImage);
+
+                // Cập nhật lại list hiện tại để tấm sau không bị trùng với tấm vừa up
+                existingImages.Add(carImage);
+            }
+
+            // 5. Đóng gói dữ liệu trả về
+            var responseData = uploadedImages.Select(img => new {
+                img.CarImageId,
+                img.ImageUrl,
+                img.ImageType,
+                img.FileHash
+            });
+
+            // 6. Chế tạo câu thông báo thân thiện
+            string msg = $"Thêm thành công {uploadedImages.Count} ảnh loại '{imageType}'.";
+            if (skippedCount > 0)
+            {
+                msg += $" (Đã tự động bỏ qua {skippedCount} ảnh bị trùng lặp).";
+            }
+
+            return (true, msg, responseData);
         }
 
         // 6. UPLOAD 360

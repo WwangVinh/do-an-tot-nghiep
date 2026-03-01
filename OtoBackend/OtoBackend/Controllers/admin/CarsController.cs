@@ -48,12 +48,20 @@ namespace OtoBackend.Controllers.Admin
 
         [HttpPost("{carId}/images")]
         [Consumes("multipart/form-data")]
-        public async Task<IActionResult> UploadCarImage([FromRoute] int carId, IFormFile file, [FromForm] string imageType)
+        // 👈 Đổi IFormFile file thành List<IFormFile> files
+        public async Task<IActionResult> UploadCarImages([FromRoute] int carId, [FromForm] List<IFormFile> files, [FromForm] string imageType)
         {
-            if (file == null || file.Length == 0) return BadRequest("Vui lòng chọn một file ảnh!");
-            var result = await _adminService.UploadGalleryImageAsync(carId, file, imageType);
-            if (!result.Success) return BadRequest(result.Message);
-            return Ok(new { message = $"Thêm ảnh phụ thành công!", data = result.Data });
+            if (files == null || files.Count == 0)
+                return BadRequest("Vui lòng chọn ít nhất một file ảnh!");
+
+            // Gọi đúng tên hàm số nhiều mới sửa
+            var result = await _adminService.UploadGalleryImagesAsync(carId, files, imageType);
+
+            if (!result.Success)
+                return BadRequest(result.Message);
+
+            // Trả về đúng câu chữ mình vừa Build ở Service
+            return Ok(new { message = result.Message, data = result.Data });
         }
 
         [HttpPost("{id}/upload-360")]
