@@ -21,5 +21,9 @@ public partial class CarImage
 
     public bool Is360Degree { get; set; }
 
+    public string? Description { get; set; }
+
+    public string? Title { get; set; }
+
     public virtual Car? Car { get; set; }
 }

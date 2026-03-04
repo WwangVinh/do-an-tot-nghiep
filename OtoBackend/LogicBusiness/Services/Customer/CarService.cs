@@ -1,6 +1,6 @@
 ﻿using CoreEntities.Models;
 using LogicBusiness.Interfaces.Customer;
-using LogicBusiness.Interfaces.Repositories;
+using LogicBusiness.Services.Repositories;
 
 namespace LogicBusiness.Services.Customer
 {
@@ -23,6 +23,8 @@ namespace LogicBusiness.Services.Customer
                 c.CarId,
                 c.Name,
                 c.Brand,
+                c.Year,
+                Condition = c.Condition.ToString(),
                 c.Price,
                 c.ImageUrl,
                 Status = c.Status.ToString() // Ép cái số thành chữ cho FE dễ làm nhãn
@@ -60,6 +62,7 @@ namespace LogicBusiness.Services.Customer
                 car.FuelType,
                 car.Description,
                 car.ImageUrl, // Tấm ảnh Đại diện chính
+                Condition = car.Condition.ToString(),
                 Status = car.Status.ToString(),
 
                 // BÍ KÍP: Lọc riêng Album ảnh và GOM NHÓM theo phân loại (Nội thất, Ngoại thất...)
@@ -67,9 +70,8 @@ namespace LogicBusiness.Services.Customer
                     .Where(img => img.Is360Degree == false)
                     .GroupBy(img => img.ImageType)
                     .Select(group => new {
-                        Category = group.Key, // Tên tab (VD: "Nội thất")
-                        // Khách hàng CHỈ CẦN link ảnh để xem, không cần ID để xóa
-                        Images = group.Select(i => i.ImageUrl).ToList()
+                        Category = group.Key,
+                        Images = group.Select(i => new {i.Title, i.Description, i.ImageUrl }).ToList()
                     }).ToList(),
 
                 // Lọc riêng bộ 360 độ cho FE nạp vào thư viện xoay

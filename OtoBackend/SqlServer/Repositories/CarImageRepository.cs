@@ -1,7 +1,7 @@
-﻿using LogicBusiness.Interfaces.Repositories;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using CoreEntities.Models;
 using SqlServer.DBContext;
+using LogicBusiness.Services.Repositories;
 
 namespace SqlServer.Repositories
 {
@@ -32,6 +32,26 @@ namespace SqlServer.Repositories
             _context.CarImages.Add(carImage);
             await _context.SaveChangesAsync();
             return carImage;
+        }
+
+        public async Task<bool> UpdateImageDescriptionAsync(int imageId, string? description, string? title)
+        {
+            var image = await _context.CarImages.FindAsync(imageId);
+
+            // Nếu không tìm thấy ảnh -> báo lỗi
+            if (image == null) return false;
+
+            // 👈 THÊM DÒNG NÀY: Chặn không cho sửa nếu là ảnh 360 độ
+            if (image.Is360Degree == true) return false;
+
+            // Nếu qua được ải trên thì mới cho sửa
+            image.Description = description;
+            image.Title = title;
+
+            _context.CarImages.Update(image);
+            await _context.SaveChangesAsync();
+
+            return true;
         }
 
         public async Task<CarImage> GetCarImageByIdAsync(int imageId)

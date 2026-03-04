@@ -1,8 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using CoreEntities.Models;
+using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces;
-using CoreEntities.Models;
+using LogicBusiness.Services.Repositories;
+using Microsoft.EntityFrameworkCore;
 using SqlServer.DBContext;
-using LogicBusiness.Interfaces.Repositories;
 
 namespace SqlServer.Repositories
 {
@@ -15,6 +16,54 @@ namespace SqlServer.Repositories
             _context = context;
         }
 
+        public async Task<List<Car>> GetFilteredCarsAsync(CarFilterDto filter, bool isAdmin = false)
+        {
+            // 1. Khởi tạo câu truy vấn (Chưa chạy xuống DB ngay đâu, đang gom lệnh thôi)
+            var query = _context.Cars.AsQueryable();
+
+            // 2. PHÂN QUYỀN HIỂN THỊ CƠ BẢN
+            if (!isAdmin)
+            {
+                // Khách hàng: Chỉ thấy xe đang Active và chưa bị xóa mềm
+                query = query.Where(c => c.Status == CoreEntities.Models.CarStatus.Available && c.IsDeleted == false);
+            }
+            else
+            {
+                // Admin: Nếu có truyền Status thì lọc theo Status (Nháp/Active)
+                if (filter.Status.HasValue)
+                    query = query.Where(c => (int)c.Status == filter.Status.Value);
+            }
+
+            // 3. RÁP CÁC ĐIỀU KIỆN LỌC (Cái nào FE truyền lên mới lọc, không thì bỏ qua)
+
+            if (!string.IsNullOrWhiteSpace(filter.Keyword))
+            {
+                query = query.Where(c => c.Name.Contains(filter.Keyword) || c.Brand.Contains(filter.Keyword));
+            }
+
+            if (!string.IsNullOrWhiteSpace(filter.Brand))
+            {
+                query = query.Where(c => c.Brand == filter.Brand);
+            }
+
+            if (filter.MinPrice.HasValue)
+            {
+                query = query.Where(c => c.Price >= filter.MinPrice.Value);
+            }
+
+            if (filter.MaxPrice.HasValue)
+            {
+                query = query.Where(c => c.Price <= filter.MaxPrice.Value);
+            }
+
+            if (filter.Condition.HasValue)
+            {
+                query = query.Where(c => (int)c.Condition == filter.Condition.Value);
+            }
+
+            // 4. Chốt đơn: Sắp xếp xe mới nhất lên đầu và lấy dữ liệu
+            return await query.OrderByDescending(c => c.CreatedAt).ToListAsync();
+        }
         public async Task<(IEnumerable<Car> Cars, int TotalCount)> GetCustomerCarsAsync(string? search, string? brand, string? color, decimal? minPrice, decimal? maxPrice, CarStatus? status, int page, int pageSize)
         {
             var query = _context.Cars.AsQueryable();

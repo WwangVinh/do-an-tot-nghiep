@@ -1,7 +1,8 @@
-﻿using System;
+﻿
+using Microsoft.AspNetCore.Http;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.AspNetCore.Http;
 
 
 namespace CoreEntities.Models;
@@ -15,6 +16,8 @@ public partial class Car
     public string? Model { get; set; }
 
     public int? Year { get; set; }
+
+    public CarCondition Condition { get; set; }
 
     public decimal? Price { get; set; }
 
@@ -66,4 +69,6 @@ public partial class Car
     public virtual ICollection<UserActivity> UserActivities { get; set; } = new List<UserActivity>();
 
     public virtual ICollection<Feature> Features { get; set; } = new List<Feature>();
+
+    public virtual ICollection<CarFeature> CarFeatures { get; set; } = new List<CarFeature>();
 }

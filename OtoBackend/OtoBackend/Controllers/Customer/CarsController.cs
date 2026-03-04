@@ -20,7 +20,8 @@ namespace OtoBackend.Controllers.Customer
         public async Task<IActionResult> GetCarsForCustomer(
             [FromQuery] string? search, [FromQuery] string? brand, [FromQuery] string? color,
             [FromQuery] decimal? minPrice, [FromQuery] decimal? maxPrice,
-            [FromQuery] CarStatus? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 12)
+            [FromQuery] CarStatus? status,
+            [FromQuery] int page = 1, [FromQuery] int pageSize = 12)
         {
             try
             {

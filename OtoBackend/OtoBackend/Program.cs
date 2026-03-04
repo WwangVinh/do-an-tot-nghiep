@@ -1,11 +1,14 @@
-﻿using SqlServer.Repositories;
+﻿using LogicBusiness.Interfaces;
 using LogicBusiness.Interfaces.Admin;
 using LogicBusiness.Interfaces.Customer;
 using LogicBusiness.Interfaces.Repositories;
+using LogicBusiness.Repositories;
 using LogicBusiness.Services.Admin;
 using LogicBusiness.Services.Customer;
+using LogicBusiness.Services.Repositories;
 using Microsoft.EntityFrameworkCore;
 using SqlServer.DBContext;
+using SqlServer.Repositories;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,10 +30,16 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddScoped<ICarRepository, CarRepository>();
 builder.Services.AddScoped<ICarImageRepository, CarImageRepository>();
+builder.Services.AddScoped<ICarSpecificationRepository, CarSpecificationRepository>();
+builder.Services.AddScoped<ICarFeatureRepository, CarFeatureRepository>();
+builder.Services.AddScoped<IFeatureRepository, FeatureRepository>();
+
 
 
 builder.Services.AddScoped<ICarService, CarService>();
 builder.Services.AddScoped<ICarAdminService, CarAdminService>();
+builder.Services.AddScoped<IFeatureService, FeatureService>();
+builder.Services.AddScoped<ICarSpecificationService, CarSpecificationService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

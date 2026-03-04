@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using CoreEntities.Models;
 
-namespace LogicBusiness.Interfaces.Repositories
+namespace LogicBusiness.Services.Repositories
 {
     public interface ICarRepository
     {

@@ -1,6 +1,6 @@
 ﻿using CoreEntities.Models;
 using LogicBusiness.Interfaces.Admin;
-using LogicBusiness.Interfaces.Repositories;
+using LogicBusiness.Services.Repositories;
 using LogicBusiness.Utilities;
 using Microsoft.AspNetCore.Http;
 
@@ -25,8 +25,10 @@ namespace LogicBusiness.Services.Admin
                 c.CarId,
                 c.Name,
                 c.Brand,
+                c.Year,
                 c.Price,
                 c.ImageUrl,
+                Condition = c.Condition.ToString(),
                 Status = c.Status.ToString(),
                 c.IsDeleted,
                 CreatedAt = c.CreatedAt?.ToString("dd/MM/yyyy HH:mm"),
@@ -62,6 +64,7 @@ namespace LogicBusiness.Services.Admin
                 car.FuelType,
                 car.Description,
                 car.ImageUrl,
+                Condition = car.Condition.ToString(),
                 Status = car.Status.ToString(),
                 car.IsDeleted,
                 car.CreatedAt,
@@ -72,7 +75,7 @@ namespace LogicBusiness.Services.Admin
                     .GroupBy(img => img.ImageType)
                     .Select(group => new {
                         Category = group.Key,
-                        Images = group.Select(i => new { i.CarImageId, i.ImageUrl, i.FileHash }).ToList()
+                        Images = group.Select(i => new { i.CarImageId, i.Title, i.Description, i.ImageUrl, i.FileHash }).ToList()
                     }).ToList(),
 
                 // Mảng ảnh 360
@@ -134,70 +137,73 @@ namespace LogicBusiness.Services.Admin
             return (true, "Cập nhật thành công!", car);
         }
 
-        // 5. UPLOAD NHIỀU ẢNH PHỤ (GALLERY) CÙNG LÚC
-        public async Task<(bool Success, string Message, object? Data)> UploadGalleryImagesAsync(int carId, List<IFormFile> files, string imageType)
+        // 5. UPLOAD NHIỀU ẢNH PHỤ (GALLERY) CÙNG LÚC + MÔ TẢ RIÊNG
+        public async Task<(bool Success, string Message, object? Data)> UploadGalleryImagesAsync(int carId, List<IFormFile> files, List<string>? titles, List<string>? descriptions, string imageType)
         {
             var car = await _carRepo.GetCarByIdAsync(carId);
             if (car == null) return (false, "Không tìm thấy xe!", null);
 
             var uploadedImages = new List<CarImage>();
             int skippedCount = 0;
-
-            // Lấy trước danh sách ảnh hiện có của xe để check trùng Hash cho lẹ
             var existingImages = await _imageRepo.GetCarImagesAsync(carId);
 
-            foreach (var file in files)
+            // Chạy vòng lặp for để khớp Index giữa File và Description
+            for (int i = 0; i < files.Count; i++)
             {
+                var file = files[i];
                 if (file.Length == 0) continue;
 
-                // 1. Tạo vân tay cho ảnh
                 string fileHash = FileHelper.GetFileHash(file);
-
-                // 2. Check trùng: Nếu xe này đã có ảnh mang vân tay này rồi thì skip qua tấm tiếp theo
                 if (existingImages.Any(img => img.FileHash == fileHash))
                 {
                     skippedCount++;
                     continue;
                 }
 
-                // 3. Tải ảnh lên ổ cứng
+                // Lấy mô tả tương ứng: Nếu FE gửi thiếu hoặc không gửi thì để null
+                string? currentTitle = (titles != null && i < titles.Count) ? titles[i] : null;
+                string? currentDesc = (descriptions != null && i < descriptions.Count) ? descriptions[i] : null;
+
                 string imagePath = await FileHelper.UploadFileAsync(file, "Cars", car.Name);
 
-                // 4. Tạo Object lưu vào DB
                 var carImage = new CarImage
                 {
                     CarId = carId,
                     ImageUrl = imagePath,
                     Is360Degree = false,
                     IsMainImage = false,
-                    ImageType = string.IsNullOrWhiteSpace(imageType) ? "Khác" : imageType.Trim(), // Nhãn chung cho cả cụm
+                    ImageType = string.IsNullOrWhiteSpace(imageType) ? "Khác" : imageType.Trim(),
+                    Title = currentTitle,
+                    Description = currentDesc, // 👈 Lưu mô tả riêng vào đây
                     FileHash = fileHash,
                     CreatedAt = DateTime.Now
                 };
 
                 await _imageRepo.AddCarImageAsync(carImage);
                 uploadedImages.Add(carImage);
-
-                // Cập nhật lại list hiện tại để tấm sau không bị trùng với tấm vừa up
                 existingImages.Add(carImage);
             }
 
-            // 5. Đóng gói dữ liệu trả về
             var responseData = uploadedImages.Select(img => new {
                 img.CarImageId,
                 img.ImageUrl,
                 img.ImageType,
+                img.Title,
+                img.Description,
                 img.FileHash
             });
 
-            // 6. Chế tạo câu thông báo thân thiện
             string msg = $"Thêm thành công {uploadedImages.Count} ảnh loại '{imageType}'.";
-            if (skippedCount > 0)
-            {
-                msg += $" (Đã tự động bỏ qua {skippedCount} ảnh bị trùng lặp).";
-            }
+            if (skippedCount > 0) msg += $" (Bỏ qua {skippedCount} ảnh trùng).";
 
             return (true, msg, responseData);
+        }
+
+        public async Task<bool> UpdateImageDetailsAsync(int imageId, string? title, string? description)
+        {
+            // Gọi thẳng xuống Thủ kho (Repository)
+            // Lưu ý: Lúc nãy mình viết tham số ở Repo là (imageId, description, title) 
+            return await _imageRepo.UpdateImageDescriptionAsync(imageId, description, title);
         }
 
         // 6. UPLOAD 360

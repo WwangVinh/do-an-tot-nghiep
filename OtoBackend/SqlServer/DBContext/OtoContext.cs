@@ -29,7 +29,9 @@ namespace SqlServer.DBContext
 
         public virtual DbSet<CarImage> CarImages { get; set; }
 
-        public virtual DbSet<CarSpecification> CarSpecifications { get; set; }
+        public virtual DbSet<CarSpecification> CarSpecifications { get; set; } = null!;
+
+        public virtual DbSet<CarFeature> CarFeatures { get; set; } = null!;
 
         public virtual DbSet<CarWishlist> CarWishlists { get; set; }
 
@@ -163,22 +165,22 @@ namespace SqlServer.DBContext
                     .HasDefaultValueSql("(getdate())")
                     .HasColumnType("datetime");
 
-                entity.HasMany(d => d.Features).WithMany(p => p.Cars)
-                    .UsingEntity<Dictionary<string, object>>(
-                        "CarFeature",
-                        r => r.HasOne<Feature>().WithMany()
-                            .HasForeignKey("FeatureId")
-                            .OnDelete(DeleteBehavior.ClientSetNull)
-                            .HasConstraintName("FK__CarFeatur__Featu__0C85DE4D"),
-                        l => l.HasOne<Car>().WithMany()
-                            .HasForeignKey("CarId")
-                            .OnDelete(DeleteBehavior.ClientSetNull)
-                            .HasConstraintName("FK__CarFeatur__CarId__0B91BA14"),
-                        j =>
-                        {
-                            j.HasKey("CarId", "FeatureId").HasName("PK__CarFeatu__E08204926F1DFBCC");
-                            j.ToTable("CarFeatures");
-                        });
+                //entity.HasMany(d => d.Features).WithMany(p => p.Cars)
+                //    .UsingEntity<Dictionary<string, object>>(
+                //        "CarFeature",
+                //        r => r.HasOne<Feature>().WithMany()
+                //            .HasForeignKey("FeatureId")
+                //            .OnDelete(DeleteBehavior.ClientSetNull)
+                //            .HasConstraintName("FK__CarFeatur__Featu__0C85DE4D"),
+                //        l => l.HasOne<Car>().WithMany()
+                //            .HasForeignKey("CarId")
+                //            .OnDelete(DeleteBehavior.ClientSetNull)
+                //            .HasConstraintName("FK__CarFeatur__CarId__0B91BA14"),
+                //        j =>
+                //        {
+                //            j.HasKey("CarId", "FeatureId").HasName("PK__CarFeatu__E08204926F1DFBCC");
+                //            j.ToTable("CarFeatures");
+                //        });
             });
 
             modelBuilder.Entity<CarImage>(entity =>
@@ -207,6 +209,22 @@ namespace SqlServer.DBContext
                     .HasForeignKey(d => d.CarId)
                     .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("FK__CarSpecif__CarId__06CD04F7");
+            });
+
+            modelBuilder.Entity<CarFeature>(entity =>
+            {
+                // 1. DÒNG NÀY QUAN TRỌNG NHẤT ĐỂ TRỊ LỖI: Khai báo khóa chính kép
+                entity.HasKey(e => new { e.CarId, e.FeatureId });
+
+                // 2. Dây nối về bảng Car (Đoạn ní vừa viết)
+                entity.HasOne(d => d.Car)
+                      .WithMany(p => p.CarFeatures)
+                      .HasForeignKey(d => d.CarId);
+
+                // 3. Dây nối về bảng Feature (Khai báo nốt cho đủ bộ)
+                entity.HasOne(d => d.Feature)
+                      .WithMany() // Lưu ý: Nếu trong model Feature  KHÔNG có ICollection<CarFeature> thì bỏ cái p => p.CarFeatures đi, chỉ để .WithMany() thôi nhé.
+                      .HasForeignKey(d => d.FeatureId);
             });
 
             modelBuilder.Entity<CarWishlist>(entity =>

@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using CoreEntities.Models;
+﻿using CoreEntities.Models;
+using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Admin;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace OtoBackend.Controllers.Admin
 {
@@ -21,6 +23,15 @@ namespace OtoBackend.Controllers.Admin
             return Ok(await _adminService.GetCarsAsync(search, status, isDeleted, page, pageSize));
         }
 
+        //[HttpGet]
+        //public async Task<IActionResult> GetAdminCars([FromQuery] CarFilterDto filter)
+        //{
+        //    // Gọi Service -> Gọi Repo (truyền isAdmin = true)
+        //    var cars = await _adminService.GetCarsAsync(filter, isAdmin: true);
+
+        //    return Ok(new { success = true, data = cars });
+        //}
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetCarDetailForAdmin(int id)
         {
@@ -37,6 +48,17 @@ namespace OtoBackend.Controllers.Admin
             return Ok(result.Data);
         }
 
+        //[HttpGet("suggest-spec-names")]
+        //public async Task<IActionResult> GetSuggestedSpecNames()
+        //{
+        //    // Lấy danh sách các tên thông số không trùng nhau (Distinct) từ bảng có sẵn
+        //    var suggestions = await _context.CarSpecifications
+        //                                    .Select(s => s.SpecName)
+        //                                    .Distinct()
+        //                                    .ToListAsync();
+        //    return Ok(suggestions);
+        //}
+
         [HttpPut("{id}")]
         public async Task<IActionResult> PutCar(int id, [FromForm] Car car)
         {
@@ -49,19 +71,36 @@ namespace OtoBackend.Controllers.Admin
         [HttpPost("{carId}/images")]
         [Consumes("multipart/form-data")]
         // 👈 Đổi IFormFile file thành List<IFormFile> files
-        public async Task<IActionResult> UploadCarImages([FromRoute] int carId, [FromForm] List<IFormFile> files, [FromForm] string imageType)
+        public async Task<IActionResult> UploadCarImages(
+        [FromRoute] int carId,
+        [FromForm] List<IFormFile> files,
+        [FromForm] List<string>? titles,
+        [FromForm] List<string> descriptions,
+        [FromForm] string imageType)
         {
             if (files == null || files.Count == 0)
                 return BadRequest("Vui lòng chọn ít nhất một file ảnh!");
 
             // Gọi đúng tên hàm số nhiều mới sửa
-            var result = await _adminService.UploadGalleryImagesAsync(carId, files, imageType);
+            var result = await _adminService.UploadGalleryImagesAsync(carId, files, titles, descriptions, imageType);
 
             if (!result.Success)
                 return BadRequest(result.Message);
 
             // Trả về đúng câu chữ mình vừa Build ở Service
             return Ok(new { message = result.Message, data = result.Data });
+        }
+
+        [HttpPut("images/{imageId}/details")]
+        [Consumes("multipart/form-data", "application/x-www-form-urlencoded")]
+        public async Task<IActionResult> UpdateImageDetails(int imageId, [FromForm] UpdateImageDetailsDto dto)
+        {
+            var success = await _adminService.UpdateImageDetailsAsync(imageId, dto.Title, dto.Description);
+
+            if (!success)
+                return BadRequest(new { message = "Không thể cập nhật! Ảnh không tồn tại hoặc đây là ảnh 360 độ." });
+
+            return Ok(new { message = "Cập nhật tiêu đề và mô tả ảnh thành công!" });
         }
 
         [HttpPost("{id}/upload-360")]
