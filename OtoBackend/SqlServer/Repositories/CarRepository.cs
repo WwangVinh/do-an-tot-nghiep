@@ -168,12 +168,15 @@ namespace SqlServer.Repositories
         }
 
         // Trong CarRepository.cs
-        public async Task<bool> CheckNameExistAsync(string name, int? excludeId = null)
+        public async Task<bool> CheckCarListingExistAsync(string name, string brand, int? year, string color, int condition, decimal? mileage, int? excludeId = null)
         {
-            // Tìm bất kỳ xe nào có tên trùng (đã dọn khoảng trắng và chữ hoa)
-            // Điều kiện: Nếu có excludeId (đang Sửa) thì phải khác ID đó. Nếu là null (đang Tạo) thì check hết.
             return await _context.Cars.AnyAsync(c =>
                 c.Name.ToLower().Trim() == name.ToLower().Trim() &&
+                c.Brand == brand &&
+                c.Year == year &&
+                c.Color == color &&
+                c.Condition == (CarCondition)condition &&
+                c.Mileage == (mileage ?? 0m) && // Check Mileage kiểu decimal
                 (excludeId == null || c.CarId != excludeId));
         }
 

@@ -133,8 +133,8 @@ namespace LogicBusiness.Services.Admin
         public async Task<(bool Success, string Message, Car? Data)> CreateCarAsync(CarCreateDto dto)
         {
             // 1. KIỂM TRA TÊN XE
-            if (await _carRepo.CheckNameExistAsync(dto.Name))
-                return (false, $"Tên xe '{dto.Name}' đã tồn tại!", null);
+            if (await _carRepo.CheckCarListingExistAsync(dto.Name, dto.Brand, dto.Year, dto.Color, (int)dto.Condition, (decimal)(dto.Mileage ?? 0)))
+                return (false, "Tin đăng này đã tồn tại rồi ní ơi!", null);
 
             // 2. TẠO THÔNG TIN CƠ BẢN CỦA XE
             var car = new Car
@@ -298,9 +298,11 @@ namespace LogicBusiness.Services.Admin
             car.Description = dto.Description;
             car.UpdatedAt = DateTime.Now;
 
-            // Truyền cả tên và ID của con xe hiện tại
-            if (await _carRepo.CheckNameExistAsync(dto.Name, id))
-                return (false, "Tên này đã bị một con xe khác chiếm dụng mất rồi!", null);
+            // Truyền thêm ID vào cuối cùng để loại trừ chính nó
+            if (await _carRepo.CheckCarListingExistAsync(dto.Name, dto.Brand, dto.Year, dto.Color, (int)dto.Condition, (decimal)dto.Mileage, id))
+            {
+                return (false, "Tin đăng này bị trùng rồi ní ơi!", null);
+            }
 
             try
             {

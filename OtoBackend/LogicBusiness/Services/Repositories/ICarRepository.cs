@@ -1,6 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using CoreEntities.Models;
+using LogicBusiness.DTOs;
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using CoreEntities.Models;
 
 namespace LogicBusiness.Services.Repositories
 {
@@ -26,8 +27,8 @@ namespace LogicBusiness.Services.Repositories
         Task<(IEnumerable<Car> Cars, int TotalCount)> GetAdminCarsAsync(string? search, CarStatus? status, bool? isDeleted, int page, int pageSize);
         //Task<IEnumerable<Car>> GetAllCarsAsync();
         Task<Car> GetCarByIdAsync(int id);
-        // Hàm kiểm tra trùng tên (có loại trừ ID của chính nó khi đang sửa)
-        Task<bool> CheckNameExistAsync(string name, int? excludeId = null);
+
+        Task<bool> CheckCarListingExistAsync(string name, string brand, int? year, string color, int condition, decimal? mileage, int? excludeId = null);
         Task AddCarAsync(Car car);
         Task UpdateCarAsync(Car car);
         // Trong file ICarRepository.cs
