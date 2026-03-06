@@ -11,7 +11,7 @@ public partial class Feature
 
     public string? Icon { get; set; }
 
-    public virtual ICollection<Car> Cars { get; set; } = new List<Car>();
+    //public virtual ICollection<Car> Cars { get; set; } = new List<Car>();
 
     public virtual ICollection<CarFeature> CarFeatures { get; set; } = new List<CarFeature>();
 }

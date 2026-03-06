@@ -27,11 +27,14 @@ namespace LogicBusiness.Services.Repositories
         //Task<IEnumerable<Car>> GetAllCarsAsync();
         Task<Car> GetCarByIdAsync(int id);
         // Hàm kiểm tra trùng tên (có loại trừ ID của chính nó khi đang sửa)
-        Task<bool> CheckNameExistAsync(string name, int excludeId = 0);
+        Task<bool> CheckNameExistAsync(string name, int? excludeId = null);
         Task AddCarAsync(Car car);
         Task UpdateCarAsync(Car car);
-        Task DeleteCarAsync(Car car);
-        Task DeleteCarAsync(int id);
+        // Trong file ICarRepository.cs
+        Task<Car?> GetByIdAsync(int id);
+        Task UpdateAsync(Car car);
+        //Task DeleteCarAsync(Car car);
+        Task<bool> DeleteCarAsync(int id);
         bool CarExists(int id);
     }
 }

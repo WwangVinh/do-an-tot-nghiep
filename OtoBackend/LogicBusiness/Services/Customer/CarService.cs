@@ -40,15 +40,14 @@ namespace LogicBusiness.Services.Customer
             };
         }
 
+        // ĐÓNG GÓI DỮ LIỆU (DTO) SIÊU SẠCH CHO KHÁCH HÀNG (Bản Full 2026)
         public async Task<object?> GetCarDetailAsync(int id)
         {
-            // Nhờ thủ kho lấy xe + toàn bộ ảnh lên
             var car = await _carRepo.GetCarDetailForCustomerAsync(id);
 
-            // Chặn ngay nếu không tìm thấy (hoặc xe đang nháp/thùng rác)
             if (car == null) return null;
 
-            // ĐÓNG GÓI DỮ LIỆU (DTO) SIÊU SẠCH CHO KHÁCH HÀNG
+            // ĐÓNG GÓI DỮ LIỆU (Bản nâng cấp đầy đủ 2026)
             return new
             {
                 car.CarId,
@@ -61,20 +60,36 @@ namespace LogicBusiness.Services.Customer
                 car.Mileage,
                 car.FuelType,
                 car.Description,
-                car.ImageUrl, // Tấm ảnh Đại diện chính
+                car.ImageUrl,
                 Condition = car.Condition.ToString(),
                 Status = car.Status.ToString(),
 
-                // BÍ KÍP: Lọc riêng Album ảnh và GOM NHÓM theo phân loại (Nội thất, Ngoại thất...)
+                // 1. HIỆN THÔNG SỐ (Ní bị thiếu cái này nè!)
+                Specifications = car.CarSpecifications
+                    .GroupBy(s => s.Category)
+                    .Select(group => new {
+                        Category = group.Key,
+                        Items = group.Select(i => new { i.SpecName, i.SpecValue }).ToList()
+                    }).ToList(),
+
+                // 2. TIỆN ÍCH NỔI BẬT (Bản chuẩn cho FE "match" dữ liệu)
+                Features = car.CarFeatures
+                    .Select(cf => new {
+                        cf.FeatureId, // Giữ lại ID để làm key và match logic
+                        FeatureName = cf.Feature?.FeatureName,
+                        Icon = cf.Feature?.Icon
+                    }).ToList(),
+
+                // 3. ALBUM ẢNH
                 GalleryImages = car.CarImages
                     .Where(img => img.Is360Degree == false)
                     .GroupBy(img => img.ImageType)
                     .Select(group => new {
                         Category = group.Key,
-                        Images = group.Select(i => new {i.Title, i.Description, i.ImageUrl }).ToList()
+                        Images = group.Select(i => new { i.Title, i.Description, i.ImageUrl }).ToList()
                     }).ToList(),
 
-                // Lọc riêng bộ 360 độ cho FE nạp vào thư viện xoay
+                // 4. BỘ ẢNH 360
                 Images360 = car.CarImages
                     .Where(img => img.Is360Degree == true)
                     .Select(img => img.ImageUrl)

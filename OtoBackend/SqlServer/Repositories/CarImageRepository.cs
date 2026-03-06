@@ -1,4 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
+using System.IO;
 using CoreEntities.Models;
 using SqlServer.DBContext;
 using LogicBusiness.Services.Repositories;
@@ -9,9 +11,11 @@ namespace SqlServer.Repositories
     {
         private readonly OtoContext _context;
 
+
         public CarImageRepository(OtoContext context)
         {
             _context = context;
+
         }
 
         public async Task<List<CarImage>> GetCarImagesAsync(int carId)
@@ -32,6 +36,29 @@ namespace SqlServer.Repositories
             _context.CarImages.Add(carImage);
             await _context.SaveChangesAsync();
             return carImage;
+        }
+
+        public async Task<string> UploadImageAsync(IFormFile file, string folderName)
+        {
+            if (file == null || file.Length == 0) return "";
+
+            // 🚀 Tuyệt chiêu: Lấy thư mục gốc của project Web đang chạy
+            string wwwrootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            string uploadsFolder = Path.Combine(wwwrootPath, "uploads", folderName);
+
+            if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
+
+            // Tạo tên file duy nhất
+            string fileName = Guid.NewGuid().ToString() + "_" + file.FileName;
+            string filePath = Path.Combine(uploadsFolder, fileName);
+
+            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(fileStream);
+            }
+
+            // Trả về đường dẫn để lưu vào SQL Server 2022
+            return $"/uploads/{folderName}/{fileName}";
         }
 
         public async Task<bool> UpdateImageDescriptionAsync(int imageId, string? description, string? title)

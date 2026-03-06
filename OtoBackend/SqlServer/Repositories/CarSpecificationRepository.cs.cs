@@ -22,21 +22,39 @@ namespace SqlServer.Repositories
             _context = context;
         }
 
-        public async Task AddRangeAsync(IEnumerable<CarSpecification> specs)
+
+        public async Task AddRangeAsync(IEnumerable<CarSpecification> entities)
         {
-            await _context.CarSpecifications.AddRangeAsync(specs);
-            await _context.SaveChangesAsync();
+            if (entities == null || !entities.Any()) return;
+            await _context.CarSpecifications.AddRangeAsync(entities);
+            await _context.SaveChangesAsync(); // Đây là nhát búa chốt hạ để data vào DB
         }
+
+        //public async Task AddRangeAsync(IEnumerable<CarSpecification> specs)
+        //{
+        //    await _context.CarSpecifications.AddRangeAsync(specs);
+        //    await _context.SaveChangesAsync();
+        //}
+
+        //public async Task DeleteByCarIdAsync(int carId)
+        //{
+        //    var itemsToDelete = await _context.CarSpecifications
+        //                                      .Where(x => x.CarId == carId)
+        //                                      .ToListAsync();
+
+        //    if (itemsToDelete.Any())
+        //    {
+        //        _context.CarSpecifications.RemoveRange(itemsToDelete);
+        //        await _context.SaveChangesAsync();
+        //    }
+        //}
 
         public async Task DeleteByCarIdAsync(int carId)
         {
-            var itemsToDelete = await _context.CarSpecifications
-                                              .Where(x => x.CarId == carId)
-                                              .ToListAsync();
-
-            if (itemsToDelete.Any())
+            var specs = await _context.CarSpecifications.Where(x => x.CarId == carId).ToListAsync();
+            if (specs.Any())
             {
-                _context.CarSpecifications.RemoveRange(itemsToDelete);
+                _context.CarSpecifications.RemoveRange(specs);
                 await _context.SaveChangesAsync();
             }
         }

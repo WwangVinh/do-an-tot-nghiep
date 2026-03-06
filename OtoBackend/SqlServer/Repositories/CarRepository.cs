@@ -96,17 +96,28 @@ namespace SqlServer.Repositories
         public async Task<Car?> GetCarDetailForCustomerAsync(int id)
         {
             return await _context.Cars
-                .Include(c => c.CarImages) // 👈 Túm cổ luôn đám ảnh phụ và 360 đi theo
-                .FirstOrDefaultAsync(c => c.CarId == id
-                                       && c.IsDeleted == false // Chặn xe trong thùng rác
-                                       && c.Status != CarStatus.Draft); // Chặn xe bản nháp
+                .Include(c => c.CarImages)
+                .Include(c => c.CarSpecifications) // Phải có cái này mới lấy được thông số
+                .Include(c => c.CarFeatures)       // Phải có cái này mới lấy được tiện ích
+                    .ThenInclude(cf => cf.Feature) // Lấy sâu vào bảng Feature để lấy FeatureName
+                .FirstOrDefaultAsync(c => c.CarId == id && c.IsDeleted == false);
         }
+
+        //public async Task<Car?> GetCarDetailForAdminAsync(int id)
+        //{
+        //    return await _context.Cars
+        //        .Include(c => c.CarImages) // Túm cổ toàn bộ ảnh phụ và 360
+        //        .FirstOrDefaultAsync(c => c.CarId == id); // Bắt mọi loại xe
+        //}
 
         public async Task<Car?> GetCarDetailForAdminAsync(int id)
         {
             return await _context.Cars
-                .Include(c => c.CarImages) // Túm cổ toàn bộ ảnh phụ và 360
-                .FirstOrDefaultAsync(c => c.CarId == id); // Bắt mọi loại xe
+                .Include(c => c.CarImages) // Đã có
+                .Include(c => c.CarSpecifications) // Thêm cái này để lấy "nồi lẩu" thông số
+                .Include(c => c.CarFeatures) // Thêm cái này để lấy Tiện ích
+                    .ThenInclude(cf => cf.Feature) // Lấy thêm tên Tiện ích từ bảng Features
+                .FirstOrDefaultAsync(c => c.CarId == id);
         }
 
         public async Task<(IEnumerable<Car> Cars, int TotalCount)> GetAdminCarsAsync(string? search, CarStatus? status, bool? isDeleted, int page, int pageSize)
@@ -156,12 +167,14 @@ namespace SqlServer.Repositories
             return await _context.Cars.FindAsync(id);
         }
 
-        public async Task<bool> CheckNameExistAsync(string name, int excludeId = 0)
+        // Trong CarRepository.cs
+        public async Task<bool> CheckNameExistAsync(string name, int? excludeId = null)
         {
-            // Tìm xem có xe nào cùng tên (không phân biệt hoa thường) mà khác ID này không
+            // Tìm bất kỳ xe nào có tên trùng (đã dọn khoảng trắng và chữ hoa)
+            // Điều kiện: Nếu có excludeId (đang Sửa) thì phải khác ID đó. Nếu là null (đang Tạo) thì check hết.
             return await _context.Cars.AnyAsync(c =>
                 c.Name.ToLower().Trim() == name.ToLower().Trim() &&
-                c.CarId != excludeId);
+                (excludeId == null || c.CarId != excludeId));
         }
 
         public async Task AddCarAsync(Car car)
@@ -192,20 +205,57 @@ namespace SqlServer.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task DeleteCarAsync(Car car)
+        public async Task<Car?> GetByIdAsync(int id)
         {
-            _context.Cars.Remove(car);
+            return await _context.Cars.FindAsync(id);
+        }
+
+        public async Task UpdateAsync(Car car)
+        {
+            _context.Cars.Update(car);
             await _context.SaveChangesAsync();
         }
 
-        public async Task DeleteCarAsync(int id)
+        //public async Task DeleteCarAsync(Car car)
+        //{
+        //    _context.Cars.Remove(car);
+        //    await _context.SaveChangesAsync();
+        //}
+
+        public async Task DeleteByCarIdAsync(int carId)
         {
-            var car = await _context.Cars.FindAsync(id);
-            if (car != null)
+            var features = await _context.CarFeatures.Where(x => x.CarId == carId).ToListAsync();
+            if (features.Any())
             {
-                _context.Cars.Remove(car); // Lệnh Remove này là xóa bay màu khỏi DB luôn
+                _context.CarFeatures.RemoveRange(features);
                 await _context.SaveChangesAsync();
             }
+        }
+
+        //public async Task DeleteCarAsync(int id)
+        //{
+        //    var car = await _context.Cars.FindAsync(id);
+        //    if (car != null)
+        //    {
+        //        _context.Cars.Remove(car); // Lệnh Remove này là xóa bay màu khỏi DB luôn
+        //        await _context.SaveChangesAsync();
+        //    }
+        //}
+
+        public async Task<bool> DeleteCarAsync(int id)
+        {
+            // Tìm con xe trong Database
+            var car = await _context.Cars.FindAsync(id);
+
+            if (car != null)
+            {
+                // Xóa nó khỏi DB và lưu lại
+                _context.Cars.Remove(car);
+                await _context.SaveChangesAsync();
+                return true;
+            }
+
+            return false;
         }
 
         public bool CarExists(int id)

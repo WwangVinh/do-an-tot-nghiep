@@ -8,8 +8,8 @@ namespace CoreEntities.Models
 {
     public enum CarCondition
     {
-        New,        // Mới 100%
-        Used,       // Cũ / Đã qua sử dụng
-        LikeNew     // Xe lướt / 99%
+        New = 0,        // Mới 100%
+        Used = 1,       // Cũ / Đã qua sử dụng
+        LikeNew = 2    // Xe lướt / 99%
     }
 }

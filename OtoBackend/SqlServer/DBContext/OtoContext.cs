@@ -223,7 +223,7 @@ namespace SqlServer.DBContext
 
                 // 3. Dây nối về bảng Feature (Khai báo nốt cho đủ bộ)
                 entity.HasOne(d => d.Feature)
-                      .WithMany() // Lưu ý: Nếu trong model Feature  KHÔNG có ICollection<CarFeature> thì bỏ cái p => p.CarFeatures đi, chỉ để .WithMany() thôi nhé.
+                      .WithMany(p => p.CarFeatures) // Lưu ý: Nếu trong model Feature  KHÔNG có ICollection<CarFeature> thì bỏ cái p => p.CarFeatures đi, chỉ để .WithMany() thôi nhé.
                       .HasForeignKey(d => d.FeatureId);
             });
 

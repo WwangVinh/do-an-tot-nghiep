@@ -1,4 +1,5 @@
 ﻿using CoreEntities.Models;
+using Microsoft.AspNetCore.Http;
 
 namespace LogicBusiness.Services.Repositories
 {
@@ -7,6 +8,7 @@ namespace LogicBusiness.Services.Repositories
         Task<List<CarImage>> GetCarImagesAsync(int carId);
         Task<List<CarImage>> Get360ImagesAsync(int carId);
         Task<CarImage> AddCarImageAsync(CarImage carImage);
+        Task<string> UploadImageAsync(IFormFile file, string folderName);
         Task<bool> UpdateImageDescriptionAsync(int imageId, string description, string title);
         Task<CarImage> GetCarImageByIdAsync(int imageId);
         Task DeleteCarImageAsync(int imageId);

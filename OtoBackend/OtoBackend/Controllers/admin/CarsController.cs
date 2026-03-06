@@ -1,6 +1,7 @@
 ﻿using CoreEntities.Models;
 using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Admin;
+using LogicBusiness.Services.Admin;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -41,12 +42,26 @@ namespace OtoBackend.Controllers.Admin
         }
 
         [HttpPost]
-        public async Task<IActionResult> PostCar([FromForm] Car car)
+        public async Task<IActionResult> CreateCar([FromForm] CarCreateDto dto)
         {
-            var result = await _adminService.CreateCarAsync(car, car.ImageFile);
-            if (!result.Success) return BadRequest(result.Message); // Viết hoa chữ S và M
-            return Ok(result.Data);
+            // Đổi _carAdminService thành _adminService cho khớp với code cũ của ní
+            var result = await _adminService.CreateCarAsync(dto);
+
+            if (result.Success)
+            {
+                return Ok(new { message = result.Message, data = result.Data });
+            }
+
+            return BadRequest(new { message = result.Message });
         }
+
+        //[HttpPost]
+        //public async Task<IActionResult> PostCar([FromForm] Car car)
+        //{
+        //    var result = await _adminService.CreateCarAsync(car, car.ImageFile);
+        //    if (!result.Success) return BadRequest(result.Message); // Viết hoa chữ S và M
+        //    return Ok(result.Data);
+        //}
 
         //[HttpGet("suggest-spec-names")]
         //public async Task<IActionResult> GetSuggestedSpecNames()
@@ -60,12 +75,29 @@ namespace OtoBackend.Controllers.Admin
         //}
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutCar(int id, [FromForm] Car car)
+        [Consumes("multipart/form-data")] // Quan trọng để nhận được ảnh và chuỗi Specifications
+        public async Task<IActionResult> PutCar(int id, [FromForm] CarUpdateDto dto)
         {
-            if (id != car.CarId) return BadRequest("Dữ liệu ID không đồng nhất.");
-            var result = await _adminService.UpdateCarAsync(id, car);
-            if (!result.Success) return NotFound(result.Message);
-            return Ok(new { message = result.Message, car = result.Data });
+            // 1. Kiểm tra tính hợp lệ của dữ liệu đầu vào (Validation)
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // 2. Gọi Service thực hiện "Xóa cũ - Xây mới"
+            var result = await _adminService.UpdateCarAsync(id, dto);
+
+            // 3. Trả về kết quả cho Frontend (React)
+            if (result.Success)
+            {
+                return Ok(new
+                {
+                    message = result.Message,
+                    data = result.Car
+                });
+            }
+
+            return BadRequest(new { message = result.Message });
         }
 
         [HttpPost("{carId}/images")]

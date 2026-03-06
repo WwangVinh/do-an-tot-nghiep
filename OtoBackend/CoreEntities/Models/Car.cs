@@ -68,7 +68,7 @@ public partial class Car
 
     public virtual ICollection<UserActivity> UserActivities { get; set; } = new List<UserActivity>();
 
-    public virtual ICollection<Feature> Features { get; set; } = new List<Feature>();
+    //public virtual ICollection<Feature> Features { get; set; } = new List<Feature>();
 
     public virtual ICollection<CarFeature> CarFeatures { get; set; } = new List<CarFeature>();
 }

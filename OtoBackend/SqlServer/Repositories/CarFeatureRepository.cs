@@ -20,17 +20,27 @@ namespace SqlServer.Repositories
             await _context.SaveChangesAsync();
         }
 
+        //public async Task DeleteByCarIdAsync(int carId)
+        //{
+        //    // Tìm tất cả các "sợi dây" đang nối vào con xe này
+        //    var itemsToDelete = await _context.CarFeatures
+        //                                      .Where(x => x.CarId == carId)
+        //                                      .ToListAsync();
+
+        //    if (itemsToDelete.Any())
+        //    {
+        //        // Cắt đứt hết
+        //        _context.CarFeatures.RemoveRange(itemsToDelete);
+        //        await _context.SaveChangesAsync();
+        //    }
+        //}
+
         public async Task DeleteByCarIdAsync(int carId)
         {
-            // Tìm tất cả các "sợi dây" đang nối vào con xe này
-            var itemsToDelete = await _context.CarFeatures
-                                              .Where(x => x.CarId == carId)
-                                              .ToListAsync();
-
-            if (itemsToDelete.Any())
+            var features = await _context.CarFeatures.Where(x => x.CarId == carId).ToListAsync();
+            if (features.Any())
             {
-                // Cắt đứt hết
-                _context.CarFeatures.RemoveRange(itemsToDelete);
+                _context.CarFeatures.RemoveRange(features);
                 await _context.SaveChangesAsync();
             }
         }

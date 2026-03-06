@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CoreEntities.Models
 {
-    public class CarFeature
+    public partial class CarFeature
     {
         public int CarId { get; set; }
         public int FeatureId { get; set; }
