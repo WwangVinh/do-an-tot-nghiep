@@ -47,6 +47,10 @@ public partial class Car
 
     public int? DeletedBy { get; set; }
 
+    public string? Transmission { get; set; }
+    public string? BodyStyle { get; set; }
+    public int Quantity { get; set; }
+
     [NotMapped] //thêm ảnh nhưng k tạo thêm cột trong database
     public IFormFile? ImageFile { get; set; }
 

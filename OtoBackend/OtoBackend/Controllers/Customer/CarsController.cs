@@ -18,15 +18,24 @@ namespace OtoBackend.Controllers.Customer
         // GET: api/Cars
         [HttpGet]
         public async Task<IActionResult> GetCarsForCustomer(
-            [FromQuery] string? search, [FromQuery] string? brand, [FromQuery] string? color,
-            [FromQuery] decimal? minPrice, [FromQuery] decimal? maxPrice,
+            [FromQuery] string? search,
+            [FromQuery] string? brand,
+            [FromQuery] string? color,
+            [FromQuery] decimal? minPrice,
+            [FromQuery] decimal? maxPrice,
             [FromQuery] CarStatus? status,
-            [FromQuery] int page = 1, [FromQuery] int pageSize = 12)
+            [FromQuery] string? transmission, // 👈 Mở thêm ô nhập Hộp số cho Lễ tân
+            [FromQuery] string? bodyStyle,    // (Đã xóa cái dấu nháy ngược vô duyên ở đây)
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 12)
         {
             try
             {
-                var response = await _carService.GetCarsAsync(search, brand, color, minPrice, maxPrice, status, page, pageSize);
-                return Ok(response);
+                // Cất kết quả vào biến 'result'
+                var result = await _carService.GetCarsAsync(search, brand, color, minPrice, maxPrice, status, transmission, bodyStyle, page, pageSize);
+
+                // Trả đúng biến 'result' đó về cho Frontend
+                return Ok(result);
             }
             catch (Exception ex)
             {

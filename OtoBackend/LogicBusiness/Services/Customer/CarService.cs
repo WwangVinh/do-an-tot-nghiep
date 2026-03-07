@@ -13,9 +13,10 @@ namespace LogicBusiness.Services.Customer
             _carRepo = carRepo;
         }
 
-        public async Task<object> GetCarsAsync(string? search, string? brand, string? color, decimal? minPrice, decimal? maxPrice, CarStatus? status, int page, int pageSize)
+        public async Task<object> GetCarsAsync(string? search, string? brand, string? color, decimal? minPrice, decimal? maxPrice, CarStatus? status, string? transmission, string? bodyStyle, int page, int pageSize)
         {
-            var result = await _carRepo.GetCustomerCarsAsync(search, brand, color, minPrice, maxPrice, status, page, pageSize);
+            // 👉 Bơm đủ 10 tham số xuống cho Thủ kho (Repository) làm việc
+            var result = await _carRepo.GetCustomerCarsAsync(search, brand, color, minPrice, maxPrice, status, transmission, bodyStyle, page, pageSize);
 
             // BÍ KÍP Ở ĐÂY: Chỉ lấy đúng những thông tin FE cần để vẽ lên giao diện
             var cleanCars = result.Cars.Select(c => new
@@ -27,7 +28,11 @@ namespace LogicBusiness.Services.Customer
                 Condition = c.Condition.ToString(),
                 c.Price,
                 c.ImageUrl,
-                Status = c.Status.ToString() // Ép cái số thành chữ cho FE dễ làm nhãn
+                Status = c.Status.ToString(),
+                c.Mileage,       // Số km đã đi (Odo)
+                c.FuelType,      // Xăng / Điện
+                c.Transmission,  // Số tự động / Số sàn
+                c.BodyStyle      // SUV / Sedan
             });
 
             return new
@@ -59,6 +64,9 @@ namespace LogicBusiness.Services.Customer
                 car.Color,
                 car.Mileage,
                 car.FuelType,
+                car.Transmission, // Số sàn / Số tự động
+                car.BodyStyle,    // SUV / Sedan...
+                car.Quantity,
                 car.Description,
                 car.ImageUrl,
                 Condition = car.Condition.ToString(),

@@ -14,14 +14,9 @@ namespace LogicBusiness.Services.Repositories
         Task<Car?> GetCarDetailForAdminAsync(int id);
         // Trả về cả danh sách xe và tổng số lượng xe để FE làm nút bấm trang 1, 2, 3...
         Task<(IEnumerable<Car> Cars, int TotalCount)> GetCustomerCarsAsync(
-        string? search, 
-        string? brand, 
-        string? color, 
-        decimal? minPrice, 
-        decimal? maxPrice, 
-        CarStatus? status,
-        int page, 
-        int pageSize);
+       string? search, string? brand, string? color, decimal? minPrice, decimal? maxPrice, CarStatus? status,
+       string? transmission, string? bodyStyle, // 👈 THÊM 2 THẰNG NÀY VÀO ĐÂY
+       int page, int pageSize);
 
         // Dành riêng cho Admin: Lọc được cả xe trong thùng rác và mọi Status
         Task<(IEnumerable<Car> Cars, int TotalCount)> GetAdminCarsAsync(string? search, CarStatus? status, bool? isDeleted, int page, int pageSize);

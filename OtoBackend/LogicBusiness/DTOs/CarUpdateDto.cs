@@ -1,29 +1,44 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Http;
+using OtoBackend.Helpers;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using System.ComponentModel.DataAnnotations;
 
 namespace LogicBusiness.DTOs
 {
     public class CarUpdateDto
     {
-        [Required(ErrorMessage = "Tên xe không được để trống")]
+        [Required(ErrorMessage = "Tên xe không được để trống!")]
+        [StringLength(255, ErrorMessage = "Tên xe quá dài, tối đa 255 ký tự thôi!")]
         public string Name { get; set; } = null!;
 
-        public string? Brand { get; set; }
+        [Required(ErrorMessage = "Vui lòng nhập tên hãng xe!")]
+        public string Brand { get; set; } = null!;
         public string? Model { get; set; }
         public string? Color { get; set; }
 
-        [Range(0, double.MaxValue, ErrorMessage = "Giá phải lớn hơn hoặc bằng 0")]
-        public double Price { get; set; }
+        [Range(0, double.MaxValue, ErrorMessage = "Giá xe phải lớn hơn hoặc bằng 0!")]
+        public decimal Price { get; set; }
 
+        [RegularExpression("^(Xăng|Điện|Dầu|Hybrid)$", ErrorMessage = "Nhiên liệu chỉ được nhập Xăng, Điện, Dầu hoặc Hybrid!")]
         public string? FuelType { get; set; }
-        public double Mileage { get; set; }
+        [Range(0, double.MaxValue, ErrorMessage = "Số Km (ODO) không được âm!")]
+        public double? Mileage { get; set; }
         public string? Description { get; set; }
 
+        [Range(0, int.MaxValue, ErrorMessage = "Số lượng xe không được nhỏ hơn 0!")]
+        public int Quantity { get; set; }
+
+        [RegularExpression("^(Số sàn|Số tự động)$", ErrorMessage = "Hộp số chỉ được nhập 'Số sàn' hoặc 'Số tự động'")]
+        public string? Transmission { get; set; }
+
+
+        [RegularExpression("^(Sedan|SUV|Hatchback|Crossover|MPV|Bán tải|Coupe)$", ErrorMessage = "Kiểu dáng xe không hợp lệ. Vui lòng chọn đúng danh mục!")]
+        public string? BodyStyle { get; set; }
+        [ValidYearAttribute] // 👈 Tự động kiểm tra từ 1990 đến năm hiện tại!
         public int Year { get; set; }
         public int Condition { get; set; }
 

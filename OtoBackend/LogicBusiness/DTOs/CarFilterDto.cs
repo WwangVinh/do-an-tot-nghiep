@@ -8,6 +8,13 @@ namespace LogicBusiness.DTOs
 {
     public class CarFilterDto
     {
+        // Phân trang mặc định là trang 1, mỗi trang 10 xe
+        public int PageNumber { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
+
+
+        public string? Transmission { get; set; }
+        public string? BodyStyle { get; set; }
         public string? Keyword { get; set; }     // Tìm theo Tên xe hoặc Hãng )
         public string? Brand { get; set; }       // Lọc chính xác theo Hãng
         public decimal? MinPrice { get; set; }   // Giá từ...

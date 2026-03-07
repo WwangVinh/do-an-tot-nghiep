@@ -64,30 +64,75 @@ namespace SqlServer.Repositories
             // 4. Chốt đơn: Sắp xếp xe mới nhất lên đầu và lấy dữ liệu
             return await query.OrderByDescending(c => c.CreatedAt).ToListAsync();
         }
-        public async Task<(IEnumerable<Car> Cars, int TotalCount)> GetCustomerCarsAsync(string? search, string? brand, string? color, decimal? minPrice, decimal? maxPrice, CarStatus? status, int page, int pageSize)
+        public async Task<(IEnumerable<Car> Cars, int TotalCount)> GetCustomerCarsAsync(string? search, string? brand, string? color, decimal? minPrice, decimal? maxPrice, CarStatus? status, string? transmission, string? bodyStyle, int page, int pageSize)
         {
+            // Bắt đầu với danh sách toàn bộ xe
             var query = _context.Cars.AsQueryable();
 
-            // 1. Giấu xe thùng rác
+            // 1. LUÔN LUÔN GIẤU XE RÁC VÀ XE NHÁP
             query = query.Where(c => c.IsDeleted == false);
-
-            // 2. Giấu bản nháp
             query = query.Where(c => c.Status != CarStatus.Draft);
 
-            // 3. LỌC THEO TAB (Nếu FE truyền status 1, 2 hoặc 3 xuống)
+            // 2. LỌC THEO TRẠNG THÁI (Status)
             if (status.HasValue)
             {
                 query = query.Where(c => c.Status == status.Value);
             }
 
-            // ... (Giữ nguyên các đoạn if lọc theo search, brand, color, giá của ní ở đây) ...
+            // 3. LỌC THEO TỪ KHÓA (Tìm một phần của Tên xe)
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var kw = search.Trim().ToLower();
+                // Dùng .Contains() để tìm kiếm tương đối (Ví dụ: gõ "civi" ra "Honda Civic")
+                query = query.Where(c => c.Name.ToLower().Contains(kw));
+            }
 
+            // 4. LỌC THEO HÃNG XE
+            if (!string.IsNullOrWhiteSpace(brand))
+            {
+                var brandUpper = brand.Trim().ToUpper();
+                // Ép về in hoa để so sánh chính xác tuyệt đối (Vì lúc Create mình đã lưu in hoa toàn bộ)
+                query = query.Where(c => c.Brand.ToUpper() == brandUpper);
+            }
+
+            // 5. LỌC THEO MÀU SẮC
+            if (!string.IsNullOrWhiteSpace(color))
+            {
+                var colorLower = color.Trim().ToLower();
+                query = query.Where(c => c.Color.ToLower() == colorLower);
+            }
+
+            // 6. LỌC THEO KHOẢNG GIÁ (Giá min / Giá max)
+            if (minPrice.HasValue)
+            {
+                query = query.Where(c => c.Price >= minPrice.Value);
+            }
+            if (maxPrice.HasValue)
+            {
+                query = query.Where(c => c.Price <= maxPrice.Value);
+            }
+            // LỌC THEO HỘP SỐ
+            if (!string.IsNullOrWhiteSpace(transmission))
+            {
+                query = query.Where(c => c.Transmission == transmission.Trim());
+            }
+
+            // LỌC THEO KIỂU DÁNG (Sedan / SUV)
+            if (!string.IsNullOrWhiteSpace(bodyStyle))
+            {
+                query = query.Where(c => c.BodyStyle == bodyStyle.Trim());
+            }
+
+            // CHỈ HIỆN XE CÒN HÀNG (Quantity > 0)
+            query = query.Where(c => c.Quantity > 0);
+
+            // 👉 CHỐT ĐƠN: Đếm tổng số lượng (để chia trang) và cắt lấy dữ liệu
             int totalCount = await query.CountAsync();
 
             var cars = await query
-                .OrderByDescending(c => c.CreatedAt)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
+                .OrderByDescending(c => c.CreatedAt) // Mới nhất lên đầu
+                .Skip((page - 1) * pageSize)         // Bỏ qua các xe ở trang trước
+                .Take(pageSize)                      // Chỉ lấy đúng số xe của trang hiện tại
                 .ToListAsync();
 
             return (cars, totalCount);

@@ -39,6 +39,9 @@ namespace LogicBusiness.Services.Admin
                 Condition = c.Condition.ToString(),
                 Status = c.Status.ToString(),
                 c.IsDeleted,
+                c.Quantity,
+                c.Transmission,
+                c.BodyStyle,
                 CreatedAt = c.CreatedAt?.ToString("dd/MM/yyyy HH:mm"),
                 UpdatedAt = c.UpdatedAt?.ToString("dd/MM/yyyy HH:mm")
             });
@@ -70,6 +73,9 @@ namespace LogicBusiness.Services.Admin
                 car.Color,
                 car.Mileage,
                 car.FuelType,
+                car.Quantity,
+                car.Transmission,
+                car.BodyStyle,
                 car.Description,
                 car.ImageUrl,
                 Condition = car.Condition.ToString(),
@@ -111,25 +117,6 @@ namespace LogicBusiness.Services.Admin
         }
 
         // 3. CREATE
-        //public async Task<(bool Success, string Message, Car? Data)> CreateCarAsync(Car car, IFormFile? imageFile)
-        //{
-        //    if (await _carRepo.CheckNameExistAsync(car.Name))
-        //        return (false, $"Tên xe '{car.Name}' đã tồn tại!", null);
-
-        //    car.CarId = 0;
-        //    car.CreatedAt = DateTime.Now;
-        //    car.UpdatedAt = DateTime.Now;
-        //    car.IsDeleted = false;
-        //    car.Status = CarStatus.Draft;
-
-        //    if (imageFile != null && imageFile.Length > 0)
-        //        car.ImageUrl = await FileHelper.UploadFileAsync(imageFile, "Cars", car.Name);
-        //    else
-        //        car.ImageUrl = "/uploads/Cars/default-car.jpg";
-
-        //    await _carRepo.AddCarAsync(car);
-        //    return (true, "Thêm xe thành công!", car);
-        //}
         public async Task<(bool Success, string Message, Car? Data)> CreateCarAsync(CarCreateDto dto)
         {
             // 0. CHUẨN HÓA DỮ LIỆU ĐẦU VÀO (Xử lý vụ hoa/thường và khoảng trắng)
@@ -154,8 +141,11 @@ namespace LogicBusiness.Services.Admin
                 Condition = dto.Condition,
                 Price = dto.Price,
                 FuelType = dto.FuelType,       // Nhận vào đây
-                Mileage = dto.Mileage ?? 0,    // Nhận vào đây
+                Mileage = (decimal)(dto.Mileage ?? 0),   // Nhận vào đây
                 Description = dto.Description, // Nhận vào đây
+                Quantity = dto.Quantity,
+                Transmission = dto.Transmission,
+                BodyStyle = dto.BodyStyle,
 
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now,
@@ -206,56 +196,6 @@ namespace LogicBusiness.Services.Admin
                     await _carFeatureRepo.AddRangeAsync(carFeatures);
                 }
             }
-
-            //// 4. THÊM THÔNG SỐ KỸ THUẬT (BẢN VÉT CẠN)
-            //if (!string.IsNullOrWhiteSpace(dto.SpecificationsJson))
-            //{
-            //    try
-            //    {
-            //        var rawStr = dto.SpecificationsJson.Trim();
-            //        int startIdx = rawStr.IndexOf('[');
-            //        int endIdx = rawStr.LastIndexOf(']');
-
-            //        if (startIdx != -1 && endIdx != -1)
-            //        {
-            //            var cleanJson = rawStr.Substring(startIdx, endIdx - startIdx + 1).Replace("\\\"", "\"");
-
-            //            var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            //            var categories = System.Text.Json.JsonSerializer.Deserialize<List<SpecCategoryDto>>(cleanJson, options);
-
-            //            if (categories != null && categories.Any())
-            //            {
-            //                var carSpecs = new List<CarSpecification>();
-            //                foreach (var cat in categories)
-            //                {
-            //                    if (cat.Items == null) continue; // Chặn lỗi nếu Items rỗng
-
-            //                    foreach (var item in cat.Items)
-            //                    {
-            //                        carSpecs.Add(new CarSpecification
-            //                        {
-            //                            CarId = car.CarId,
-            //                            Category = cat.Category ?? "Thông số chung",
-            //                            SpecName = item.Name,  // Đảm bảo item có thuộc tính Name
-            //                            SpecValue = item.Value // Đảm bảo item có thuộc tính Value
-            //                        });
-            //                    }
-            //                }
-
-            //                if (carSpecs.Any())
-            //                {
-            //                    await _carSpecificationRepo.AddRangeAsync(carSpecs);
-            //                }
-            //            }
-            //        }
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        // Nếu tạch, nó sẽ hiện lỗi ở đây trên Swagger
-            //        return (false, $"Lỗi xử lý JSON: {ex.Message}", car);
-            //    }
-            //}
-
            
             // 4. THÊM THÔNG SỐ KỸ THUẬT (KIỂU CHUỖI PHÂN CÁCH)
             if (!string.IsNullOrWhiteSpace(dto.Specifications))
@@ -329,6 +269,9 @@ namespace LogicBusiness.Services.Admin
             // 👉 Sửa lỗi CS0019: Ép kiểu về decimal và dùng 0.0 cho khớp với double
             // (Lưu ý: Nếu DTO của ní báo lỗi không cho dùng ??, ní chỉ cần đổi thành: car.Mileage = (decimal)dto.Mileage; là xong)
             car.Mileage = (decimal)dto.Mileage;
+            car.Quantity = dto.Quantity;
+    car.Transmission = dto.Transmission;
+    car.BodyStyle = dto.BodyStyle;
 
             car.UpdatedAt = DateTime.Now;
 
