@@ -1,6 +1,6 @@
 USE [master]
 GO
-/****** Object:  Database [oto]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Database [oto]    Script Date: 3/8/2026 0:37:44 ******/
 CREATE DATABASE [oto]
  CONTAINMENT = NONE
  ON  PRIMARY 
@@ -84,7 +84,7 @@ ALTER DATABASE [oto] SET QUERY_STORE (OPERATION_MODE = READ_WRITE, CLEANUP_POLIC
 GO
 USE [oto]
 GO
-/****** Object:  Table [dbo].[__EFMigrationsHistory]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[__EFMigrationsHistory]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -98,7 +98,7 @@ CREATE TABLE [dbo].[__EFMigrationsHistory](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[AIRecommendations]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[AIRecommendations]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -115,7 +115,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Articles]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[Articles]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -134,7 +134,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Banners]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[Banners]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -154,7 +154,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Bookings]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[Bookings]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -177,7 +177,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[CarFeatures]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[CarFeatures]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -192,7 +192,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[CarImages]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[CarImages]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -214,7 +214,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Cars]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[Cars]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -238,13 +238,16 @@ CREATE TABLE [dbo].[Cars](
 	[DeletedAt] [datetime] NULL,
 	[DeletedBy] [int] NULL,
 	[Condition] [int] NOT NULL,
+	[Transmission] [nvarchar](50) NULL,
+	[BodyStyle] [nvarchar](50) NULL,
+	[Quantity] [int] NOT NULL,
 PRIMARY KEY CLUSTERED 
 (
 	[CarId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[CarSpecifications]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[CarSpecifications]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -261,7 +264,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[CarWishlist]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[CarWishlist]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -277,7 +280,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[ChatMessages]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[ChatMessages]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -294,7 +297,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[ChatSessions]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[ChatSessions]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -312,7 +315,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Features]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[Features]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -327,7 +330,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[LocationTaxes]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[LocationTaxes]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -343,7 +346,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[OrderItems]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[OrderItems]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -360,7 +363,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Orders]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[Orders]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -381,7 +384,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[PaymentTransactions]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[PaymentTransactions]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -399,7 +402,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Promotions]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[Promotions]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -418,7 +421,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Reviews]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[Reviews]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -436,7 +439,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Showrooms]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[Showrooms]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -452,7 +455,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[SystemAuditLogs]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[SystemAuditLogs]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -474,7 +477,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[UserActivity]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[UserActivity]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -491,7 +494,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[UserLogins]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[UserLogins]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -508,7 +511,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Users]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Table [dbo].[Users]    Script Date: 3/8/2026 0:37:44 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -533,6 +536,72 @@ PRIMARY KEY CLUSTERED
 	[UserId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2037, 1)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2037, 2)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2037, 3)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2039, 1)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2039, 2)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2039, 3)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2039, 4)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2039, 5)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2041, 1)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2041, 2)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2041, 4)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2042, 1)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2042, 2)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2042, 3)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2043, 1)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2043, 3)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2043, 4)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2054, 1)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2054, 2)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2054, 3)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2059, 1)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2059, 3)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2059, 5)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2060, 1)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2060, 2)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2060, 3)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2061, 1)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2061, 2)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2061, 3)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2062, 1)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2062, 2)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2062, 3)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (2062, 4)
 GO
 SET IDENTITY_INSERT [dbo].[CarImages] ON 
 GO
@@ -620,35 +689,149 @@ INSERT [dbo].[CarImages] ([CarImageId], [CarId], [ImageUrl], [IsMainImage], [Cre
 GO
 INSERT [dbo].[CarImages] ([CarImageId], [CarId], [ImageUrl], [IsMainImage], [CreatedAt], [Is360Degree], [ImageType], [FileHash], [Description], [Title]) VALUES (1044, 1023, N'/uploads/Cars/VF9/7a20997b-72d1-4b34-bb5f-0f5b752efb9a.HEIC', 0, CAST(N'2026-03-02T10:21:31.970' AS DateTime), 0, N'lộn xộn', N'f1de78145b2a86d3687b04f07ea740ad', N'bầu trời đêm đầy sao', N'ảnh chụp tòa nhà')
 GO
+INSERT [dbo].[CarImages] ([CarImageId], [CarId], [ImageUrl], [IsMainImage], [CreatedAt], [Is360Degree], [ImageType], [FileHash], [Description], [Title]) VALUES (1045, 2039, N'/uploads/Cars/string/749bbe50-db27-46fc-89f0-34c18cabbd92.JPG', 0, CAST(N'2026-03-07T02:56:11.253' AS DateTime), 0, N'àbhkdjkasdjlhasiohdioa', N'69b6f01d43103b19b6edcc68277884e0', N'Nhanh & mạnh mẽ', N'Động cơ')
+GO
+INSERT [dbo].[CarImages] ([CarImageId], [CarId], [ImageUrl], [IsMainImage], [CreatedAt], [Is360Degree], [ImageType], [FileHash], [Description], [Title]) VALUES (1046, 2039, N'/uploads/Cars/string/38de7902-0116-418c-b679-b5bedcdc5afb.HEIC', 0, CAST(N'2026-03-07T02:57:36.913' AS DateTime), 0, N'àbhkdjkasdjlhasiohdioa', N'f1de78145b2a86d3687b04f07ea740ad', N'1', N'string1')
+GO
+INSERT [dbo].[CarImages] ([CarImageId], [CarId], [ImageUrl], [IsMainImage], [CreatedAt], [Is360Degree], [ImageType], [FileHash], [Description], [Title]) VALUES (1047, 2039, N'/uploads/Cars/string/cce7055b-08a7-4e38-a0ec-5cc0d8bd8fa0.HEIC', 0, CAST(N'2026-03-07T02:57:36.927' AS DateTime), 0, N'àbhkdjkasdjlhasiohdioa', N'1247749242ed9a1e70663e925ea19c4b', N'2', N'string2')
+GO
+INSERT [dbo].[CarImages] ([CarImageId], [CarId], [ImageUrl], [IsMainImage], [CreatedAt], [Is360Degree], [ImageType], [FileHash], [Description], [Title]) VALUES (1048, 2039, N'/uploads/Cars/string/a64be352-3eea-41a9-8834-6267a74b8d90.MOV', 0, CAST(N'2026-03-07T02:57:36.977' AS DateTime), 0, N'àbhkdjkasdjlhasiohdioa', N'c294043ea4d2fc6d23d6356346119ed0', N'3', N'string3')
+GO
+INSERT [dbo].[CarImages] ([CarImageId], [CarId], [ImageUrl], [IsMainImage], [CreatedAt], [Is360Degree], [ImageType], [FileHash], [Description], [Title]) VALUES (1049, 2039, N'/uploads/Cars/string/226151d3-6765-4321-ba71-9ad0b81fe49d.JPG', 0, CAST(N'2026-03-07T02:58:49.477' AS DateTime), 0, N'qửqewt3', N'0ee6731369409a3c658853f872b140be', N'1', N'Động cơ')
+GO
+INSERT [dbo].[CarImages] ([CarImageId], [CarId], [ImageUrl], [IsMainImage], [CreatedAt], [Is360Degree], [ImageType], [FileHash], [Description], [Title]) VALUES (1050, 2039, N'/uploads/Cars\string\360/exterior/ce9f3805-b98a-474b-933b-1eb7b84958bf.JPG', 0, CAST(N'2026-03-07T03:00:10.767' AS DateTime), 1, NULL, NULL, NULL, NULL)
+GO
+INSERT [dbo].[CarImages] ([CarImageId], [CarId], [ImageUrl], [IsMainImage], [CreatedAt], [Is360Degree], [ImageType], [FileHash], [Description], [Title]) VALUES (1051, 2039, N'/uploads/Cars\string\360/exterior/9dd25b8d-1b5e-4a98-ba90-0cd25730e0de.WEBP', 0, CAST(N'2026-03-07T03:00:10.773' AS DateTime), 1, NULL, NULL, NULL, NULL)
+GO
+INSERT [dbo].[CarImages] ([CarImageId], [CarId], [ImageUrl], [IsMainImage], [CreatedAt], [Is360Degree], [ImageType], [FileHash], [Description], [Title]) VALUES (1052, 2039, N'/uploads/Cars\string\360/exterior/bb3b63ff-dd06-4052-8dae-e95f17f906a1.PNG', 0, CAST(N'2026-03-07T03:00:10.783' AS DateTime), 1, NULL, NULL, NULL, NULL)
+GO
+INSERT [dbo].[CarImages] ([CarImageId], [CarId], [ImageUrl], [IsMainImage], [CreatedAt], [Is360Degree], [ImageType], [FileHash], [Description], [Title]) VALUES (1053, 2039, N'/uploads/Cars\string\360/exterior/2d478859-1f53-4c8c-97ee-148279e719a4.PNG', 0, CAST(N'2026-03-07T03:00:10.813' AS DateTime), 1, NULL, NULL, NULL, NULL)
+GO
+INSERT [dbo].[CarImages] ([CarImageId], [CarId], [ImageUrl], [IsMainImage], [CreatedAt], [Is360Degree], [ImageType], [FileHash], [Description], [Title]) VALUES (1054, 2061, N'/uploads/Cars/VF9/74de7866-bf74-4ae6-a04e-255392f44342.HEIC', 0, CAST(N'2026-03-07T14:00:41.270' AS DateTime), 0, N'ngoại hình', N'f1de78145b2a86d3687b04f07ea740ad', N'Mạnh mẽ & cá tính', N'Mạnh mẽ & cá tính')
+GO
+INSERT [dbo].[CarImages] ([CarImageId], [CarId], [ImageUrl], [IsMainImage], [CreatedAt], [Is360Degree], [ImageType], [FileHash], [Description], [Title]) VALUES (1055, 2061, N'/uploads/Cars/VF9/c1296fcd-325a-4e1b-853c-74a57d80a059.JPG', 0, CAST(N'2026-03-07T14:00:41.297' AS DateTime), 0, N'ngoại hình', N'4efef19ccce104390c2c163a0c0f4484', N'phong cách & sáng tạo', N'phong cách & sáng tạo')
+GO
+INSERT [dbo].[CarImages] ([CarImageId], [CarId], [ImageUrl], [IsMainImage], [CreatedAt], [Is360Degree], [ImageType], [FileHash], [Description], [Title]) VALUES (1056, 2062, N'/uploads/Cars/VINFAST/VINFAST_VF5/360/3b71c36c-b2ff-4661-a1b0-29502a760754.JPG', 0, CAST(N'2026-03-08T00:21:11.283' AS DateTime), 1, NULL, NULL, NULL, NULL)
+GO
 SET IDENTITY_INSERT [dbo].[CarImages] OFF
 GO
 SET IDENTITY_INSERT [dbo].[Cars] ON 
 GO
-INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition]) VALUES (1, N'lamobogini', N'Sport', 2026, CAST(50000.00 AS Decimal(18, 2)), N'trắng', N'string', N'lambo', CAST(10000.00 AS Decimal(18, 2)), N'https://giaxeoto.vn/admin/upload/images/resize/640-ngoai-that-xe-lamborghini-sian.jpg', 1, CAST(N'2026-01-22T13:52:15.270' AS DateTime), CAST(N'2026-02-27T21:27:10.343' AS DateTime), NULL, 0, CAST(N'2026-02-27T21:26:58.457' AS DateTime), 1, 0)
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (1, N'lamobogini', N'Sport', 2026, CAST(50000.00 AS Decimal(18, 2)), N'trắng', N'string', N'lambo', CAST(10000.00 AS Decimal(18, 2)), N'https://giaxeoto.vn/admin/upload/images/resize/640-ngoai-that-xe-lamborghini-sian.jpg', 1, CAST(N'2026-01-22T13:52:15.270' AS DateTime), CAST(N'2026-02-27T21:27:10.343' AS DateTime), NULL, 0, CAST(N'2026-02-27T21:26:58.457' AS DateTime), 1, 0, NULL, NULL, 1)
 GO
-INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition]) VALUES (2, N'Honda Civic', N'Sport', 2019, CAST(650000000.00 AS Decimal(18, 2)), N'White', N'phong cách thể thao', N'Honda', CAST(42000.00 AS Decimal(18, 2)), N'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ6SzECa2NaZTSkmlf_66zOhpK7V3cVoXQS1Q&s', 1, CAST(N'2026-01-22T13:52:15.270' AS DateTime), CAST(N'2026-02-27T17:02:50.803' AS DateTime), NULL, 0, NULL, NULL, 0)
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2, N'Honda Civic', N'Sport', 2019, CAST(650000000.00 AS Decimal(18, 2)), N'White', N'phong cách thể thao', N'Honda', CAST(42000.00 AS Decimal(18, 2)), N'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ6SzECa2NaZTSkmlf_66zOhpK7V3cVoXQS1Q&s', 1, CAST(N'2026-01-22T13:52:15.270' AS DateTime), CAST(N'2026-02-27T17:02:50.803' AS DateTime), NULL, 0, NULL, NULL, 0, NULL, NULL, 1)
 GO
-INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition]) VALUES (3, N'Mazda CX-5', N'Premium', 2021, CAST(900000000.00 AS Decimal(18, 2)), N'Red', N'SUV 5 ch?, n?i th?t cao c?p', N'Mazda', CAST(15000.00 AS Decimal(18, 2)), N'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQE9xIfpTo704onWifqv25wfuM2vJrqji0ghg&s', 0, CAST(N'2026-01-22T13:52:15.270' AS DateTime), CAST(N'2026-01-31T08:44:17.360' AS DateTime), NULL, 0, NULL, NULL, 0)
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (3, N'Mazda CX-5', N'Premium', 2021, CAST(900000000.00 AS Decimal(18, 2)), N'Red', N'SUV 5 ch?, n?i th?t cao c?p', N'Mazda', CAST(15000.00 AS Decimal(18, 2)), N'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQE9xIfpTo704onWifqv25wfuM2vJrqji0ghg&s', 0, CAST(N'2026-01-22T13:52:15.270' AS DateTime), CAST(N'2026-01-31T08:44:17.360' AS DateTime), NULL, 0, NULL, NULL, 0, NULL, NULL, 1)
 GO
-INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition]) VALUES (4, N'Ford Ranger', N'Wildtrak', 2022, CAST(950000000.00 AS Decimal(18, 2)), N'Blue', N'Bán t?i m?nh m?, off-road t?t', N'Ford', CAST(10000.00 AS Decimal(18, 2)), N'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTzVsAeejSiIZ7j2FIpwE9xrq-4-dPW8iciuw&s', 0, CAST(N'2026-01-22T13:52:15.270' AS DateTime), CAST(N'2026-01-31T08:44:40.013' AS DateTime), NULL, 0, NULL, NULL, 0)
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (4, N'Ford Ranger', N'Wildtrak', 2022, CAST(950000000.00 AS Decimal(18, 2)), N'Blue', N'Bán t?i m?nh m?, off-road t?t', N'Ford', CAST(10000.00 AS Decimal(18, 2)), N'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTzVsAeejSiIZ7j2FIpwE9xrq-4-dPW8iciuw&s', 0, CAST(N'2026-01-22T13:52:15.270' AS DateTime), CAST(N'2026-01-31T08:44:40.013' AS DateTime), NULL, 0, NULL, NULL, 0, NULL, NULL, 1)
 GO
-INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition]) VALUES (5, N'Mercedes-Benz C300', N'AMG', 2021, CAST(1800000000.00 AS Decimal(18, 2)), N'Silver', N'Sedan h?ng sang, hi?u su?t cao', N'Mercedes-Benz', CAST(8000.00 AS Decimal(18, 2)), N'https://mercedes-benz-vn.com/wp-content/uploads/c300.jpg', 0, CAST(N'2026-01-22T13:52:15.270' AS DateTime), CAST(N'2026-01-31T08:45:01.000' AS DateTime), NULL, 0, NULL, NULL, 0)
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (5, N'Mercedes-Benz C300', N'AMG', 2021, CAST(1800000000.00 AS Decimal(18, 2)), N'Silver', N'Sedan h?ng sang, hi?u su?t cao', N'Mercedes-Benz', CAST(8000.00 AS Decimal(18, 2)), N'https://mercedes-benz-vn.com/wp-content/uploads/c300.jpg', 0, CAST(N'2026-01-22T13:52:15.270' AS DateTime), CAST(N'2026-01-31T08:45:01.000' AS DateTime), NULL, 0, NULL, NULL, 0, NULL, NULL, 1)
 GO
-INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition]) VALUES (11, N'Mẹt', N'sport', 2025, CAST(555555000.00 AS Decimal(18, 2)), N'den', N'adfdfdfd', N'Mẹt', CAST(555555555.00 AS Decimal(18, 2)), N'https://giaxeoto.vn/admin/upload/images/resize/640-ngoai-that-xe-lamborghini-sian.jpg', 0, CAST(N'2026-01-26T03:29:35.470' AS DateTime), CAST(N'2026-01-29T09:06:07.323' AS DateTime), NULL, 0, NULL, NULL, 0)
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (11, N'Mẹt', N'sport', 2025, CAST(555555000.00 AS Decimal(18, 2)), N'den', N'adfdfdfd', N'Mẹt', CAST(555555555.00 AS Decimal(18, 2)), N'https://giaxeoto.vn/admin/upload/images/resize/640-ngoai-that-xe-lamborghini-sian.jpg', 0, CAST(N'2026-01-26T03:29:35.470' AS DateTime), CAST(N'2026-01-29T09:06:07.323' AS DateTime), NULL, 0, NULL, NULL, 0, NULL, NULL, 1)
 GO
-INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition]) VALUES (21, N'MG', N'Sport', 2025, CAST(800000.00 AS Decimal(18, 2)), N'Đen', N'abc', N'MG', CAST(222.00 AS Decimal(18, 2)), N'https://mglamdong.com/wp-content/uploads/2024/11/khunglogomglamdong1.jpg', 2, CAST(N'2026-01-29T09:08:44.593' AS DateTime), CAST(N'2026-01-29T09:08:44.593' AS DateTime), NULL, 0, NULL, NULL, 0)
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (21, N'MG', N'Sport', 2025, CAST(800000.00 AS Decimal(18, 2)), N'Đen', N'abc', N'MG', CAST(222.00 AS Decimal(18, 2)), N'https://mglamdong.com/wp-content/uploads/2024/11/khunglogomglamdong1.jpg', 2, CAST(N'2026-01-29T09:08:44.593' AS DateTime), CAST(N'2026-01-29T09:08:44.593' AS DateTime), NULL, 0, NULL, NULL, 0, NULL, NULL, 1)
 GO
-INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition]) VALUES (22, N'VF7', N'Sport', 2025, CAST(900000000.00 AS Decimal(18, 2)), N'trắng, xanh, đen, xám', N'là mẫu xe mang phong cách thể thao ', N'Vinfast', CAST(500000.00 AS Decimal(18, 2)), N'/uploads/87f2ce9d-a829-4371-a902-40b5378a880a.JPG', 0, CAST(N'2026-02-25T01:42:40.920' AS DateTime), CAST(N'2026-02-25T01:42:40.920' AS DateTime), N'Điện', 0, NULL, NULL, 0)
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (22, N'VF7', N'Sport', 2025, CAST(900000000.00 AS Decimal(18, 2)), N'trắng, xanh, đen, xám', N'là mẫu xe mang phong cách thể thao ', N'Vinfast', CAST(500000.00 AS Decimal(18, 2)), N'/uploads/87f2ce9d-a829-4371-a902-40b5378a880a.JPG', 0, CAST(N'2026-02-25T01:42:40.920' AS DateTime), CAST(N'2026-02-25T01:42:40.920' AS DateTime), N'Điện', 0, NULL, NULL, 0, NULL, NULL, 1)
 GO
-INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition]) VALUES (1022, N'VF8', N'Sport', 2025, CAST(130000000.00 AS Decimal(18, 2)), N'đen, trắng , xanh', N'adu vjp lắm nha', N'Vinfast', CAST(500000.00 AS Decimal(18, 2)), N'/uploads/Cars/VF8/84a68aa8-b84e-4e0b-9175-3f0b0a01080f.JPG', 3, CAST(N'2026-02-27T08:55:27.617' AS DateTime), CAST(N'2026-02-28T12:20:09.937' AS DateTime), N'Điện', 0, NULL, NULL, 0)
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (1022, N'VF8', N'Sport', 2025, CAST(130000000.00 AS Decimal(18, 2)), N'đen, trắng , xanh', N'adu vjp lắm nha', N'Vinfast', CAST(500000.00 AS Decimal(18, 2)), N'/uploads/Cars/VF8/84a68aa8-b84e-4e0b-9175-3f0b0a01080f.JPG', 3, CAST(N'2026-02-27T08:55:27.617' AS DateTime), CAST(N'2026-02-28T12:20:09.937' AS DateTime), N'Điện', 0, NULL, NULL, 0, NULL, NULL, 1)
 GO
-INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition]) VALUES (1023, N'VF9', N'Stress', 2025, CAST(150000000.00 AS Decimal(18, 2)), N'trắng, lục bảo, đen, xanh', N'sang trọng, quý phái', N'Vinfast', CAST(20000000.00 AS Decimal(18, 2)), N'/uploads/Cars/VF9/7a9f8aba-12e5-436b-b153-f864100d5f9a.JPG', 1, CAST(N'2026-02-27T10:04:51.817' AS DateTime), CAST(N'2026-02-27T10:04:51.817' AS DateTime), N'Điện', 0, NULL, NULL, 0)
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (1023, N'VF9', N'Stress', 2025, CAST(150000000.00 AS Decimal(18, 2)), N'trắng, lục bảo, đen, xanh', N'sang trọng, quý phái', N'Vinfast', CAST(20000000.00 AS Decimal(18, 2)), N'/uploads/Cars/VF9/7a9f8aba-12e5-436b-b153-f864100d5f9a.JPG', 1, CAST(N'2026-02-27T10:04:51.817' AS DateTime), CAST(N'2026-02-27T10:04:51.817' AS DateTime), N'Điện', 0, NULL, NULL, 0, NULL, NULL, 1)
 GO
-INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition]) VALUES (1024, N'LUX-A', N'Sprot', 2020, CAST(40000000.00 AS Decimal(18, 2)), N'trắng, đen, xám , nâu', N'xe cũ nhưng mà trông vẫn ngon nghẻ lắm', N'Vinfast', CAST(30000.00 AS Decimal(18, 2)), N'/uploads/Cars/LUX-A/7a1601fc-072f-4daf-8d10-21208d8687ed.JPG', 1, CAST(N'2026-02-27T10:14:30.517' AS DateTime), CAST(N'2026-02-28T21:24:17.727' AS DateTime), N'Xăng', 0, CAST(N'2026-02-28T12:31:23.643' AS DateTime), 1, 2)
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (1024, N'LUX-A', N'Sprot', 2020, CAST(40000000.00 AS Decimal(18, 2)), N'trắng, đen, xám , nâu', N'xe cũ nhưng mà trông vẫn ngon nghẻ lắm', N'Vinfast', CAST(30000.00 AS Decimal(18, 2)), N'/uploads/Cars/LUX-A/7a1601fc-072f-4daf-8d10-21208d8687ed.JPG', 1, CAST(N'2026-02-27T10:14:30.517' AS DateTime), CAST(N'2026-02-28T21:24:17.727' AS DateTime), N'Xăng', 0, CAST(N'2026-02-28T12:31:23.643' AS DateTime), 1, 2, NULL, NULL, 1)
 GO
-INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition]) VALUES (2027, N'string', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg', 0, CAST(N'2026-03-03T21:43:55.137' AS DateTime), CAST(N'2026-03-03T21:45:01.590' AS DateTime), N'string', 0, CAST(N'2026-03-03T14:43:36.797' AS DateTime), 0, 2)
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2028, N'Lạc Hồng LSX 600', N'Premium', NULL, CAST(5000000000.00 AS Decimal(18, 2)), N'Đen', N'XE sang', N'Vinfast', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 0, CAST(N'2026-03-05T22:10:30.567' AS DateTime), CAST(N'2026-03-05T22:10:30.567' AS DateTime), N'Điện', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2029, N'BMW', N'Premium', 2022, CAST(4000.00 AS Decimal(18, 2)), N'ĐEN, TRẮNG', N'ádawsdqwdqw', N'MẸC XE ĐÉC', CAST(5000.00 AS Decimal(18, 2)), N'/uploads/Cars/BMW/b8f37161-0230-4157-ac30-01753267d0c7.JPG', 0, CAST(N'2026-03-05T22:27:10.560' AS DateTime), CAST(N'2026-03-05T22:27:10.560' AS DateTime), N'Xăng', 0, NULL, NULL, 1, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2030, N'SH', N'Premium', 2025, CAST(360000000.00 AS Decimal(18, 2)), N'Đen', N'Xe SH', N'Honda', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/SH/aa3a34fc-7efc-4475-b139-c3932a06d79a.JPG', 0, CAST(N'2026-03-06T22:54:28.960' AS DateTime), CAST(N'2026-03-06T22:54:28.960' AS DateTime), N'Xăng', 0, NULL, NULL, 1, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2031, N'AB', N'Premium', 2025, CAST(4700000.00 AS Decimal(18, 2)), N'string', N'xsasadasd', N'Honda', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/AB/adb35b72-2c60-476f-865c-18fc894dd52b.JPG', 0, CAST(N'2026-03-06T23:06:07.570' AS DateTime), CAST(N'2026-03-06T23:06:07.570' AS DateTime), N'Xăng', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2037, N'string4', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 0, CAST(N'2026-03-07T00:01:00.587' AS DateTime), CAST(N'2026-03-07T00:01:00.587' AS DateTime), N'string', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2038, N'string', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 0, CAST(N'2026-03-07T00:03:48.357' AS DateTime), CAST(N'2026-03-07T02:16:05.580' AS DateTime), N'string', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2039, N'string', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/string/1b7ae8d2-7af6-4846-924f-ac60ab5e1449_2022_10_02_20_34_7C12845B-10DF-450D-B3CC-C8D2F0696909.JPG', 1, CAST(N'2026-03-07T00:04:08.037' AS DateTime), CAST(N'2026-03-07T02:34:38.937' AS DateTime), N'string', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2040, N'string7', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 0, CAST(N'2026-03-07T00:06:21.310' AS DateTime), CAST(N'2026-03-07T00:06:21.310' AS DateTime), N'string', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2041, N'string8', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 0, CAST(N'2026-03-07T00:06:40.483' AS DateTime), CAST(N'2026-03-07T00:06:40.483' AS DateTime), N'string', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2042, N'string9', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 0, CAST(N'2026-03-07T00:09:25.377' AS DateTime), CAST(N'2026-03-07T00:09:25.377' AS DateTime), N'string', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2043, N'string10', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 0, CAST(N'2026-03-07T00:10:37.273' AS DateTime), CAST(N'2026-03-07T00:10:37.273' AS DateTime), N'string', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2044, N'string11', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 0, CAST(N'2026-03-07T00:13:34.790' AS DateTime), CAST(N'2026-03-07T00:13:34.790' AS DateTime), N'string', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2045, N'string12', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 0, CAST(N'2026-03-07T00:14:23.630' AS DateTime), CAST(N'2026-03-07T00:14:23.630' AS DateTime), N'string', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2046, N'string22', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 0, CAST(N'2026-03-07T00:22:05.373' AS DateTime), CAST(N'2026-03-07T00:22:05.373' AS DateTime), N'string', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2047, N'string33', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 0, CAST(N'2026-03-07T00:24:54.470' AS DateTime), CAST(N'2026-03-07T01:55:23.393' AS DateTime), N'string', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2048, N'string36', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 0, CAST(N'2026-03-07T00:27:03.903' AS DateTime), CAST(N'2026-03-07T00:27:03.903' AS DateTime), N'string', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2049, N'string37', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 0, CAST(N'2026-03-07T00:28:13.313' AS DateTime), CAST(N'2026-03-07T00:28:13.313' AS DateTime), N'string', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2050, N'string34', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 0, CAST(N'2026-03-07T00:29:45.743' AS DateTime), CAST(N'2026-03-07T00:29:45.743' AS DateTime), N'string', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2051, N'string32', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 0, CAST(N'2026-03-07T00:30:36.217' AS DateTime), CAST(N'2026-03-07T00:30:36.217' AS DateTime), N'string', 1, CAST(N'2026-03-07T23:30:28.633' AS DateTime), 1, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2052, N'string31', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 0, CAST(N'2026-03-07T00:34:14.597' AS DateTime), CAST(N'2026-03-07T00:34:14.597' AS DateTime), N'string', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2053, N'string39', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 0, CAST(N'2026-03-07T00:35:26.500' AS DateTime), CAST(N'2026-03-07T00:35:26.500' AS DateTime), N'string', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2054, N'string40', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/string40/9f6b1154-37f0-447a-8909-33fe8ebc5ac3.JPG', 0, CAST(N'2026-03-07T00:39:13.003' AS DateTime), CAST(N'2026-03-07T00:39:13.007' AS DateTime), N'string', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2055, N'string41', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 0, CAST(N'2026-03-07T00:43:03.850' AS DateTime), CAST(N'2026-03-07T00:43:03.850' AS DateTime), N'string', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2056, N'string43', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 0, CAST(N'2026-03-07T00:46:49.083' AS DateTime), CAST(N'2026-03-07T00:46:49.083' AS DateTime), N'string', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2058, N'2026', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/2026/200447a5-ff70-4b37-b2ad-847a56bbffb4.JPG', 0, CAST(N'2026-03-07T02:31:09.340' AS DateTime), CAST(N'2026-03-07T02:31:09.340' AS DateTime), N'string', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2059, N'2027', N'string', 0, CAST(0.00 AS Decimal(18, 2)), N'string', N'string', N'string', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/string/d152b008-7210-4b27-8fab-44c590cecd90_2025_05_19_20_03_DEC548E5-DA49-40B5-AFA3-00F0FC56D237.JPG', 0, CAST(N'2026-03-07T02:31:56.537' AS DateTime), CAST(N'2026-03-07T02:32:45.063' AS DateTime), N'string', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2060, N'VF3', N'Family', 2025, CAST(30000000.00 AS Decimal(18, 2)), N'Trắng', N'Mẫu xe nhỏ gọn, phù hợp với túi tiền ', N'VINFAST', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/VINFAST/VINFAST_VF3/390b0ce5-d1d3-45c6-aa3f-cc47800eee66.JPG', 0, CAST(N'2026-03-07T13:38:46.477' AS DateTime), CAST(N'2026-03-07T13:51:12.497' AS DateTime), N'Điện', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2061, N'VF9', N'Premium', 2025, CAST(3000000000.00 AS Decimal(18, 2)), N'trắng', N'mô tả', N'VINFAST', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/VINFAST/VINFAST_VF9/be98675f-629a-4cca-8974-7b0f45c47415.JPG', 0, CAST(N'2026-03-07T13:55:05.680' AS DateTime), CAST(N'2026-03-07T13:57:14.083' AS DateTime), N'Điện', 0, NULL, NULL, 0, NULL, NULL, 1)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Condition], [Transmission], [BodyStyle], [Quantity]) VALUES (2062, N'VF5', N'Dịch vụ', 2025, CAST(9000000.00 AS Decimal(18, 2)), N'Trắng', N'sdqwfqwfqwfqwfw', N'VINFAST', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/VINFAST/VINFAST_VF5/40f61043-19d5-467e-ad09-926c076e65c2.HEIC', 1, CAST(N'2026-03-07T23:54:40.510' AS DateTime), CAST(N'2026-03-07T23:54:40.510' AS DateTime), N'Điện', 0, NULL, NULL, 0, N'Số Sàn', N'SUV', 1)
 GO
 SET IDENTITY_INSERT [dbo].[Cars] OFF
+GO
+SET IDENTITY_INSERT [dbo].[CarSpecifications] ON 
+GO
+INSERT [dbo].[CarSpecifications] ([SpecId], [CarId], [Category], [SpecName], [SpecValue]) VALUES (2, 2048, N'Test Nhóm', N'Test Tên', N'Test Giá Trị')
+GO
+INSERT [dbo].[CarSpecifications] ([SpecId], [CarId], [Category], [SpecName], [SpecValue]) VALUES (3, 2049, N'Test Nhóm', N'Test Tên', N'Test Giá Trị')
+GO
+INSERT [dbo].[CarSpecifications] ([SpecId], [CarId], [Category], [SpecName], [SpecValue]) VALUES (10, 2047, N'ộng cơ', N'Mã lực', N'300 HP')
+GO
+INSERT [dbo].[CarSpecifications] ([SpecId], [CarId], [Category], [SpecName], [SpecValue]) VALUES (11, 2047, N'Động cơ', N'Mô-men xoắn', N'400 Nm')
+GO
+INSERT [dbo].[CarSpecifications] ([SpecId], [CarId], [Category], [SpecName], [SpecValue]) VALUES (12, 2047, N'Kích thước', N'Chiều dài', N'4940 mm')
+GO
+INSERT [dbo].[CarSpecifications] ([SpecId], [CarId], [Category], [SpecName], [SpecValue]) VALUES (13, 2039, N'Động cơ', N'Mã lực', N'300 HP')
+GO
+INSERT [dbo].[CarSpecifications] ([SpecId], [CarId], [Category], [SpecName], [SpecValue]) VALUES (14, 2039, N'Động cơ', N'Mô-men xoắn', N'400 Nm')
+GO
+INSERT [dbo].[CarSpecifications] ([SpecId], [CarId], [Category], [SpecName], [SpecValue]) VALUES (15, 2039, N'Kích thước', N'Chiều dài', N'4940 mm')
+GO
+INSERT [dbo].[CarSpecifications] ([SpecId], [CarId], [Category], [SpecName], [SpecValue]) VALUES (30, 2060, N'Động cơ', N'Mã lực', N'300 HP')
+GO
+INSERT [dbo].[CarSpecifications] ([SpecId], [CarId], [Category], [SpecName], [SpecValue]) VALUES (31, 2060, N'Động cơ', N'Mô-men xoắn', N'400 Nm')
+GO
+INSERT [dbo].[CarSpecifications] ([SpecId], [CarId], [Category], [SpecName], [SpecValue]) VALUES (32, 2060, N'Kích thước', N'Chiều dài', N'4940 mm')
+GO
+INSERT [dbo].[CarSpecifications] ([SpecId], [CarId], [Category], [SpecName], [SpecValue]) VALUES (37, 2061, N'Động cơ', N'Mã lực', N'300 HP')
+GO
+INSERT [dbo].[CarSpecifications] ([SpecId], [CarId], [Category], [SpecName], [SpecValue]) VALUES (38, 2061, N'Động cơ', N'Mô-men xoắn', N'400 Nm')
+GO
+INSERT [dbo].[CarSpecifications] ([SpecId], [CarId], [Category], [SpecName], [SpecValue]) VALUES (39, 2061, N'Kích thước', N'Chiều dài', N'4940 mm')
+GO
+INSERT [dbo].[CarSpecifications] ([SpecId], [CarId], [Category], [SpecName], [SpecValue]) VALUES (40, 2062, N'Động cơ', N'mã lục', N'400N')
+GO
+SET IDENTITY_INSERT [dbo].[CarSpecifications] OFF
 GO
 SET IDENTITY_INSERT [dbo].[CarWishlist] ON 
 GO
@@ -768,7 +951,7 @@ SET IDENTITY_INSERT [dbo].[Users] OFF
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__Promotio__A25C5AA7A444C1CD]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Index [UQ__Promotio__A25C5AA7A444C1CD]    Script Date: 3/8/2026 0:37:44 ******/
 ALTER TABLE [dbo].[Promotions] ADD UNIQUE NONCLUSTERED 
 (
 	[Code] ASC
@@ -776,7 +959,7 @@ ALTER TABLE [dbo].[Promotions] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__Users__536C85E4014A9D7C]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Index [UQ__Users__536C85E4014A9D7C]    Script Date: 3/8/2026 0:37:44 ******/
 ALTER TABLE [dbo].[Users] ADD UNIQUE NONCLUSTERED 
 (
 	[Username] ASC
@@ -784,7 +967,7 @@ ALTER TABLE [dbo].[Users] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__Users__A9D105348B415492]    Script Date: 3/5/2026 0:28:27 ******/
+/****** Object:  Index [UQ__Users__A9D105348B415492]    Script Date: 3/8/2026 0:37:44 ******/
 ALTER TABLE [dbo].[Users] ADD UNIQUE NONCLUSTERED 
 (
 	[Email] ASC
@@ -817,6 +1000,8 @@ GO
 ALTER TABLE [dbo].[Cars] ADD  DEFAULT ((0)) FOR [IsDeleted]
 GO
 ALTER TABLE [dbo].[Cars] ADD  DEFAULT ((0)) FOR [Condition]
+GO
+ALTER TABLE [dbo].[Cars] ADD  DEFAULT ((1)) FOR [Quantity]
 GO
 ALTER TABLE [dbo].[CarWishlist] ADD  DEFAULT (getdate()) FOR [AddedAt]
 GO
