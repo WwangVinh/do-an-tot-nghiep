@@ -132,6 +132,13 @@ namespace LogicBusiness.Services.Admin
         //}
         public async Task<(bool Success, string Message, Car? Data)> CreateCarAsync(CarCreateDto dto)
         {
+            // 0. CHUẨN HÓA DỮ LIỆU ĐẦU VÀO (Xử lý vụ hoa/thường và khoảng trắng)
+            if (!string.IsNullOrWhiteSpace(dto.Brand))
+                dto.Brand = dto.Brand.Trim().ToUpper(); // Biến mọi kiểu nhập (vd: "  vinFast ") thành chữ IN HOA "VINFAST"
+
+            if (!string.IsNullOrWhiteSpace(dto.Name))
+                dto.Name = dto.Name.Trim(); // Dọn dẹp khoảng trắng thừa của Tên xe (vd: " VF8 " thành "VF8")
+
             // 1. KIỂM TRA TÊN XE
             if (await _carRepo.CheckCarListingExistAsync(dto.Name, dto.Brand, dto.Year, dto.Color, (int)dto.Condition, (decimal)(dto.Mileage ?? 0)))
                 return (false, "Tin đăng này đã tồn tại rồi ní ơi!", null);
@@ -158,13 +165,23 @@ namespace LogicBusiness.Services.Admin
 
             // Xử lý ảnh xe
             if (dto.ImageFile != null && dto.ImageFile.Length > 0)
-                car.ImageUrl = await FileHelper.UploadFileAsync(dto.ImageFile, "Cars", car.Name);
+            {
+                // 1. Tạo đường dẫn thư mục cha chứa Hãng (VD: "Cars/VINFAST")
+                string subFolder = $"Cars/{car.Brand}";
+
+                // 2. Định danh folder con cho từng xe (VD: "VINFAST_VF7")
+                string targetName = $"{car.Brand}_{car.Name}";
+
+                // 3. Gọi Shipper FileHelper đi giao hàng
+                car.ImageUrl = await FileHelper.UploadFileAsync(dto.ImageFile, subFolder, targetName);
+            }
             else
+            {
                 car.ImageUrl = "/uploads/Cars/default-car.jpg.png"; // Ảnh mặc định
+            }
 
-            // 👉 LƯU XE LẦN 1: Để hệ thống sinh ra cái CarId mới tinh
+            // 👉 BƯỚC BẮT BUỘC: Lưu xe vào DB để EF Core tự động lấy CarId mới nhất gán vào biến 'car'
             await _carRepo.AddCarAsync(car);
-
             // -------------------------------------------------------------
             // TỪ ĐÂY TRỞ XUỐNG BẮT ĐẦU XỬ LÝ 2 BẢNG PHỤ DỰA VÀO CARID MỚI
             // -------------------------------------------------------------
@@ -285,6 +302,13 @@ namespace LogicBusiness.Services.Admin
         // 4. UPDATE (Bản Chốt Hạ 2026)
         public async Task<(bool Success, string Message, Car? Car)> UpdateCarAsync(int id, CarUpdateDto dto)
         {
+            // 0. CHUẨN HÓA DỮ LIỆU ĐẦU VÀO (Tuyệt chiêu đồng bộ hệ thống)
+            if (!string.IsNullOrWhiteSpace(dto.Brand))
+                dto.Brand = dto.Brand.Trim().ToUpper(); // Ép chuẩn in hoa: "  honda " -> "HONDA"
+
+            if (!string.IsNullOrWhiteSpace(dto.Name))
+                dto.Name = dto.Name.Trim(); // Dọn dẹp khoảng trắng
+
             // 1. Tìm xe cũ trong SQL Server 2022
             var car = await _carRepo.GetByIdAsync(id);
             if (car == null) return (false, "Không tìm thấy xe!", null);
@@ -296,37 +320,43 @@ namespace LogicBusiness.Services.Admin
             car.Price = (decimal)dto.Price;
             car.Year = dto.Year;
             car.Description = dto.Description;
+
+            // 👉 Sửa lỗi CS0266: Ép kiểu int về Enum CarCondition
+            car.Condition = (CarCondition)dto.Condition;
+
+            car.FuelType = dto.FuelType;
+
+            // 👉 Sửa lỗi CS0019: Ép kiểu về decimal và dùng 0.0 cho khớp với double
+            // (Lưu ý: Nếu DTO của ní báo lỗi không cho dùng ??, ní chỉ cần đổi thành: car.Mileage = (decimal)dto.Mileage; là xong)
+            car.Mileage = (decimal)dto.Mileage;
+
             car.UpdatedAt = DateTime.Now;
 
-            // Truyền thêm ID vào cuối cùng để loại trừ chính nó
-            if (await _carRepo.CheckCarListingExistAsync(dto.Name, dto.Brand, dto.Year, dto.Color, (int)dto.Condition, (decimal)dto.Mileage, id))
+            // Truyền thêm ID vào cuối cùng để loại trừ chính nó khi check trùng lặp
+            if (await _carRepo.CheckCarListingExistAsync(dto.Name, dto.Brand, dto.Year, dto.Color, (int)dto.Condition, (decimal)car.Mileage, id))
             {
-                return (false, "Tin đăng này bị trùng rồi ní ơi!", null);
+                return (false, "Tin đăng này bị trùng với một xe khác rồi ní ơi!", null);
             }
 
             try
             {
-                // 3. XỬ LÝ ẢNH CHÍNH (Bản nâng cấp theo cấu trúc Thư mục Hãng)
+                // 3. XỬ LÝ ẢNH CHÍNH (Đồng bộ cấu trúc thư mục với lúc Create)
                 if (dto.ImageFile != null)
                 {
                     try
                     {
-                        // A. Xác định thư mục lưu theo Brand (Ví dụ: "Cars/BMW")
-                        string brandFolder = !string.IsNullOrEmpty(dto.Brand) ? $"Cars/{dto.Brand}" : "Cars/Others";
+                        // A. Xác định thư mục cha và tên folder con (VD: Cars/HONDA -> HONDA_CIVIC)
+                        string subFolder = $"Cars/{car.Brand}";
+                        string targetName = $"{car.Brand}_{car.Name}";
 
-                        // B. Lưu ảnh mới vào đúng thư mục
-                        string newImageUrl = await _imageRepo.UploadImageAsync(dto.ImageFile, brandFolder);
+                        // B. Lưu ảnh mới bằng FileHelper để tự động bóc tách thư mục
+                        string newImageUrl = await FileHelper.UploadFileAsync(dto.ImageFile, subFolder, targetName);
 
                         // C. XÓA ẢNH CŨ (Tránh rác server)
                         if (!string.IsNullOrEmpty(car.ImageUrl) && !car.ImageUrl.Contains("default-car.jpg"))
                         {
-                            // Chuyển đường dẫn web (/uploads/...) thành đường dẫn vật lý (C:\...)
-                            var oldPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", car.ImageUrl.TrimStart('/'));
-
-                            if (File.Exists(oldPath))
-                            {
-                                File.Delete(oldPath);
-                            }
+                            // Gọi ngay ông FileHelper đi dọn rác, code sạch đẹp mướt rượt!
+                            FileHelper.DeleteFile(car.ImageUrl);
                         }
 
                         // D. Cập nhật đường dẫn mới vào database
@@ -339,10 +369,8 @@ namespace LogicBusiness.Services.Admin
                 }
 
                 // 4. XỬ LÝ THÔNG SỐ KỸ THUẬT (Chiến thuật Xóa sạch - Xây mới)
-                // A. Quét sạch bãi chiến trường cũ để tránh trùng lặp
                 await _carSpecificationRepo.DeleteByCarIdAsync(id);
 
-                // B. Nạp mớ "nồi lẩu" mới từ chuỗi phân cách
                 if (!string.IsNullOrWhiteSpace(dto.Specifications))
                 {
                     var specLines = dto.Specifications.Split(';', StringSplitOptions.RemoveEmptyEntries);
@@ -351,7 +379,7 @@ namespace LogicBusiness.Services.Admin
                     foreach (var line in specLines)
                     {
                         var parts = line.Split('|');
-                        if (parts.Length == 3)
+                        if (parts.Length == 3) // Đúng định dạng: Nhóm|Tên|Giá trị
                         {
                             newSpecs.Add(new CarSpecification
                             {
@@ -372,27 +400,28 @@ namespace LogicBusiness.Services.Admin
                 // 5. XỬ LÝ TIỆN ÍCH (Features: ABS, Cửa sổ trời...)
                 try
                 {
-                    // Bước A: Xóa sạch các tiện ích cũ của xe này trong bảng trung gian
-                    // Ní dùng hàm đã khai báo trong Interface ở hình image_7cd2c2.jpg
+                    // Bước A: Xóa sạch các tiện ích cũ
                     await _carFeatureRepo.DeleteByCarIdAsync(id);
 
-                    // Bước B: Nếu chuỗi FeatureIds gửi lên có dữ liệu (VD: "1,2,3")
+                    // Bước B: Thêm tiện ích mới
                     if (!string.IsNullOrWhiteSpace(dto.FeatureIds))
                     {
-                        // Tách chuỗi thành danh sách số nguyên
                         var featureIds = dto.FeatureIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                                                     .Select(int.Parse)
-                                                     .ToList();
+                                                       .Select(idStr => idStr.Trim())
+                                                       .Where(idStr => int.TryParse(idStr, out _))
+                                                       .Select(int.Parse)
+                                                       .ToList();
 
-                        // Tạo danh sách các đối tượng CarFeature mới
                         var newCarFeatures = featureIds.Select(fId => new CarFeature
                         {
                             CarId = id,
                             FeatureId = fId
                         }).ToList();
 
-                        // Lưu vào Database thông qua Repository
-                        await _carFeatureRepo.AddRangeAsync(newCarFeatures);
+                        if (newCarFeatures.Any())
+                        {
+                            await _carFeatureRepo.AddRangeAsync(newCarFeatures);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -400,16 +429,16 @@ namespace LogicBusiness.Services.Admin
                     return (false, $"Lỗi khi cập nhật tiện ích: {ex.Message}", null);
                 }
 
-                // 5. Chốt đơn lưu xe
+                // 6. Chốt đơn lưu xe vào Database
                 await _carRepo.UpdateAsync(car);
 
                 return (true, "Cập nhật xe, ảnh và thông số thành công!", car);
-        }
+            } // <-- Tui đã nắn cái ngoặc nhọn này lại đúng vị trí để bao trọn khối try rồi nè!
             catch (Exception ex)
             {
                 return (false, $"Lỗi hệ thống: {ex.Message}", null);
             }
-    }
+        }
 
         // 5. UPLOAD NHIỀU ẢNH PHỤ (GALLERY) CÙNG LÚC + MÔ TẢ RIÊNG
         public async Task<(bool Success, string Message, object? Data)> UploadGalleryImagesAsync(int carId, List<IFormFile> files, List<string>? titles, List<string>? descriptions, string imageType)
@@ -438,7 +467,10 @@ namespace LogicBusiness.Services.Admin
                 string? currentTitle = (titles != null && i < titles.Count) ? titles[i] : null;
                 string? currentDesc = (descriptions != null && i < descriptions.Count) ? descriptions[i] : null;
 
-                string imagePath = await FileHelper.UploadFileAsync(file, "Cars", car.Name);
+                // 👉 SỬA ĐƯỜNG DẪN ẢNH PHỤ TẠI ĐÂY
+                string subFolder = $"Cars/{car.Brand}";
+                string targetName = $"{car.Brand}_{car.Name}";
+                string imagePath = await FileHelper.UploadFileAsync(file, subFolder, targetName);
 
                 var carImage = new CarImage
                 {
@@ -486,15 +518,21 @@ namespace LogicBusiness.Services.Admin
             var car = await _carRepo.GetCarByIdAsync(carId);
             if (car == null) return (false, "Không tìm thấy xe.", null);
 
-            string folderName = car.Name.Replace(" ", "_");
-            string subFolder = Path.Combine("Cars", folderName, "360");
+            // 👉 SỬA ĐƯỜNG DẪN ẢNH 360 TẠI ĐÂY
+            // Gom thư mục cha và thư mục xe lại làm 1
+            string subFolder = $"Cars/{car.Brand}/{car.Brand}_{car.Name}";
+            // Target name là "360" để FileHelper đẻ thêm 1 thư mục con bên trong
+            string targetName = "360";
+
             var uploadedImages = new List<CarImage>();
 
             foreach (var file in files)
             {
                 if (file.Length > 0)
                 {
-                    string imagePath = await FileHelper.UploadFileAsync(file, subFolder, "exterior");
+                    // Truyền subFolder và targetName mới vào
+                    string imagePath = await FileHelper.UploadFileAsync(file, subFolder, targetName);
+
                     var carImage = new CarImage
                     {
                         CarId = carId,
@@ -517,11 +555,10 @@ namespace LogicBusiness.Services.Admin
             var image = await _imageRepo.GetCarImageByIdAsync(imageId);
             if (image == null) return false;
 
+            // 👉 GỌI FILEHELPER XÓA NHANH GỌN LẸ
             if (!string.IsNullOrEmpty(image.ImageUrl) && !image.ImageUrl.Contains("default-car.jpg") && !image.ImageUrl.StartsWith("http"))
             {
-                string normalizedUrl = image.ImageUrl.TrimStart('/', '\\').Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
-                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", normalizedUrl);
-                if (File.Exists(filePath)) File.Delete(filePath);
+                FileHelper.DeleteFile(image.ImageUrl); // Dùng đúng 1 dòng "đồ nhà trồng được"
             }
 
             await _imageRepo.DeleteCarImageAsync(imageId);
@@ -561,27 +598,35 @@ namespace LogicBusiness.Services.Admin
 
             if (car.IsDeleted != true && car.Status != CarStatus.Draft) return false;
 
-            // A. Xóa Folder vật lý (Giữ nguyên code của ní)
-            string folderName = car.Name.Replace(" ", "_");
-            var carFolderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "Cars", folderName);
+            // A. XÓA FOLDER VẬT LÝ (Đã nâng cấp theo chuẩn Cars/Hãng/Hãng_TênXe)
+            // 1. Dựng lại đúng tên Hãng và Tên xe như lúc Create
+            string brandFolder = car.Brand?.Trim().ToUpper() ?? "UNKNOWN";
+            string targetName = $"{brandFolder}_{car.Name?.Trim()}";
 
+            // 2. Dọn dẹp ký tự đặc biệt y chang cách FileHelper đã làm để tìm trúng phóc thư mục
+            string cleanTargetName = string.Join("_", targetName.Split(Path.GetInvalidFileNameChars())).Replace(" ", "_");
+
+            // 3. Ghép đường dẫn: wwwroot/uploads/Cars/VINFAST/VINFAST_VF7
+            var carFolderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "Cars", brandFolder, cleanTargetName);
+
+            // 4. Quét sạch sành sanh
             if (Directory.Exists(carFolderPath))
             {
+                // Tham số 'true' ở đây cực kỳ lợi hại: Nó sẽ xóa cái folder này và toàn bộ ảnh chính, ảnh phụ, lẫn folder 360 bên trong!
                 Directory.Delete(carFolderPath, true);
             }
             else if (!string.IsNullOrEmpty(car.ImageUrl) && !car.ImageUrl.Contains("default-car.jpg"))
             {
-                var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", car.ImageUrl.TrimStart('/'));
-                if (File.Exists(imagePath)) File.Delete(imagePath);
+                // Chữa cháy: Nếu xui xui thư mục không còn mà ảnh chính vẫn kẹt ở ngoài thì gọi FileHelper xử lý
+                FileHelper.DeleteFile(car.ImageUrl);
             }
 
-            // B. XÓA DỮ LIỆU TRONG BẢNG CAR IMAGES TRƯỚC 👈 (Chèn thêm dòng này)
+            // B. XÓA DỮ LIỆU TRONG CÁC BẢNG PHỤ TRƯỚC (Chuẩn đét!)
             await _imageRepo.DeleteAllImagesByCarIdAsync(id);
             await _carFeatureRepo.DeleteByCarIdAsync(id);
             await _carSpecificationRepo.DeleteByCarIdAsync(id);
 
-
-            // C. CUỐI CÙNG MỚI XÓA XE
+            // C. CUỐI CÙNG MỚI XÓA XE VÀO HƯ VÔ
             await _carRepo.DeleteCarAsync(id);
 
             return true;
