@@ -13,6 +13,17 @@ using SqlServer.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        builder =>
+        {
+            builder.AllowAnyOrigin()  // Cho phép mọi nguồn (bao gồm cả link figma lạ kia)
+                   .AllowAnyMethod()  // Cho phép GET, POST, PUT, DELETE...
+                   .AllowAnyHeader(); // Cho phép mọi Header
+        });
+});
+
 // --- THÊM KẾT NỐI DATABASE (DEPENDENCY INJECTION) VÀO ĐÂY ---
 builder.Services.AddDbContext<OtoContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -44,6 +55,8 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 var app = builder.Build();
 
+
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -51,11 +64,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseCors("AllowAll");
+
 app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 
-app.UseCors("AllowAll"); // Bật CORS Ploicy Error lên
+//app.UseCors("AllowAll"); // Bật CORS Ploicy Error lên
 
 app.UseAuthorization();
 
