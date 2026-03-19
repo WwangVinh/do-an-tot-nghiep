@@ -1,86 +1,90 @@
 USE [master]
 GO
-/****** Object:  Database [oto]    Script Date: 3/8/2026 0:37:44 ******/
-CREATE DATABASE [otoBE]
+/****** Object:  Database [oto]    Script Date: 3/19/2026 10:55:43 ******/
+CREATE DATABASE [oto]
  CONTAINMENT = NONE
- 
+ ON  PRIMARY 
+( NAME = N'oto', FILENAME = N'C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER16\MSSQL\DATA\oto.mdf' , SIZE = 8192KB , MAXSIZE = UNLIMITED, FILEGROWTH = 65536KB )
+ LOG ON 
+( NAME = N'oto_log', FILENAME = N'C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER16\MSSQL\DATA\oto_log.ldf' , SIZE = 8192KB , MAXSIZE = 2048GB , FILEGROWTH = 65536KB )
+ WITH CATALOG_COLLATION = DATABASE_DEFAULT, LEDGER = OFF
 GO
-ALTER DATABASE [otoBE] SET COMPATIBILITY_LEVEL = 160
+ALTER DATABASE [oto] SET COMPATIBILITY_LEVEL = 160
 GO
 IF (1 = FULLTEXTSERVICEPROPERTY('IsFullTextInstalled'))
 begin
-EXEC [otoBE].[dbo].[sp_fulltext_database] @action = 'enable'
+EXEC [oto].[dbo].[sp_fulltext_database] @action = 'enable'
 end
 GO
-ALTER DATABASE [otoBE] SET ANSI_NULL_DEFAULT OFF 
+ALTER DATABASE [oto] SET ANSI_NULL_DEFAULT OFF 
 GO
-ALTER DATABASE [otoBE] SET ANSI_NULLS OFF 
+ALTER DATABASE [oto] SET ANSI_NULLS OFF 
 GO
-ALTER DATABASE [otoBE] SET ANSI_PADDING OFF 
+ALTER DATABASE [oto] SET ANSI_PADDING OFF 
 GO
-ALTER DATABASE [otoBE] SET ANSI_WARNINGS OFF 
+ALTER DATABASE [oto] SET ANSI_WARNINGS OFF 
 GO
-ALTER DATABASE [otoBE] SET ARITHABORT OFF 
+ALTER DATABASE [oto] SET ARITHABORT OFF 
 GO
-ALTER DATABASE [otoBE] SET AUTO_CLOSE OFF 
+ALTER DATABASE [oto] SET AUTO_CLOSE OFF 
 GO
-ALTER DATABASE [otoBE] SET AUTO_SHRINK OFF 
+ALTER DATABASE [oto] SET AUTO_SHRINK OFF 
 GO
-ALTER DATABASE [otoBE] SET AUTO_UPDATE_STATISTICS ON 
+ALTER DATABASE [oto] SET AUTO_UPDATE_STATISTICS ON 
 GO
-ALTER DATABASE [otoBE] SET CURSOR_CLOSE_ON_COMMIT OFF 
+ALTER DATABASE [oto] SET CURSOR_CLOSE_ON_COMMIT OFF 
 GO
-ALTER DATABASE [otoBE] SET CURSOR_DEFAULT  GLOBAL 
+ALTER DATABASE [oto] SET CURSOR_DEFAULT  GLOBAL 
 GO
-ALTER DATABASE [otoBE] SET CONCAT_NULL_YIELDS_NULL OFF 
+ALTER DATABASE [oto] SET CONCAT_NULL_YIELDS_NULL OFF 
 GO
-ALTER DATABASE [otoBE] SET NUMERIC_ROUNDABORT OFF 
+ALTER DATABASE [oto] SET NUMERIC_ROUNDABORT OFF 
 GO
-ALTER DATABASE [otoBE] SET QUOTED_IDENTIFIER OFF 
+ALTER DATABASE [oto] SET QUOTED_IDENTIFIER OFF 
 GO
-ALTER DATABASE [otoBE] SET RECURSIVE_TRIGGERS OFF 
+ALTER DATABASE [oto] SET RECURSIVE_TRIGGERS OFF 
 GO
-ALTER DATABASE [otoBE] SET  ENABLE_BROKER 
+ALTER DATABASE [oto] SET  ENABLE_BROKER 
 GO
-ALTER DATABASE [otoBE] SET AUTO_UPDATE_STATISTICS_ASYNC OFF 
+ALTER DATABASE [oto] SET AUTO_UPDATE_STATISTICS_ASYNC OFF 
 GO
-ALTER DATABASE [otoBE] SET DATE_CORRELATION_OPTIMIZATION OFF 
+ALTER DATABASE [oto] SET DATE_CORRELATION_OPTIMIZATION OFF 
 GO
-ALTER DATABASE [otoBE] SET TRUSTWORTHY OFF 
+ALTER DATABASE [oto] SET TRUSTWORTHY OFF 
 GO
-ALTER DATABASE [otoBE] SET ALLOW_SNAPSHOT_ISOLATION OFF 
+ALTER DATABASE [oto] SET ALLOW_SNAPSHOT_ISOLATION OFF 
 GO
-ALTER DATABASE [otoBE] SET PARAMETERIZATION SIMPLE 
+ALTER DATABASE [oto] SET PARAMETERIZATION SIMPLE 
 GO
-ALTER DATABASE [otoBE] SET READ_COMMITTED_SNAPSHOT OFF 
+ALTER DATABASE [oto] SET READ_COMMITTED_SNAPSHOT OFF 
 GO
-ALTER DATABASE [otoBE] SET HONOR_BROKER_PRIORITY OFF 
+ALTER DATABASE [oto] SET HONOR_BROKER_PRIORITY OFF 
 GO
-ALTER DATABASE [otoBE] SET RECOVERY FULL 
+ALTER DATABASE [oto] SET RECOVERY FULL 
 GO
-ALTER DATABASE [otoBE] SET  MULTI_USER 
+ALTER DATABASE [oto] SET  MULTI_USER 
 GO
-ALTER DATABASE [otoBE] SET PAGE_VERIFY CHECKSUM  
+ALTER DATABASE [oto] SET PAGE_VERIFY CHECKSUM  
 GO
-ALTER DATABASE [otoBE] SET DB_CHAINING OFF 
+ALTER DATABASE [oto] SET DB_CHAINING OFF 
 GO
-ALTER DATABASE [otoBE] SET FILESTREAM( NON_TRANSACTED_ACCESS = OFF ) 
+ALTER DATABASE [oto] SET FILESTREAM( NON_TRANSACTED_ACCESS = OFF ) 
 GO
-ALTER DATABASE [otoBE] SET TARGET_RECOVERY_TIME = 60 SECONDS 
+ALTER DATABASE [oto] SET TARGET_RECOVERY_TIME = 60 SECONDS 
 GO
-ALTER DATABASE [otoBE] SET DELAYED_DURABILITY = DISABLED 
+ALTER DATABASE [oto] SET DELAYED_DURABILITY = DISABLED 
 GO
-ALTER DATABASE [otoBE] SET ACCELERATED_DATABASE_RECOVERY = OFF  
+ALTER DATABASE [oto] SET ACCELERATED_DATABASE_RECOVERY = OFF  
 GO
 EXEC sys.sp_db_vardecimal_storage_format N'oto', N'ON'
 GO
-ALTER DATABASE [otoBE] SET QUERY_STORE = ON
+ALTER DATABASE [oto] SET QUERY_STORE = ON
 GO
-ALTER DATABASE [otoBE] SET QUERY_STORE (OPERATION_MODE = READ_WRITE, CLEANUP_POLICY = (STALE_QUERY_THRESHOLD_DAYS = 30), DATA_FLUSH_INTERVAL_SECONDS = 900, INTERVAL_LENGTH_MINUTES = 60, MAX_STORAGE_SIZE_MB = 1000, QUERY_CAPTURE_MODE = AUTO, SIZE_BASED_CLEANUP_MODE = AUTO, MAX_PLANS_PER_QUERY = 200, WAIT_STATS_CAPTURE_MODE = ON)
+ALTER DATABASE [oto] SET QUERY_STORE (OPERATION_MODE = READ_WRITE, CLEANUP_POLICY = (STALE_QUERY_THRESHOLD_DAYS = 30), DATA_FLUSH_INTERVAL_SECONDS = 900, INTERVAL_LENGTH_MINUTES = 60, MAX_STORAGE_SIZE_MB = 1000, QUERY_CAPTURE_MODE = AUTO, SIZE_BASED_CLEANUP_MODE = AUTO, MAX_PLANS_PER_QUERY = 200, WAIT_STATS_CAPTURE_MODE = ON)
 GO
-USE [otoBE]
+USE [oto]
 GO
-/****** Object:  Table [dbo].[__EFMigrationsHistory]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[__EFMigrationsHistory]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -94,7 +98,7 @@ CREATE TABLE [dbo].[__EFMigrationsHistory](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[AIRecommendations]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[AIRecommendations]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -105,13 +109,15 @@ CREATE TABLE [dbo].[AIRecommendations](
 	[CarId] [int] NULL,
 	[Reason] [nvarchar](500) NULL,
 	[CreatedAt] [datetime] NULL,
+	[IsHelpful] [bit] NULL,
+	[FeedbackNote] [nvarchar](500) NULL,
 PRIMARY KEY CLUSTERED 
 (
 	[RecommendationId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Articles]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[Articles]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -130,7 +136,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Banners]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[Banners]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -150,7 +156,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Bookings]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[Bookings]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -173,7 +179,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[CarFeatures]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[CarFeatures]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -188,7 +194,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[CarImages]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[CarImages]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -210,7 +216,25 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Cars]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[CarInventories]    Script Date: 3/19/2026 10:55:43 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[CarInventories](
+	[InventoryId] [int] IDENTITY(1,1) NOT NULL,
+	[ShowroomId] [int] NOT NULL,
+	[CarId] [int] NOT NULL,
+	[Quantity] [int] NOT NULL,
+	[DisplayStatus] [nvarchar](50) NOT NULL,
+	[UpdatedAt] [datetime] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[InventoryId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Cars]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -243,7 +267,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[CarSpecifications]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[CarSpecifications]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -260,7 +284,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[CarWishlist]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[CarWishlist]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -276,7 +300,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[ChatMessages]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[ChatMessages]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -287,13 +311,14 @@ CREATE TABLE [dbo].[ChatMessages](
 	[SenderType] [nvarchar](20) NOT NULL,
 	[MessageText] [nvarchar](max) NOT NULL,
 	[CreatedAt] [datetime] NULL,
+	[IntentLabel] [nvarchar](100) NULL,
 PRIMARY KEY CLUSTERED 
 (
 	[MessageId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[ChatSessions]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[ChatSessions]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -311,7 +336,55 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Features]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[Consignments]    Script Date: 3/19/2026 10:55:43 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Consignments](
+	[ConsignmentId] [int] IDENTITY(1,1) NOT NULL,
+	[UserId] [int] NOT NULL,
+	[Brand] [nvarchar](100) NOT NULL,
+	[Model] [nvarchar](100) NOT NULL,
+	[Year] [int] NOT NULL,
+	[Mileage] [decimal](18, 2) NOT NULL,
+	[ConditionDescription] [nvarchar](1000) NULL,
+	[ExpectedPrice] [decimal](18, 2) NULL,
+	[AgreedPrice] [decimal](18, 2) NULL,
+	[CommissionRate] [decimal](5, 2) NULL,
+	[Status] [nvarchar](50) NOT NULL,
+	[LinkedCarId] [int] NULL,
+	[CreatedAt] [datetime] NULL,
+	[UpdatedAt] [datetime] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[ConsignmentId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[ConsultationProfiles]    Script Date: 3/19/2026 10:55:43 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[ConsultationProfiles](
+	[ProfileId] [int] IDENTITY(1,1) NOT NULL,
+	[UserId] [int] NULL,
+	[SessionId] [int] NULL,
+	[BudgetMin] [decimal](18, 2) NULL,
+	[BudgetMax] [decimal](18, 2) NULL,
+	[PreferredBodyStyle] [nvarchar](100) NULL,
+	[PreferredBrand] [nvarchar](100) NULL,
+	[Purpose] [nvarchar](255) NULL,
+	[CreatedAt] [datetime] NULL,
+	[UpdatedAt] [datetime] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[ProfileId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Features]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -326,7 +399,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[LocationTaxes]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[LocationTaxes]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -342,7 +415,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[OrderItems]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[OrderItems]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -359,7 +432,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Orders]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[Orders]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -374,13 +447,18 @@ CREATE TABLE [dbo].[Orders](
 	[PaymentMethod] [nvarchar](50) NULL,
 	[ShippingAddress] [nvarchar](500) NULL,
 	[PromotionId] [int] NULL,
+	[OrderCode] [nvarchar](50) NULL,
+	[Subtotal] [decimal](18, 2) NOT NULL,
+	[DiscountAmount] [decimal](18, 2) NOT NULL,
+	[FinalAmount] [decimal](18, 2) NOT NULL,
+	[PaymentStatus] [nvarchar](50) NOT NULL,
 PRIMARY KEY CLUSTERED 
 (
 	[OrderId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[PaymentTransactions]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[PaymentTransactions]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -398,7 +476,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Promotions]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[Promotions]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -411,13 +489,15 @@ CREATE TABLE [dbo].[Promotions](
 	[EndDate] [datetime] NULL,
 	[Description] [nvarchar](500) NULL,
 	[Status] [nvarchar](50) NULL,
+	[PromotionName] [nvarchar](255) NULL,
+	[DiscountAmount] [decimal](18, 2) NULL,
 PRIMARY KEY CLUSTERED 
 (
 	[PromotionId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Reviews]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[Reviews]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -435,7 +515,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Showrooms]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[Showrooms]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -451,7 +531,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[SystemAuditLogs]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[SystemAuditLogs]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -473,7 +553,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[UserActivity]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[UserActivity]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -490,7 +570,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[UserLogins]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[UserLogins]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -507,7 +587,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Users]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Table [dbo].[Users]    Script Date: 3/19/2026 10:55:43 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -887,13 +967,13 @@ SET IDENTITY_INSERT [dbo].[OrderItems] OFF
 GO
 SET IDENTITY_INSERT [dbo].[Orders] ON 
 GO
-INSERT [dbo].[Orders] ([OrderId], [UserId], [CarId], [OrderDate], [Status], [TotalAmount], [PaymentMethod], [ShippingAddress], [PromotionId]) VALUES (3, 2, 2, CAST(N'2026-01-22T14:00:38.897' AS DateTime), N'Completed', CAST(10000000000.00 AS Decimal(18, 2)), N'Cash', N'Ship', NULL)
+INSERT [dbo].[Orders] ([OrderId], [UserId], [CarId], [OrderDate], [Status], [TotalAmount], [PaymentMethod], [ShippingAddress], [PromotionId], [OrderCode], [Subtotal], [DiscountAmount], [FinalAmount], [PaymentStatus]) VALUES (3, 2, 2, CAST(N'2026-01-22T14:00:38.897' AS DateTime), N'Completed', CAST(10000000000.00 AS Decimal(18, 2)), N'Cash', N'Ship', NULL, NULL, CAST(0.00 AS Decimal(18, 2)), CAST(0.00 AS Decimal(18, 2)), CAST(0.00 AS Decimal(18, 2)), N'Unpaid')
 GO
-INSERT [dbo].[Orders] ([OrderId], [UserId], [CarId], [OrderDate], [Status], [TotalAmount], [PaymentMethod], [ShippingAddress], [PromotionId]) VALUES (4, 2, 2, CAST(N'2026-01-22T14:00:38.897' AS DateTime), N'Completed', CAST(650000000.00 AS Decimal(18, 2)), N'Cash', N'456 Hai Bà Trưng, TP.HCM', NULL)
+INSERT [dbo].[Orders] ([OrderId], [UserId], [CarId], [OrderDate], [Status], [TotalAmount], [PaymentMethod], [ShippingAddress], [PromotionId], [OrderCode], [Subtotal], [DiscountAmount], [FinalAmount], [PaymentStatus]) VALUES (4, 2, 2, CAST(N'2026-01-22T14:00:38.897' AS DateTime), N'Completed', CAST(650000000.00 AS Decimal(18, 2)), N'Cash', N'456 Hai Bà Trưng, TP.HCM', NULL, NULL, CAST(0.00 AS Decimal(18, 2)), CAST(0.00 AS Decimal(18, 2)), CAST(0.00 AS Decimal(18, 2)), N'Unpaid')
 GO
-INSERT [dbo].[Orders] ([OrderId], [UserId], [CarId], [OrderDate], [Status], [TotalAmount], [PaymentMethod], [ShippingAddress], [PromotionId]) VALUES (10, 2, 3, CAST(N'2026-01-29T12:33:24.957' AS DateTime), N'Cancel', CAST(50000000.00 AS Decimal(18, 2)), N'Card', N'Hà Nội', NULL)
+INSERT [dbo].[Orders] ([OrderId], [UserId], [CarId], [OrderDate], [Status], [TotalAmount], [PaymentMethod], [ShippingAddress], [PromotionId], [OrderCode], [Subtotal], [DiscountAmount], [FinalAmount], [PaymentStatus]) VALUES (10, 2, 3, CAST(N'2026-01-29T12:33:24.957' AS DateTime), N'Cancel', CAST(50000000.00 AS Decimal(18, 2)), N'Card', N'Hà Nội', NULL, NULL, CAST(0.00 AS Decimal(18, 2)), CAST(0.00 AS Decimal(18, 2)), CAST(0.00 AS Decimal(18, 2)), N'Unpaid')
 GO
-INSERT [dbo].[Orders] ([OrderId], [UserId], [CarId], [OrderDate], [Status], [TotalAmount], [PaymentMethod], [ShippingAddress], [PromotionId]) VALUES (11, 2, 2, CAST(N'2026-01-29T13:13:36.627' AS DateTime), N'Pending', CAST(500000.00 AS Decimal(18, 2)), N'card', N'Ship', NULL)
+INSERT [dbo].[Orders] ([OrderId], [UserId], [CarId], [OrderDate], [Status], [TotalAmount], [PaymentMethod], [ShippingAddress], [PromotionId], [OrderCode], [Subtotal], [DiscountAmount], [FinalAmount], [PaymentStatus]) VALUES (11, 2, 2, CAST(N'2026-01-29T13:13:36.627' AS DateTime), N'Pending', CAST(500000.00 AS Decimal(18, 2)), N'card', N'Ship', NULL, NULL, CAST(0.00 AS Decimal(18, 2)), CAST(0.00 AS Decimal(18, 2)), CAST(0.00 AS Decimal(18, 2)), N'Unpaid')
 GO
 SET IDENTITY_INSERT [dbo].[Orders] OFF
 GO
@@ -911,15 +991,15 @@ SET IDENTITY_INSERT [dbo].[PaymentTransactions] OFF
 GO
 SET IDENTITY_INSERT [dbo].[Promotions] ON 
 GO
-INSERT [dbo].[Promotions] ([PromotionId], [Code], [DiscountPercentage], [StartDate], [EndDate], [Description], [Status]) VALUES (1, N'WELCOME2026', CAST(25.00 AS Decimal(5, 2)), CAST(N'2026-01-01T00:00:00.000' AS DateTime), CAST(N'2026-03-31T00:00:00.000' AS DateTime), N'Giảm giá 10% cho khách hàng mới nhân dịp đầu năm', N'Inactive')
+INSERT [dbo].[Promotions] ([PromotionId], [Code], [DiscountPercentage], [StartDate], [EndDate], [Description], [Status], [PromotionName], [DiscountAmount]) VALUES (1, N'WELCOME2026', CAST(25.00 AS Decimal(5, 2)), CAST(N'2026-01-01T00:00:00.000' AS DateTime), CAST(N'2026-03-31T00:00:00.000' AS DateTime), N'Giảm giá 10% cho khách hàng mới nhân dịp đầu năm', N'Inactive', NULL, NULL)
 GO
-INSERT [dbo].[Promotions] ([PromotionId], [Code], [DiscountPercentage], [StartDate], [EndDate], [Description], [Status]) VALUES (2, N'XUAN2026', CAST(5.00 AS Decimal(5, 2)), CAST(N'2026-02-01T00:00:00.000' AS DateTime), CAST(N'2026-02-28T00:00:00.000' AS DateTime), N'Khuyến mãi Tết Nguyên Đán cho tất cả dòng xe', N'Inactive')
+INSERT [dbo].[Promotions] ([PromotionId], [Code], [DiscountPercentage], [StartDate], [EndDate], [Description], [Status], [PromotionName], [DiscountAmount]) VALUES (2, N'XUAN2026', CAST(5.00 AS Decimal(5, 2)), CAST(N'2026-02-01T00:00:00.000' AS DateTime), CAST(N'2026-02-28T00:00:00.000' AS DateTime), N'Khuyến mãi Tết Nguyên Đán cho tất cả dòng xe', N'Inactive', NULL, NULL)
 GO
-INSERT [dbo].[Promotions] ([PromotionId], [Code], [DiscountPercentage], [StartDate], [EndDate], [Description], [Status]) VALUES (3, N'VIPCAR', CAST(15.00 AS Decimal(5, 2)), CAST(N'2026-01-01T00:00:00.000' AS DateTime), CAST(N'2026-12-31T00:00:00.000' AS DateTime), N'Ưu đãi đặc biệt cho khách hàng VIP', N'Active')
+INSERT [dbo].[Promotions] ([PromotionId], [Code], [DiscountPercentage], [StartDate], [EndDate], [Description], [Status], [PromotionName], [DiscountAmount]) VALUES (3, N'VIPCAR', CAST(15.00 AS Decimal(5, 2)), CAST(N'2026-01-01T00:00:00.000' AS DateTime), CAST(N'2026-12-31T00:00:00.000' AS DateTime), N'Ưu đãi đặc biệt cho khách hàng VIP', N'Active', NULL, NULL)
 GO
-INSERT [dbo].[Promotions] ([PromotionId], [Code], [DiscountPercentage], [StartDate], [EndDate], [Description], [Status]) VALUES (4, N'BLACKFRIDAY', CAST(20.00 AS Decimal(5, 2)), CAST(N'2026-11-20T00:00:00.000' AS DateTime), CAST(N'2026-11-30T00:00:00.000' AS DateTime), N'Siêu giảm giá Black Friday', N'Active')
+INSERT [dbo].[Promotions] ([PromotionId], [Code], [DiscountPercentage], [StartDate], [EndDate], [Description], [Status], [PromotionName], [DiscountAmount]) VALUES (4, N'BLACKFRIDAY', CAST(20.00 AS Decimal(5, 2)), CAST(N'2026-11-20T00:00:00.000' AS DateTime), CAST(N'2026-11-30T00:00:00.000' AS DateTime), N'Siêu giảm giá Black Friday', N'Active', NULL, NULL)
 GO
-INSERT [dbo].[Promotions] ([PromotionId], [Code], [DiscountPercentage], [StartDate], [EndDate], [Description], [Status]) VALUES (5, N'SUMMERHOT', CAST(8.00 AS Decimal(5, 2)), CAST(N'2026-06-01T00:00:00.000' AS DateTime), CAST(N'2026-08-31T00:00:00.000' AS DateTime), N'Ưu đãi mùa hè sôi động', N'Active')
+INSERT [dbo].[Promotions] ([PromotionId], [Code], [DiscountPercentage], [StartDate], [EndDate], [Description], [Status], [PromotionName], [DiscountAmount]) VALUES (5, N'SUMMERHOT', CAST(8.00 AS Decimal(5, 2)), CAST(N'2026-06-01T00:00:00.000' AS DateTime), CAST(N'2026-08-31T00:00:00.000' AS DateTime), N'Ưu đãi mùa hè sôi động', N'Active', NULL, NULL)
 GO
 SET IDENTITY_INSERT [dbo].[Promotions] OFF
 GO
@@ -945,9 +1025,16 @@ INSERT [dbo].[Users] ([UserId], [Username], [PasswordHash], [Email], [FullName],
 GO
 SET IDENTITY_INSERT [dbo].[Users] OFF
 GO
+/****** Object:  Index [UQ_Showroom_Car]    Script Date: 3/19/2026 10:55:43 ******/
+ALTER TABLE [dbo].[CarInventories] ADD  CONSTRAINT [UQ_Showroom_Car] UNIQUE NONCLUSTERED 
+(
+	[ShowroomId] ASC,
+	[CarId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__Promotio__A25C5AA7A444C1CD]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Index [UQ__Promotio__A25C5AA7A444C1CD]    Script Date: 3/19/2026 10:55:43 ******/
 ALTER TABLE [dbo].[Promotions] ADD UNIQUE NONCLUSTERED 
 (
 	[Code] ASC
@@ -955,7 +1042,7 @@ ALTER TABLE [dbo].[Promotions] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__Users__536C85E4014A9D7C]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Index [UQ__Users__536C85E4014A9D7C]    Script Date: 3/19/2026 10:55:43 ******/
 ALTER TABLE [dbo].[Users] ADD UNIQUE NONCLUSTERED 
 (
 	[Username] ASC
@@ -963,7 +1050,7 @@ ALTER TABLE [dbo].[Users] ADD UNIQUE NONCLUSTERED
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__Users__A9D105348B415492]    Script Date: 3/8/2026 0:37:44 ******/
+/****** Object:  Index [UQ__Users__A9D105348B415492]    Script Date: 3/19/2026 10:55:43 ******/
 ALTER TABLE [dbo].[Users] ADD UNIQUE NONCLUSTERED 
 (
 	[Email] ASC
@@ -989,6 +1076,12 @@ ALTER TABLE [dbo].[CarImages] ADD  DEFAULT (getdate()) FOR [CreatedAt]
 GO
 ALTER TABLE [dbo].[CarImages] ADD  DEFAULT ((0)) FOR [Is360Degree]
 GO
+ALTER TABLE [dbo].[CarInventories] ADD  DEFAULT ((0)) FOR [Quantity]
+GO
+ALTER TABLE [dbo].[CarInventories] ADD  DEFAULT ('OnDisplay') FOR [DisplayStatus]
+GO
+ALTER TABLE [dbo].[CarInventories] ADD  DEFAULT (getdate()) FOR [UpdatedAt]
+GO
 ALTER TABLE [dbo].[Cars] ADD  DEFAULT (getdate()) FOR [CreatedAt]
 GO
 ALTER TABLE [dbo].[Cars] ADD  DEFAULT (getdate()) FOR [UpdatedAt]
@@ -1007,9 +1100,27 @@ ALTER TABLE [dbo].[ChatSessions] ADD  DEFAULT ('AI_Handling') FOR [Status]
 GO
 ALTER TABLE [dbo].[ChatSessions] ADD  DEFAULT (getdate()) FOR [CreatedAt]
 GO
+ALTER TABLE [dbo].[Consignments] ADD  DEFAULT ('Pending') FOR [Status]
+GO
+ALTER TABLE [dbo].[Consignments] ADD  DEFAULT (getdate()) FOR [CreatedAt]
+GO
+ALTER TABLE [dbo].[Consignments] ADD  DEFAULT (getdate()) FOR [UpdatedAt]
+GO
+ALTER TABLE [dbo].[ConsultationProfiles] ADD  DEFAULT (getdate()) FOR [CreatedAt]
+GO
+ALTER TABLE [dbo].[ConsultationProfiles] ADD  DEFAULT (getdate()) FOR [UpdatedAt]
+GO
 ALTER TABLE [dbo].[OrderItems] ADD  DEFAULT ((1)) FOR [Quantity]
 GO
 ALTER TABLE [dbo].[Orders] ADD  DEFAULT (getdate()) FOR [OrderDate]
+GO
+ALTER TABLE [dbo].[Orders] ADD  DEFAULT ((0)) FOR [Subtotal]
+GO
+ALTER TABLE [dbo].[Orders] ADD  DEFAULT ((0)) FOR [DiscountAmount]
+GO
+ALTER TABLE [dbo].[Orders] ADD  DEFAULT ((0)) FOR [FinalAmount]
+GO
+ALTER TABLE [dbo].[Orders] ADD  DEFAULT ('Unpaid') FOR [PaymentStatus]
 GO
 ALTER TABLE [dbo].[PaymentTransactions] ADD  DEFAULT (getdate()) FOR [TransactionDate]
 GO
@@ -1081,6 +1192,18 @@ GO
 ALTER TABLE [dbo].[CarImages]  WITH CHECK ADD FOREIGN KEY([CarId])
 REFERENCES [dbo].[Cars] ([CarId])
 GO
+ALTER TABLE [dbo].[CarInventories]  WITH CHECK ADD  CONSTRAINT [FK_CarInventories_Cars] FOREIGN KEY([CarId])
+REFERENCES [dbo].[Cars] ([CarId])
+ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[CarInventories] CHECK CONSTRAINT [FK_CarInventories_Cars]
+GO
+ALTER TABLE [dbo].[CarInventories]  WITH CHECK ADD  CONSTRAINT [FK_CarInventories_Showrooms] FOREIGN KEY([ShowroomId])
+REFERENCES [dbo].[Showrooms] ([ShowroomId])
+ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[CarInventories] CHECK CONSTRAINT [FK_CarInventories_Showrooms]
+GO
 ALTER TABLE [dbo].[CarSpecifications]  WITH CHECK ADD FOREIGN KEY([CarId])
 REFERENCES [dbo].[Cars] ([CarId])
 GO
@@ -1098,6 +1221,26 @@ REFERENCES [dbo].[Users] ([UserId])
 GO
 ALTER TABLE [dbo].[ChatSessions]  WITH CHECK ADD FOREIGN KEY([UserId])
 REFERENCES [dbo].[Users] ([UserId])
+GO
+ALTER TABLE [dbo].[Consignments]  WITH CHECK ADD  CONSTRAINT [FK_Consignments_Cars] FOREIGN KEY([LinkedCarId])
+REFERENCES [dbo].[Cars] ([CarId])
+GO
+ALTER TABLE [dbo].[Consignments] CHECK CONSTRAINT [FK_Consignments_Cars]
+GO
+ALTER TABLE [dbo].[Consignments]  WITH CHECK ADD  CONSTRAINT [FK_Consignments_Users] FOREIGN KEY([UserId])
+REFERENCES [dbo].[Users] ([UserId])
+GO
+ALTER TABLE [dbo].[Consignments] CHECK CONSTRAINT [FK_Consignments_Users]
+GO
+ALTER TABLE [dbo].[ConsultationProfiles]  WITH CHECK ADD  CONSTRAINT [FK_ConsultationProfiles_Sessions] FOREIGN KEY([SessionId])
+REFERENCES [dbo].[ChatSessions] ([SessionId])
+GO
+ALTER TABLE [dbo].[ConsultationProfiles] CHECK CONSTRAINT [FK_ConsultationProfiles_Sessions]
+GO
+ALTER TABLE [dbo].[ConsultationProfiles]  WITH CHECK ADD  CONSTRAINT [FK_ConsultationProfiles_Users] FOREIGN KEY([UserId])
+REFERENCES [dbo].[Users] ([UserId])
+GO
+ALTER TABLE [dbo].[ConsultationProfiles] CHECK CONSTRAINT [FK_ConsultationProfiles_Users]
 GO
 ALTER TABLE [dbo].[OrderItems]  WITH CHECK ADD FOREIGN KEY([CarId])
 REFERENCES [dbo].[Cars] ([CarId])

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace CoreEntities.Models;
 
@@ -12,6 +13,11 @@ public partial class Airecommendation
     public int? CarId { get; set; }
 
     public string? Reason { get; set; }
+
+    public bool? IsHelpful { get; set; }
+
+    [MaxLength(500)]
+    public string? FeedbackNote { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 

@@ -63,6 +63,10 @@ namespace SqlServer.DBContext
 
         public virtual DbSet<UserLogin> UserLogins { get; set; }
 
+        public DbSet<ConsultationProfile> ConsultationProfiles { get; set; }
+        public DbSet<CarInventory> CarInventories { get; set; }
+        public DbSet<Consignment> Consignments { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Airecommendation>(entity =>
@@ -475,6 +479,10 @@ namespace SqlServer.DBContext
                     .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("FK__UserLogin__UserI__503BEA1C");
             });
+
+            modelBuilder.Entity<CarInventory>()
+                        .HasIndex(ci => new { ci.ShowroomId, ci.CarId })
+                        .IsUnique();
 
             OnModelCreatingPartial(modelBuilder);
         }

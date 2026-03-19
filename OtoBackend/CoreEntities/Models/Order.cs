@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CoreEntities.Models;
 
@@ -22,6 +24,22 @@ public partial class Order
     public string? ShippingAddress { get; set; }
 
     public int? PromotionId { get; set; }
+
+    [MaxLength(50)]
+    public string? OrderCode { get; set; }
+
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal Subtotal { get; set; } = 0;
+
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal DiscountAmount { get; set; } = 0;
+
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal FinalAmount { get; set; } = 0;
+
+    [Required]
+    [MaxLength(50)]
+    public string PaymentStatus { get; set; } = "Unpaid";
 
     public virtual Car? Car { get; set; }
 
