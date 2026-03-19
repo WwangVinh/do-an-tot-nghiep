@@ -49,7 +49,7 @@ public partial class Car
 
     public string? Transmission { get; set; }
     public string? BodyStyle { get; set; }
-    public int Quantity { get; set; }
+    //public int Quantity { get; set; }
 
     [NotMapped] //thêm ảnh nhưng k tạo thêm cột trong database
     public IFormFile? ImageFile { get; set; }
@@ -73,6 +73,7 @@ public partial class Car
     public virtual ICollection<UserActivity> UserActivities { get; set; } = new List<UserActivity>();
 
     //public virtual ICollection<Feature> Features { get; set; } = new List<Feature>();
+    public virtual ICollection<CarInventory> CarInventories { get; set; } = new List<CarInventory>();
 
     public virtual ICollection<CarFeature> CarFeatures { get; set; } = new List<CarFeature>();
 }

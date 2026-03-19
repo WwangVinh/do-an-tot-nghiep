@@ -1,7 +1,7 @@
 ﻿using CoreEntities.Models;
 using Microsoft.AspNetCore.Http;
 
-namespace LogicBusiness.Services.Repositories
+namespace LogicBusiness.Interfaces.Repositories
 {
     public interface ICarImageRepository
     {

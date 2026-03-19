@@ -2,7 +2,6 @@
 using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Admin;
 using LogicBusiness.Interfaces.Repositories;
-using LogicBusiness.Services.Repositories;
 using LogicBusiness.Utilities;
 using Microsoft.AspNetCore.Http;
 using System.Text.Json;
@@ -14,15 +13,17 @@ namespace LogicBusiness.Services.Admin
     {
         private readonly ICarRepository _carRepo;
         private readonly ICarImageRepository _imageRepo;
-        private readonly ICarFeatureRepository _carFeatureRepo;             // Gọi đệ tử 1
-        private readonly ICarSpecificationRepository _carSpecificationRepo; // Gọi đệ tử 2
+        private readonly ICarFeatureRepository _carFeatureRepo;             
+        private readonly ICarSpecificationRepository _carSpecificationRepo;
+        private readonly ICarInventoryRepository _inventoryRepo;
 
-        public CarAdminService(ICarRepository carRepo, ICarImageRepository imageRepo, ICarFeatureRepository carFeatureRepo, ICarSpecificationRepository carSpecificationRepo)
+        public CarAdminService(ICarRepository carRepo, ICarImageRepository imageRepo, ICarFeatureRepository carFeatureRepo, ICarSpecificationRepository carSpecificationRepo, ICarInventoryRepository inventoryRepo)
         {
             _carRepo = carRepo;
             _imageRepo = imageRepo;
             _carFeatureRepo = carFeatureRepo;
             _carSpecificationRepo = carSpecificationRepo;
+            _inventoryRepo = inventoryRepo;
         }
 
         // 1. GET ALL
@@ -39,8 +40,7 @@ namespace LogicBusiness.Services.Admin
                 Condition = c.Condition.ToString(),
                 Status = c.Status.ToString(),
                 c.IsDeleted,
-                c.Quantity,
-                c.Transmission,
+                TotalQuantity = c.CarInventories != null ? c.CarInventories.Sum(i => i.Quantity) : 0,
                 c.BodyStyle,
                 CreatedAt = c.CreatedAt?.ToString("dd/MM/yyyy HH:mm"),
                 UpdatedAt = c.UpdatedAt?.ToString("dd/MM/yyyy HH:mm")
@@ -73,7 +73,7 @@ namespace LogicBusiness.Services.Admin
                 car.Color,
                 car.Mileage,
                 car.FuelType,
-                car.Quantity,
+                TotalQuantity = car.CarInventories != null ? car.CarInventories.Sum(i => i.Quantity) : 0,
                 car.Transmission,
                 car.BodyStyle,
                 car.Description,
@@ -143,7 +143,6 @@ namespace LogicBusiness.Services.Admin
                 FuelType = dto.FuelType,       // Nhận vào đây
                 Mileage = (decimal)(dto.Mileage ?? 0),   // Nhận vào đây
                 Description = dto.Description, // Nhận vào đây
-                Quantity = dto.Quantity,
                 Transmission = dto.Transmission,
                 BodyStyle = dto.BodyStyle,
 
@@ -175,6 +174,20 @@ namespace LogicBusiness.Services.Admin
             // -------------------------------------------------------------
             // TỪ ĐÂY TRỞ XUỐNG BẮT ĐẦU XỬ LÝ 2 BẢNG PHỤ DỰA VÀO CARID MỚI
             // -------------------------------------------------------------
+
+            // 3. NHẬP KHO XE VỪA TẠO VÀO CƠ SỞ ĐÃ CHỌN
+            if (dto.ShowroomId > 0)
+            {
+                var inventory = new CarInventory
+                {
+                    CarId = car.CarId,
+                    ShowroomId = dto.ShowroomId,
+                    Quantity = dto.Quantity,
+                    DisplayStatus = "OnDisplay", // Hoặc Available tùy logic của bạn
+                    UpdatedAt = DateTime.Now
+                };
+                await _inventoryRepo.AddInventoryAsync(inventory);
+            }
 
             // 3. THÊM TÍNH NĂNG (FEATURES)
             if (!string.IsNullOrWhiteSpace(dto.FeatureIds))
@@ -267,11 +280,10 @@ namespace LogicBusiness.Services.Admin
             car.FuelType = dto.FuelType;
 
             // 👉 Sửa lỗi CS0019: Ép kiểu về decimal và dùng 0.0 cho khớp với double
-            // (Lưu ý: Nếu DTO của ní báo lỗi không cho dùng ??, ní chỉ cần đổi thành: car.Mileage = (decimal)dto.Mileage; là xong)
+            // (Lưu ý: Nếu DTO báo lỗi không cho dùng ??,chỉ cần đổi thành: car.Mileage = (decimal)dto.Mileage; là xong)
             car.Mileage = (decimal)dto.Mileage;
-            car.Quantity = dto.Quantity;
-    car.Transmission = dto.Transmission;
-    car.BodyStyle = dto.BodyStyle;
+            car.Transmission = dto.Transmission;
+            car.BodyStyle = dto.BodyStyle;
 
             car.UpdatedAt = DateTime.Now;
 
@@ -374,6 +386,33 @@ namespace LogicBusiness.Services.Admin
 
                 // 6. Chốt đơn lưu xe vào Database
                 await _carRepo.UpdateAsync(car);
+
+                if (dto.ShowroomId > 0)
+                {
+                    // Tìm xem chiếc xe này ở cơ sở đó đã có bản ghi trong kho chưa
+                    var inventory = await _inventoryRepo.GetInventoryAsync(id, dto.ShowroomId);
+
+                    if (inventory != null)
+                    {
+                        // Nếu đã có thì cập nhật số lượng
+                        inventory.Quantity = dto.Quantity;
+                        inventory.UpdatedAt = DateTime.Now;
+                        await _inventoryRepo.UpdateInventoryAsync(inventory);
+                    }
+                    else
+                    {
+                        // Chữa cháy: Nếu lúc trước quên nhập kho, giờ tạo mới luôn
+                        var newInventory = new CarInventory
+                        {
+                            CarId = id,
+                            ShowroomId = dto.ShowroomId,
+                            Quantity = dto.Quantity,
+                            DisplayStatus = "OnDisplay",
+                            UpdatedAt = DateTime.Now
+                        };
+                        await _inventoryRepo.AddInventoryAsync(newInventory);
+                    }
+                }
 
                 return (true, "Cập nhật xe, ảnh và thông số thành công!", car);
             } // <-- Tui đã nắn cái ngoặc nhọn này lại đúng vị trí để bao trọn khối try rồi nè!

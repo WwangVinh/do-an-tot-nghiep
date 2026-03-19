@@ -1,7 +1,7 @@
 ﻿using CoreEntities.Models;
 using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces;
-using LogicBusiness.Services.Repositories;
+using LogicBusiness.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
 using SqlServer.DBContext;
 

@@ -30,6 +30,8 @@ namespace LogicBusiness.DTOs
         public string? Description { get; set; }
 
         [Range(0, int.MaxValue, ErrorMessage = "Số lượng xe không được nhỏ hơn 0!")]
+
+        public int ShowroomId { get; set; }
         public int Quantity { get; set; }
 
         [RegularExpression("^(Số sàn|Số tự động)$", ErrorMessage = "Hộp số chỉ được nhập 'Số sàn' hoặc 'Số tự động'")]

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CoreEntities.Models;
 
@@ -32,6 +33,11 @@ public partial class User
     public int? DeletedBy { get; set; }
 
     public string? AvatarUrl { get; set; }
+
+    public int? ShowroomId { get; set; }
+
+    [ForeignKey("ShowroomId")]
+    public virtual Showroom Showroom { get; set; }
 
     public virtual ICollection<Airecommendation> Airecommendations { get; set; } = new List<Airecommendation>();
 

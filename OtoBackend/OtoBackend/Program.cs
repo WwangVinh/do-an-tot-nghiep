@@ -5,7 +5,6 @@ using LogicBusiness.Interfaces.Repositories;
 using LogicBusiness.Repositories;
 using LogicBusiness.Services.Admin;
 using LogicBusiness.Services.Customer;
-using LogicBusiness.Services.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using SqlServer.DBContext;
@@ -107,6 +106,7 @@ builder.Services.AddScoped<ICarImageRepository, CarImageRepository>();
 builder.Services.AddScoped<ICarSpecificationRepository, CarSpecificationRepository>();
 builder.Services.AddScoped<ICarFeatureRepository, CarFeatureRepository>();
 builder.Services.AddScoped<IFeatureRepository, FeatureRepository>();
+builder.Services.AddScoped<ICarInventoryRepository, CarInventoryRepository>();
 
 
 builder.Services.AddScoped<IUserService, UserService>();

@@ -3,7 +3,7 @@ using LogicBusiness.DTOs;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace LogicBusiness.Services.Repositories
+namespace LogicBusiness.Interfaces.Repositories
 {
     public interface ICarRepository
     {

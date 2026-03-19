@@ -9,10 +9,10 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
-using SqlServer.Repositories;
 using BCrypt.Net;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.Extensions.Configuration;
+using LogicBusiness.Interfaces.Repositories;
 
 namespace LogicBusiness.Services.Customer
 {

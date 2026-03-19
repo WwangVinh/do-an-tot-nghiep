@@ -1,6 +1,6 @@
 ﻿using CoreEntities.Models;
 using LogicBusiness.Interfaces.Customer;
-using LogicBusiness.Services.Repositories;
+using LogicBusiness.Interfaces.Repositories;
 
 namespace LogicBusiness.Services.Customer
 {
@@ -32,7 +32,8 @@ namespace LogicBusiness.Services.Customer
                 c.Mileage,       // Số km đã đi (Odo)
                 c.FuelType,      // Xăng / Điện
                 c.Transmission,  // Số tự động / Số sàn
-                c.BodyStyle      // SUV / Sedan
+                c.BodyStyle,      // SUV / Sedan
+                TotalQuantity = c.CarInventories != null ? c.CarInventories.Sum(i => i.Quantity) : 0
             });
 
             return new
@@ -66,7 +67,7 @@ namespace LogicBusiness.Services.Customer
                 car.FuelType,
                 car.Transmission, // Số sàn / Số tự động
                 car.BodyStyle,    // SUV / Sedan...
-                car.Quantity,
+                TotalQuantity = car.CarInventories != null ? car.CarInventories.Sum(i => i.Quantity) : 0,
                 car.Description,
                 car.ImageUrl,
                 Condition = car.Condition.ToString(),

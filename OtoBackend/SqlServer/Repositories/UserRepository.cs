@@ -1,4 +1,5 @@
 ﻿using CoreEntities.Models;
+using LogicBusiness.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
 using SqlServer.DBContext;
 using System;

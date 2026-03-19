@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http;
 using System.IO;
 using CoreEntities.Models;
 using SqlServer.DBContext;
-using LogicBusiness.Services.Repositories;
+using LogicBusiness.Interfaces.Repositories;
 
 namespace SqlServer.Repositories
 {

@@ -1,6 +1,6 @@
 ﻿using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Customer;
-using SqlServer.Repositories;
+using LogicBusiness.Interfaces.Repositories;
 using System;
 using System.Collections.Generic;
 using System.Linq;
