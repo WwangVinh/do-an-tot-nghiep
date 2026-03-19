@@ -13,27 +13,52 @@ namespace LogicBusiness.Services.Customer
             _carRepo = carRepo;
         }
 
-        public async Task<object> GetCarsAsync(string? search, string? brand, string? color, decimal? minPrice, decimal? maxPrice, CarStatus? status, string? transmission, string? bodyStyle, int page, int pageSize)
+        // 👉 Bơm thêm fuelType và location vào đây nè
+        public async Task<object> GetCarsAsync(string? search, string? brand, string? color, decimal? minPrice, decimal? maxPrice, CarStatus? status, string? transmission, string? bodyStyle, string? fuelType, string? location, int page, int pageSize)
         {
-            // 👉 Bơm đủ 10 tham số xuống cho Thủ kho (Repository) làm việc
-            var result = await _carRepo.GetCustomerCarsAsync(search, brand, color, minPrice, maxPrice, status, transmission, bodyStyle, page, pageSize);
+            // Truyền đủ xuống Repo
+            var result = await _carRepo.GetCustomerCarsAsync(search, brand, color, minPrice, maxPrice, status, transmission, bodyStyle, fuelType, location, page, pageSize);
 
-            // BÍ KÍP Ở ĐÂY: Chỉ lấy đúng những thông tin FE cần để vẽ lên giao diện
-            var cleanCars = result.Cars.Select(c => new
-            {
-                c.CarId,
-                c.Name,
-                c.Brand,
-                c.Year,
-                Condition = c.Condition.ToString(),
-                c.Price,
-                c.ImageUrl,
-                Status = c.Status.ToString(),
-                c.Mileage,       // Số km đã đi (Odo)
-                c.FuelType,      // Xăng / Điện
-                c.Transmission,  // Số tự động / Số sàn
-                c.BodyStyle,      // SUV / Sedan
-                TotalQuantity = c.CarInventories != null ? c.CarInventories.Sum(i => i.Quantity) : 0
+            var cleanCars = result.Cars.Select(c => {
+
+                int totalQty = c.CarInventories != null ? c.CarInventories.Sum(i => i.Quantity) : 0;
+                string displayLocation = "Hết hàng";
+
+                if (totalQty > 0 && c.CarInventories != null)
+                {
+                    var activeLocations = c.CarInventories
+                                            .Where(inv => inv.Quantity > 0 && inv.Showroom != null && !string.IsNullOrWhiteSpace(inv.Showroom.Province)) // 👈 Chỗ này phải là Province
+                                            .Select(inv => inv.Showroom.Province)
+                                            .Distinct()
+                                            .ToList();
+
+                    if (activeLocations.Any())
+                    {
+                        displayLocation = string.Join(", ", activeLocations.Take(2));
+                        if (activeLocations.Count > 2)
+                        {
+                            displayLocation += ", ...";
+                        }
+                    }
+                }
+
+                return new
+                {
+                    c.CarId,
+                    c.Name,
+                    c.Brand,
+                    c.Year,
+                    Condition = c.Condition.ToString(),
+                    c.Price,
+                    c.ImageUrl,
+                    Status = c.Status.ToString(),
+                    c.Mileage,
+                    c.FuelType,
+                    c.Transmission,
+                    c.BodyStyle,
+                    TotalQuantity = totalQty,
+                    Showrooms = displayLocation
+                };
             });
 
             return new
@@ -68,12 +93,22 @@ namespace LogicBusiness.Services.Customer
                 car.Transmission, // Số sàn / Số tự động
                 car.BodyStyle,    // SUV / Sedan...
                 TotalQuantity = car.CarInventories != null ? car.CarInventories.Sum(i => i.Quantity) : 0,
+
+                // ✅ THÊM VÀO ĐÂY: Trả về danh sách Showroom đang CÒN xe này
+                ShowroomDetails = car.CarInventories?
+                    .Where(inv => inv.Quantity > 0)
+                    .Select(inv => new {
+                        ShowroomName = inv.Showroom?.Name,
+                        ShowroomAddress = inv.Showroom?.FullAddress, // 👈 Gọi cái Getter ở Model ní mới làm
+                        Quantity = inv.Quantity
+                    }).ToList(),
+
                 car.Description,
                 car.ImageUrl,
                 Condition = car.Condition.ToString(),
                 Status = car.Status.ToString(),
 
-                // 1. HIỆN THÔNG SỐ (Ní bị thiếu cái này nè!)
+                // 1. HIỆN THÔNG SỐ
                 Specifications = car.CarSpecifications
                     .GroupBy(s => s.Category)
                     .Select(group => new {
@@ -81,7 +116,7 @@ namespace LogicBusiness.Services.Customer
                         Items = group.Select(i => new { i.SpecName, i.SpecValue }).ToList()
                     }).ToList(),
 
-                // 2. TIỆN ÍCH NỔI BẬT (Bản chuẩn cho FE "match" dữ liệu)
+                // 2. TIỆN ÍCH NỔI BẬT
                 Features = car.CarFeatures
                     .Select(cf => new {
                         cf.FeatureId, // Giữ lại ID để làm key và match logic

@@ -17,30 +17,15 @@ namespace OtoBackend.Controllers.Customer
 
         // GET: api/Cars
         [HttpGet]
-        public async Task<IActionResult> GetCarsForCustomer(
-            [FromQuery] string? search,
-            [FromQuery] string? brand,
-            [FromQuery] string? color,
-            [FromQuery] decimal? minPrice,
-            [FromQuery] decimal? maxPrice,
-            [FromQuery] CarStatus? status,
-            [FromQuery] string? transmission, // 👈 Mở thêm ô nhập Hộp số cho Lễ tân
-            [FromQuery] string? bodyStyle,    // (Đã xóa cái dấu nháy ngược vô duyên ở đây)
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 12)
+        public async Task<IActionResult> GetCustomerCars(
+        [FromQuery] string? search, [FromQuery] string? brand, [FromQuery] string? color,
+        [FromQuery] decimal? minPrice, [FromQuery] decimal? maxPrice, [FromQuery] CarStatus? status,
+        [FromQuery] string? transmission, [FromQuery] string? bodyStyle,
+        [FromQuery] string? fuelType, [FromQuery] string? location, // 👈 2 tham số mới
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            try
-            {
-                // Cất kết quả vào biến 'result'
-                var result = await _carService.GetCarsAsync(search, brand, color, minPrice, maxPrice, status, transmission, bodyStyle, page, pageSize);
-
-                // Trả đúng biến 'result' đó về cho Frontend
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Lỗi hệ thống: {ex.Message}");
-            }
+            var result = await _carService.GetCarsAsync(search, brand, color, minPrice, maxPrice, status, transmission, bodyStyle, fuelType, location, page, pageSize);
+            return Ok(result);
         }
 
         // GET: api/Cars/5

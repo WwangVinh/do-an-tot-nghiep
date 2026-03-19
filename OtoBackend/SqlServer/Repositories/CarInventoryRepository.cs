@@ -37,5 +37,12 @@ namespace SqlServer.Repositories
             _context.CarInventories.Update(inventory);
             await _context.SaveChangesAsync(); // Chốt lưu DB
         }
+        public async Task<int> GetTotalQuantityByCarIdAsync(int carId)
+        {
+            // Tính tổng số lượng của tất cả các showroom cho cái xe này
+            return await _context.CarInventories
+                .Where(i => i.CarId == carId)
+                .SumAsync(i => i.Quantity);
+        }
     }
 }

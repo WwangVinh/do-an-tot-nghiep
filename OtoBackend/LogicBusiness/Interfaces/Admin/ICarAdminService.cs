@@ -6,7 +6,12 @@ namespace LogicBusiness.Interfaces.Admin
 {
     public interface ICarAdminService
     {
-        Task<object> GetCarsAsync(string? search, CarStatus? status, bool? isDeleted, int page, int pageSize);
+        Task<object> GetCarsAsync(
+            string? search, string? brand, string? color,
+            decimal? minPrice, decimal? maxPrice, CarStatus? status,
+            string? transmission, string? bodyStyle,
+            string? fuelType, string? location,
+            bool? isDeleted, int page, int pageSize);
 
         Task<object?> GetCarDetailAsync(int id);
 

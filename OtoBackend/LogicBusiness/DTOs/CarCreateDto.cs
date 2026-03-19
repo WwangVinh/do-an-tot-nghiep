@@ -25,12 +25,12 @@ namespace LogicBusiness.DTOs
         [ValidYearAttribute] // 👈 Tự động kiểm tra từ 1990 đến năm hiện tại!
         public int Year { get; set; }
         [Range(0, int.MaxValue, ErrorMessage = "Số lượng xe không được nhỏ hơn 0!")]
+        public int Quantity { get; set; }
 
         [RegularExpression("^(Số sàn|Số tự động)$", ErrorMessage = "Hộp số chỉ được nhập 'Số sàn' hoặc 'Số tự động'")]
         public string? Transmission { get; set; }
 
-        public int ShowroomId { get; set; } // Bắt buộc để biết xe vào kho nào
-        public int Quantity { get; set; }
+        public int ShowroomId { get; set; } // tạm khóa để thử 
 
         [RegularExpression("^(Sedan|SUV|Hatchback|Crossover|MPV|Bán tải|Coupe)$", ErrorMessage = "Kiểu dáng xe không hợp lệ. Vui lòng chọn đúng danh mục!")]
         public string? BodyStyle { get; set; }
@@ -47,7 +47,7 @@ namespace LogicBusiness.DTOs
         // Thay vì để trống, mình nhét luôn 1 cục JSON mẫu làm mặc định
         // Trong file DTOs/CarCreateDto.cs
         public string? Specifications { get; set; } = "Động cơ|Mã lực|300 HP;Kích thước|Chiều dài|4940 mm";
-
+     
     }
 
     public class SpecCategoryDto

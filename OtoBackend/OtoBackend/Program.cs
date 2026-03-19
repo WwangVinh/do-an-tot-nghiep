@@ -107,7 +107,7 @@ builder.Services.AddScoped<ICarSpecificationRepository, CarSpecificationReposito
 builder.Services.AddScoped<ICarFeatureRepository, CarFeatureRepository>();
 builder.Services.AddScoped<IFeatureRepository, FeatureRepository>();
 builder.Services.AddScoped<ICarInventoryRepository, CarInventoryRepository>();
-
+builder.Services.AddScoped<IShowroomRepository, ShowroomRepository>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICarService, CarService>();
@@ -116,6 +116,7 @@ builder.Services.AddScoped<IFeatureService, FeatureService>();
 builder.Services.AddScoped<ICarSpecificationService, CarSpecificationService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IShowroomService, ShowroomService>();
 var app = builder.Build();
 
 

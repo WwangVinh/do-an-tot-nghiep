@@ -19,9 +19,28 @@ namespace OtoBackend.Controllers.Admin
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetCarsForAdmin([FromQuery] string? search, [FromQuery] CarStatus? status, [FromQuery] bool? isDeleted = false, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetCarsForAdmin(
+        [FromQuery] string? search,
+        [FromQuery] string? brand,
+        [FromQuery] string? color,
+        [FromQuery] decimal? minPrice,
+        [FromQuery] decimal? maxPrice,
+        [FromQuery] CarStatus? status,
+        [FromQuery] string? transmission,
+        [FromQuery] string? bodyStyle,
+        [FromQuery] string? fuelType,
+        [FromQuery] string? location,
+        [FromQuery] bool? isDeleted, // Món đặc sản của Admin
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
         {
-            return Ok(await _adminService.GetCarsAsync(search, status, isDeleted, page, pageSize));
+            // Gọi Service với đầy đủ 13 tham số
+            // Lưu ý: Ní kiểm tra xem biến Service trong Controller của ní tên là _adminService hay _carService nhé!
+            var result = await _adminService.GetCarsAsync(
+                search, brand, color, minPrice, maxPrice, status,
+                transmission, bodyStyle, fuelType, location, isDeleted, page, pageSize);
+
+            return Ok(result);
         }
 
         //[HttpGet]
