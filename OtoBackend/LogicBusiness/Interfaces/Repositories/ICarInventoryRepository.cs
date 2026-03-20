@@ -18,5 +18,7 @@ namespace LogicBusiness.Interfaces.Repositories
 
         // Hàm cập nhật số lượng xe trong kho
         Task UpdateInventoryAsync(CarInventory inventory);
+
+        Task<IEnumerable<CarInventory>> GetCarsByShowroomIdAsync(int showroomId);
     }
 }
