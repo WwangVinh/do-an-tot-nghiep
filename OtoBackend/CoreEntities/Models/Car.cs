@@ -50,6 +50,7 @@ public partial class Car
     public string? Transmission { get; set; }
     public string? BodyStyle { get; set; }
     //public int Quantity { get; set; }
+    public string? RejectionReason { get; set; }
 
     [NotMapped] //thêm ảnh nhưng k tạo thêm cột trong database
     public IFormFile? ImageFile { get; set; }

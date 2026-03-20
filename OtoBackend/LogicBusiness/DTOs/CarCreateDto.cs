@@ -37,6 +37,8 @@ namespace LogicBusiness.DTOs
 
         public CarCondition Condition { get; set; } // Nếu xe có tình trạng (Mới/Cũ) thì mở comment dòng này
 
+        public CarStatus? Status { get; set; }
+
         // --- CÁC TRƯỜNG PHỤ TRỢ ---
         public IFormFile? ImageFile { get; set; }
 

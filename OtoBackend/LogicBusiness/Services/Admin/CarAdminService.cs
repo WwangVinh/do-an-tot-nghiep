@@ -199,7 +199,8 @@ namespace LogicBusiness.Services.Admin
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now,
                 IsDeleted = false,
-                Status = CarStatus.Draft // Tùy ní xài Enum hay string
+                Status = dto.Status ?? CarStatus.Draft, //(Lưu nháp = 0, Nộp duyệt = 1)
+                RejectionReason = null                  // dòng comment cho các sếp
             };
 
             // Xử lý ảnh xe
@@ -336,6 +337,12 @@ namespace LogicBusiness.Services.Admin
             car.BodyStyle = dto.BodyStyle;
 
             car.UpdatedAt = DateTime.Now;
+
+            if (car.Status == CarStatus.Rejected)
+            {
+                car.Status = CarStatus.PendingApproval;
+                car.RejectionReason = null; // Tẩy trắng hồ sơ
+            }
 
             // Truyền thêm ID vào cuối cùng để loại trừ chính nó khi check trùng lặp
             if (await _carRepo.CheckCarListingExistAsync(dto.Name, dto.Brand, dto.Year, dto.Color, (int)dto.Condition, (decimal)car.Mileage, id))
@@ -695,19 +702,42 @@ namespace LogicBusiness.Services.Admin
             // Nếu xe đang là Draft hoặc Coming_Soon thì kệ nó, không tự động đổi.
         }
 
-        //public async Task<bool> HardDeleteCarAsync(int id)
-        //{
-        //    // 1. Dọn dẹp bảng Tính năng (CarFeatures)
-        //    await _carFeatureRepo.DeleteByCarIdAsync(id);
+        // ==========================================
+        // KHU VỰC QUYỀN LỰC CỦA MANAGER (QUẢN LÝ)
+        // ==========================================
 
-        //    // 2. Dọn dẹp bảng Thông số kỹ thuật (CarSpecifications)
-        //    await _carSpecificationRepo.DeleteByCarIdAsync(id);
+        // 11. DUYỆT XE (Cho phép xe lên Web)
+        public async Task<(bool Success, string Message)> ApproveCarAsync(int carId)
+        {
+            var car = await _carRepo.GetByIdAsync(carId);
+            if (car == null) return (false, "Không tìm thấy xe!");
 
-        //    // (Nếu ní có bảng CarImages thì gọi Repo xóa hình luôn ở bước 3 này nha)
-        //    // await _carImageRepo.DeleteByCarIdAsync(id); 
+            if (car.Status == CarStatus.Available)
+                return (false, "Xe này đang bán rồi, duyệt gì nữa ní!");
 
-        //    // 4. Khi đám "con nheo nhóc" đã bị dọn sạch, giờ thì tử hình thằng "Cha" (Car)
-        //    return await _carRepo.HardDeleteCarAsync(id);
-        //}
+            car.Status = CarStatus.Available; // Đóng mộc ĐÃ DUYỆT!
+            car.RejectionReason = null; // Chắc chắn là không còn lý do chê bai gì nữa
+            car.UpdatedAt = DateTime.Now;
+
+            await _carRepo.UpdateAsync(car);
+            return (true, "Đã duyệt xe thành công! Xe đã lên sóng.");
+        }
+
+        // 12. TỪ CHỐI XE (Kèm lời dặn dò cho lính)
+        public async Task<(bool Success, string Message)> RejectCarAsync(int carId, string reason)
+        {
+            var car = await _carRepo.GetByIdAsync(carId);
+            if (car == null) return (false, "Không tìm thấy xe!");
+
+            if (string.IsNullOrWhiteSpace(reason))
+                return (false, "Từ chối thì phải ghi rõ lý do cho lính nó biết đường sửa chứ sếp!");
+
+            car.Status = CarStatus.Rejected; // Đóng mộc TỪ CHỐI!
+            car.RejectionReason = reason; // Lưu lời vàng ý ngọc của Sếp vào DB
+            car.UpdatedAt = DateTime.Now;
+
+            await _carRepo.UpdateAsync(car);
+            return (true, "Đã từ chối và gửi phản hồi lại cho nhân viên!");
+        }
     }
 }

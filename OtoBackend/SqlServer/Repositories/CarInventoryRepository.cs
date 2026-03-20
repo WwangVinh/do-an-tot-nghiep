@@ -26,6 +26,15 @@ namespace SqlServer.Repositories
                 .FirstOrDefaultAsync(i => i.CarId == carId && i.ShowroomId == showroomId);
         }
 
+        public async Task<IEnumerable<CarInventory>> GetInventoriesByCarIdAsync(int carId)
+        {
+            // Lấy tất cả các kho đang chứa con xe này, VÀ nối luôn bảng Showroom để lấy tên tỉnh
+            return await _context.CarInventories
+                .Include(i => i.Showroom) // Bước cực kỳ quan trọng để không bị mù thông tin Showroom
+                .Where(i => i.CarId == carId)
+                .ToListAsync();
+        }
+
         public async Task AddInventoryAsync(CarInventory inventory)
         {
             await _context.CarInventories.AddAsync(inventory);

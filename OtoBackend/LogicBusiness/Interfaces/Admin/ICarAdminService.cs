@@ -33,5 +33,8 @@ namespace LogicBusiness.Interfaces.Admin
         Task<bool> RestoreCarAsync(int id);
 
         Task<bool> HardDeleteCarAsync(int id);
+
+        Task<(bool Success, string Message)> ApproveCarAsync(int carId);
+        Task<(bool Success, string Message)> RejectCarAsync(int carId, string reason);
     }
 }

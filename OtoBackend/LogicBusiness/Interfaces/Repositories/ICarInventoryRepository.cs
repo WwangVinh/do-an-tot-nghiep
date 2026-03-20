@@ -12,6 +12,7 @@ namespace LogicBusiness.Interfaces.Repositories
     {
         // Hàm tìm xem xe này ở showroom này đã có trong kho chưa
         Task<CarInventory?> GetInventoryAsync(int carId, int showroomId);
+        Task<IEnumerable<CarInventory>> GetInventoriesByCarIdAsync(int carId);
 
         // Hàm thêm xe mới vào kho
         Task AddInventoryAsync(CarInventory inventory);

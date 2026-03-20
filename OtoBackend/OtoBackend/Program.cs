@@ -117,6 +117,7 @@ builder.Services.AddScoped<ICarSpecificationService, CarSpecificationService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IShowroomService, ShowroomService>();
+builder.Services.AddScoped<ICarInventoryService, CarInventoryService>();
 var app = builder.Build();
 
 

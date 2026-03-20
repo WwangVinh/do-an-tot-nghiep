@@ -22,15 +22,26 @@ namespace LogicBusiness.Services.Customer
             var cleanCars = result.Cars.Select(c => {
 
                 int totalQty = c.CarInventories != null ? c.CarInventories.Sum(i => i.Quantity) : 0;
-                string displayLocation = "Hết hàng";
+                string displayLocation = ""; // Khởi tạo rỗng trước
 
-                if (totalQty > 0 && c.CarInventories != null)
+                // 1. ƯU TIÊN 1: Check trạng thái xe trước
+                if (c.Status.ToString() == "ComingSoon") // Ní sửa lại thành tên Enum của ní cho đúng nhé (VD: CarStatus.ComingSoon)
+                {
+                    displayLocation = "Sắp về";
+                }
+                // 2. ƯU TIÊN 2: Nếu xe đang bán nhưng hết tồn kho
+                else if (totalQty == 0)
+                {
+                    displayLocation = "Hết hàng";
+                }
+                // 3. ƯU TIÊN 3: Có hàng trong kho
+                else if (c.CarInventories != null)
                 {
                     var activeLocations = c.CarInventories
-                                            .Where(inv => inv.Quantity > 0 && inv.Showroom != null && !string.IsNullOrWhiteSpace(inv.Showroom.Province)) // 👈 Chỗ này phải là Province
-                                            .Select(inv => inv.Showroom.Province)
-                                            .Distinct()
-                                            .ToList();
+                        .Where(inv => inv.Quantity > 0 && inv.Showroom != null && !string.IsNullOrWhiteSpace(inv.Showroom.Province))
+                        .Select(inv => inv.Showroom.Province)
+                        .Distinct()
+                        .ToList();
 
                     if (activeLocations.Any())
                     {
@@ -40,8 +51,13 @@ namespace LogicBusiness.Services.Customer
                             displayLocation += ", ...";
                         }
                     }
+                    else
+                    {
+                        displayLocation = "Đang cập nhật vị trí"; // Lỡ kho có xe mà quên gắn Showroom
+                    }
                 }
 
+                // Trả về dữ liệu sạch sẽ cho Frontend
                 return new
                 {
                     c.CarId,
@@ -51,13 +67,13 @@ namespace LogicBusiness.Services.Customer
                     Condition = c.Condition.ToString(),
                     c.Price,
                     c.ImageUrl,
-                    Status = c.Status.ToString(),
+                    Status = c.Status.ToString(), // Cái này Frontend có thể dùng để hiện Label màu (Đỏ = Hết hàng, Xanh = Đang bán, Vàng = Sắp về)
                     c.Mileage,
                     c.FuelType,
                     c.Transmission,
                     c.BodyStyle,
                     TotalQuantity = totalQty,
-                    Showrooms = displayLocation
+                    Showrooms = displayLocation // Bây giờ nó sẽ cực kỳ thông minh
                 };
             });
 

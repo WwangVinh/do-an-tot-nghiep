@@ -196,5 +196,37 @@ namespace OtoBackend.Controllers.Admin
             if (!success) return BadRequest("Xe này không tồn tại!");
             return Ok(new { message = "Đã tiêu diệt chiếc xe và dọn sạch ổ cứng vĩnh viễn khỏi vũ trụ!" });
         }
+
+        /// <summary>
+        /// SẾP DUYỆT XE: Cho phép xe hiển thị lên Web
+        /// </summary>
+        [HttpPut("{id}/approve")]
+        public async Task<IActionResult> ApproveCar(int id)
+        {
+            var result = await _adminService.ApproveCarAsync(id);
+            if (result.Success)
+            {
+                return Ok(new { message = result.Message });
+            }
+            return BadRequest(new { message = result.Message });
+        }
+
+        /// <summary>
+        /// SẾP TỪ CHỐI XE: Trả về cho nhân viên sửa lại kèm lý do
+        /// </summary>
+        [HttpPut("{id}/reject")]
+        public async Task<IActionResult> RejectCar(int id, [FromBody] RejectRequestDto request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Reason))
+            {
+                return BadRequest(new { message = "Sếp phải nhập lý do từ chối chứ!" });
+            }  
+            var result = await _adminService.RejectCarAsync(id, request.Reason);
+            if (result.Success)
+            {
+                return Ok(new { message = result.Message });
+            }
+            return BadRequest(new { message = result.Message });
+        }
     }
 }
