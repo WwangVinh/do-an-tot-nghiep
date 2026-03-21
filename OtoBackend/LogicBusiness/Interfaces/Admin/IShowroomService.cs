@@ -9,11 +9,11 @@ namespace LogicBusiness.Interfaces.Admin
 {
     public interface IShowroomService
     {
-        Task<IEnumerable<ShowroomResponseDto>> GetAllShowroomsAsync();
-        Task<ShowroomResponseDto?> GetShowroomByIdAsync(int id);
-        Task<ShowroomResponseDto> CreateShowroomAsync(ShowroomRequestDto request);
-        Task<bool> UpdateShowroomAsync(int id, ShowroomRequestDto request);
-        Task<bool> DeleteShowroomAsync(int id);
+        Task<IEnumerable<ShowroomDto>> GetAllShowroomsAsync();
+        Task<ShowroomDto?> GetShowroomByIdAsync(int id);
+        Task<(bool Success, string Message)> CreateShowroomAsync(ShowroomCreateDto dto);
+        Task<(bool Success, string Message)> UpdateShowroomAsync(int id, ShowroomUpdateDto dto);
+        Task<(bool Success, string Message)> DeleteShowroomAsync(int id);
 
         Task<IEnumerable<ShowroomCarResponseDto>> GetCarsInShowroomAsync(int showroomId);
     }

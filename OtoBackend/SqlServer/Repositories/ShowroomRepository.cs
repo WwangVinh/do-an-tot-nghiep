@@ -46,5 +46,21 @@ namespace SqlServer.Repositories
             _context.Showrooms.Remove(showroom);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<bool> CheckExistsAsync(string name, string province, string district, string streetAddress, int? excludeId = null)
+        {
+            var query = _context.Showrooms.AsQueryable();
+
+            if (excludeId.HasValue)
+            {
+                query = query.Where(s => s.ShowroomId != excludeId.Value);
+            }
+
+            return await query.AnyAsync(s =>
+                s.Name.ToLower() == name.ToLower() &&
+                s.Province.ToLower() == province.ToLower() &&
+                s.District.ToLower() == district.ToLower() &&
+                s.StreetAddress.ToLower() == streetAddress.ToLower());
+        }
     }
 }

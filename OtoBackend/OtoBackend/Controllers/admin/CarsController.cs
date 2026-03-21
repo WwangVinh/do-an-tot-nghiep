@@ -19,9 +19,28 @@ namespace OtoBackend.Controllers.Admin
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetCarsForAdmin([FromQuery] string? search, [FromQuery] CarStatus? status, [FromQuery] bool? isDeleted = false, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetCarsForAdmin(
+        [FromQuery] string? search,
+        [FromQuery] string? brand,
+        [FromQuery] string? color,
+        [FromQuery] decimal? minPrice,
+        [FromQuery] decimal? maxPrice,
+        [FromQuery] CarStatus? status,
+        [FromQuery] string? transmission,
+        [FromQuery] string? bodyStyle,
+        [FromQuery] string? fuelType,
+        [FromQuery] string? location,
+        [FromQuery] bool? isDeleted, // Món đặc sản của Admin
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
         {
-            return Ok(await _adminService.GetCarsAsync(search, status, isDeleted, page, pageSize));
+            // Gọi Service với đầy đủ 13 tham số
+            // Lưu ý: Ní kiểm tra xem biến Service trong Controller của ní tên là _adminService hay _carService nhé!
+            var result = await _adminService.GetCarsAsync(
+                search, brand, color, minPrice, maxPrice, status,
+                transmission, bodyStyle, fuelType, location, isDeleted, page, pageSize);
+
+            return Ok(result);
         }
 
         //[HttpGet]
@@ -176,6 +195,52 @@ namespace OtoBackend.Controllers.Admin
             var success = await _adminService.HardDeleteCarAsync(id);
             if (!success) return BadRequest("Xe này không tồn tại!");
             return Ok(new { message = "Đã tiêu diệt chiếc xe và dọn sạch ổ cứng vĩnh viễn khỏi vũ trụ!" });
+        }
+
+        /// <summary>
+        /// SẾP DUYỆT XE: Cho phép xe hiển thị lên Web
+        /// </summary>
+        [HttpPut("{id}/approve")]
+        public async Task<IActionResult> ApproveCar(int id)
+        {
+            var result = await _adminService.ApproveCarAsync(id);
+            if (result.Success)
+            {
+                return Ok(new { message = result.Message });
+            }
+            return BadRequest(new { message = result.Message });
+        }
+
+        /// <summary>
+        /// SẾP TỪ CHỐI XE: Trả về cho nhân viên sửa lại kèm lý do
+        /// </summary>
+        [HttpPut("{id}/reject")]
+        public async Task<IActionResult> RejectCar(int id, [FromBody] RejectRequestDto request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Reason))
+            {
+                return BadRequest(new { message = "Sếp phải nhập lý do từ chối chứ!" });
+            }  
+            var result = await _adminService.RejectCarAsync(id, request.Reason);
+            if (result.Success)
+            {
+                return Ok(new { message = result.Message });
+            }
+            return BadRequest(new { message = result.Message });
+        }
+        /// <summary>
+        /// SẾP ĐỔI TRẠNG THÁI NHANH: Thích xe thành Coming Soon hay Nháp đều được
+        /// </summary>
+        [HttpPut("{id}/change-status")]
+        public async Task<IActionResult> ChangeCarStatus(int id, [FromBody] ChangeStatusRequestDto request)
+        {
+            // Controller cực kỳ nhàn nhã, chỉ việc gọi Service ra xử lý
+            var result = await _adminService.ChangeCarStatusAsync(id, request.NewStatus);
+            if (result.Success)
+            {
+                return Ok(new { message = result.Message });
+            }
+            return BadRequest(new { message = result.Message });
         }
     }
 }

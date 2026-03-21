@@ -9,7 +9,12 @@ public partial class Showroom
 
     public string Name { get; set; } = null!;
 
-    public string Address { get; set; } = null!;
+    public string Province { get; set; }     // Lưu: "Hà Nội", "TP. HCM" -> Dùng để lọc và hiện ở xem lướt
+    public string District { get; set; }     // Lưu: "Cầu Giấy", "Quận 1"
+    public string StreetAddress { get; set; } // Lưu: "Số 10, đường ABC"
+    public string FullAddress => $"{StreetAddress}, {District}, {Province}";
+
+    //public string Address { get; set; } = null!;
 
     public string? Hotline { get; set; }
 

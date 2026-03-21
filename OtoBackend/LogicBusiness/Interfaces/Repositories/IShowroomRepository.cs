@@ -14,5 +14,6 @@ namespace LogicBusiness.Interfaces.Repositories
         Task AddAsync(Showroom showroom);
         Task UpdateAsync(Showroom showroom);
         Task DeleteAsync(Showroom showroom);
+        Task<bool> CheckExistsAsync(string name, string province, string district, string streetAddress, int? excludeId = null);
     }
 }

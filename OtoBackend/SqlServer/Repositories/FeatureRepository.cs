@@ -63,16 +63,18 @@ namespace LogicBusiness.Repositories
 
         public async Task<bool> CheckExistsAsync(string featureName, int? excludeId = null)
         {
-            // Tìm xem có cái tên nào trùng không (không phân biệt chữ hoa chữ thường)
-            var query = _context.Features.Where(f => f.FeatureName.ToLower() == featureName.ToLower());
+            var nameClean = featureName.Trim().ToLower();
 
-            // Nếu đang Edit (Cập nhật), thì bỏ qua chính cái ID đang edit
+            // Thêm AsNoTracking để truy vấn nhanh và nhẹ hơn 
+            var query = _context.Features.AsNoTracking().AsQueryable();
+
             if (excludeId.HasValue)
             {
                 query = query.Where(f => f.FeatureId != excludeId.Value);
             }
 
-            return await query.AnyAsync();
+            // Để SQL Server tự lo vụ hoa thường (thường mặc định SQL là Case-Insensitive)
+            return await query.AnyAsync(f => f.FeatureName.ToLower() == nameClean);
         }
         public async Task DeleteAsync(int id)
         {

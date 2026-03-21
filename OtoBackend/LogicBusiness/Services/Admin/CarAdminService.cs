@@ -27,23 +27,66 @@ namespace LogicBusiness.Services.Admin
         }
 
         // 1. GET ALL
-        public async Task<object> GetCarsAsync(string? search, CarStatus? status, bool? isDeleted, int page, int pageSize)
+        public async Task<object> GetCarsAsync(
+            string? search, string? brand, string? color,
+            decimal? minPrice, decimal? maxPrice, CarStatus? status,
+            string? transmission, string? bodyStyle,
+            string? fuelType, string? location,
+            bool? isDeleted, int page, int pageSize)
         {
-            var result = await _carRepo.GetAdminCarsAsync(search, status, isDeleted, page, pageSize);
-            var adminCars = result.Cars.Select(c => new {
-                c.CarId,
-                c.Name,
-                c.Brand,
-                c.Year,
-                c.Price,
-                c.ImageUrl,
-                Condition = c.Condition.ToString(),
-                Status = c.Status.ToString(),
-                c.IsDeleted,
-                TotalQuantity = c.CarInventories != null ? c.CarInventories.Sum(i => i.Quantity) : 0,
-                c.BodyStyle,
-                CreatedAt = c.CreatedAt?.ToString("dd/MM/yyyy HH:mm"),
-                UpdatedAt = c.UpdatedAt?.ToString("dd/MM/yyyy HH:mm")
+            var result = await _carRepo.GetAdminCarsAsync(
+                search, brand, color, minPrice, maxPrice, status,
+                transmission, bodyStyle, fuelType, location, isDeleted, page, pageSize);
+
+            // Dùng ngoặc nhọn { } trong Select để thoải mái viết logic tính toán
+            var adminCars = result.Cars.Select(c => {
+
+                // 1. Tính tổng số lượng xe ở tất cả các kho
+                int totalQty = c.CarInventories != null ? c.CarInventories.Sum(i => i.Quantity) : 0;
+
+                // 2. Xử lý chuỗi hiển thị Showroom (Mặc định là "Hết hàng")
+                string displayLocation = "Hết hàng";
+
+                if (totalQty > 0 && c.CarInventories != null)
+                {
+                    // Lọc ra các kho có xe > 0, có thông tin Showroom và Địa chỉ
+                    var activeLocations = c.CarInventories
+                        .Where(inv => inv.Quantity > 0 && inv.Showroom != null && !string.IsNullOrWhiteSpace(inv.Showroom.Province))
+                        .Select(inv => inv.Showroom.Province) // Lấy trực tiếp cột Province luôn, quá khỏe!
+                        .Distinct()
+                        .ToList();
+
+                    if (activeLocations.Any())
+                    {
+                        // Lấy tối đa 2 tỉnh đầu tiên để hiển thị
+                        displayLocation = string.Join(", ", activeLocations.Take(2));
+
+                        // Nếu xe phân bố ở nhiều hơn 2 tỉnh thì gắn thêm đuôi "..."
+                        if (activeLocations.Count > 2)
+                        {
+                            displayLocation += ", ...";
+                        }
+                    }
+                }
+
+                // 3. Trả về Object đã được chế biến sạch sẽ cho Frontend
+                return new
+                {
+                    c.CarId,
+                    c.Name,
+                    c.Brand,
+                    c.Year,
+                    c.Price,
+                    c.ImageUrl,
+                    Condition = c.Condition.ToString(),
+                    Status = c.Status.ToString(),
+                    c.IsDeleted,
+                    TotalQuantity = totalQty,
+                    Showrooms = displayLocation,
+                    c.BodyStyle,
+                    CreatedAt = c.CreatedAt?.ToString("dd/MM/yyyy HH:mm"),
+                    UpdatedAt = c.UpdatedAt?.ToString("dd/MM/yyyy HH:mm")
+                };
             });
 
             return new
@@ -56,7 +99,7 @@ namespace LogicBusiness.Services.Admin
             };
         }
 
-        // 2. GET DETAIL (Bản Full Options 2026)
+        // 2. GET DETAIL (Bản Full Options 2026 cho Admin)
         public async Task<object?> GetCarDetailAsync(int id)
         {
             var car = await _carRepo.GetCarDetailForAdminAsync(id);
@@ -84,7 +127,16 @@ namespace LogicBusiness.Services.Admin
                 car.CreatedAt,
                 car.UpdatedAt,
 
-                // 1. NHÓM THÔNG SỐ KỸ THUẬT (Đúng kiểu "Nhóm hóa" ní muốn)
+                // ✅ THÊM CỤC NÀY: Quản lý tồn kho chi tiết cho Admin
+                ShowroomDetails = car.CarInventories?.Select(inv => new {
+                    inv.ShowroomId,
+                    ShowroomName = inv.Showroom?.Name,
+                    ShowroomAddress = inv.Showroom?.FullAddress, // 👈 Sửa Address thành FullAddress ở đây
+                    Quantity = inv.Quantity,
+                    StockStatus = inv.Quantity == 0 ? "Hết hàng" : (inv.Quantity < 3 ? "Sắp hết" : "Sẵn có")
+                }).ToList(),
+
+                // 1. NHÓM THÔNG SỐ KỸ THUẬT (Giữ nguyên logic của ní)
                 Specifications = car.CarSpecifications
                     .GroupBy(s => s.Category)
                     .Select(group => new {
@@ -92,17 +144,15 @@ namespace LogicBusiness.Services.Admin
                         Items = group.Select(i => new { i.SpecName, i.SpecValue }).ToList()
                     }).ToList(),
 
-                // 2. DANH SÁCH TIỆN ÍCH (Sửa lại cho khớp với Model Feature)
+                // 2. DANH SÁCH TIỆN ÍCH
                 Features = car.CarFeatures
                     .Select(cf => new {
                         cf.FeatureId,
-                        // Sửa Name thành FeatureName cho đúng với file Feature.cs
                         FeatureName = cf.Feature?.FeatureName,
-                        // Tiện tay ní lấy luôn cái Icon để sau này hiển thị cho đẹp
                         Icon = cf.Feature?.Icon
                     }).ToList(),
 
-                // 3. GOM NHÓM ẢNH PHỤ (Đã có sẵn logic của ní)
+                // 3. GOM NHÓM ẢNH PHỤ
                 GalleryImages = car.CarImages.Where(img => img.Is360Degree == false)
                     .GroupBy(img => img.ImageType)
                     .Select(group => new {
@@ -110,7 +160,7 @@ namespace LogicBusiness.Services.Admin
                         Images = group.Select(i => new { i.CarImageId, i.Title, i.Description, i.ImageUrl }).ToList()
                     }).ToList(),
 
-                // 4. MẢNG ẢNH 360 (Đã có sẵn logic của ní)
+                // 4. MẢNG ẢNH 360
                 Images360 = car.CarImages.Where(img => img.Is360Degree == true)
                     .Select(i => new { i.CarImageId, i.ImageUrl }).ToList()
             };
@@ -149,7 +199,8 @@ namespace LogicBusiness.Services.Admin
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now,
                 IsDeleted = false,
-                Status = CarStatus.Draft // Tùy ní xài Enum hay string
+                Status = dto.Status ?? CarStatus.Draft, //(Lưu nháp = 0, Nộp duyệt = 1)
+                RejectionReason = null                  // dòng comment cho các sếp
             };
 
             // Xử lý ảnh xe
@@ -287,6 +338,12 @@ namespace LogicBusiness.Services.Admin
 
             car.UpdatedAt = DateTime.Now;
 
+            if (car.Status == CarStatus.Rejected)
+            {
+                car.Status = CarStatus.PendingApproval;
+                car.RejectionReason = null; // Tẩy trắng hồ sơ
+            }
+
             // Truyền thêm ID vào cuối cùng để loại trừ chính nó khi check trùng lặp
             if (await _carRepo.CheckCarListingExistAsync(dto.Name, dto.Brand, dto.Year, dto.Color, (int)dto.Condition, (decimal)car.Mileage, id))
             {
@@ -394,12 +451,14 @@ namespace LogicBusiness.Services.Admin
 
                     if (inventory != null)
                     {
-                        // Nếu đã có thì cập nhật số lượng
+                        // ✅ NÂNG CẤP: Cập nhật số lượng và tự động đổi trạng thái hiển thị của kho đó
                         inventory.Quantity = dto.Quantity;
+                        inventory.DisplayStatus = dto.Quantity <= 0 ? "Out of stock" : "OnDisplay";
                         inventory.UpdatedAt = DateTime.Now;
+
                         await _inventoryRepo.UpdateInventoryAsync(inventory);
                     }
-                    else
+                    else if (dto.Quantity > 0) // Chỉ tạo kho mới nếu Admin nhập số lượng > 0
                     {
                         // Chữa cháy: Nếu lúc trước quên nhập kho, giờ tạo mới luôn
                         var newInventory = new CarInventory
@@ -414,8 +473,11 @@ namespace LogicBusiness.Services.Admin
                     }
                 }
 
-                return (true, "Cập nhật xe, ảnh và thông số thành công!", car);
-            } // <-- Tui đã nắn cái ngoặc nhọn này lại đúng vị trí để bao trọn khối try rồi nè!
+                await SyncCarStatusAsync(id);
+
+                return (true, "Cập nhật xe, ảnh, thông số và kho thành công!", car);
+
+            }
             catch (Exception ex)
             {
                 return (false, $"Lỗi hệ thống: {ex.Message}", null);
@@ -614,19 +676,85 @@ namespace LogicBusiness.Services.Admin
             return true;
         }
 
-        //public async Task<bool> HardDeleteCarAsync(int id)
-        //{
-        //    // 1. Dọn dẹp bảng Tính năng (CarFeatures)
-        //    await _carFeatureRepo.DeleteByCarIdAsync(id);
+        // Viết một hàm private nhỏ gọn trong CarAdminService.cs
+        private async Task SyncCarStatusAsync(int carId)
+        {
+            // 1. Tính tổng tồn kho hiện tại
+            int totalQuantity = await _inventoryRepo.GetTotalQuantityByCarIdAsync(carId);
 
-        //    // 2. Dọn dẹp bảng Thông số kỹ thuật (CarSpecifications)
-        //    await _carSpecificationRepo.DeleteByCarIdAsync(id);
+            // 2. Lấy chiếc xe lên
+            var car = await _carRepo.GetByIdAsync(carId);
+            if (car == null) return;
 
-        //    // (Nếu ní có bảng CarImages thì gọi Repo xóa hình luôn ở bước 3 này nha)
-        //    // await _carImageRepo.DeleteByCarIdAsync(id); 
+            // 3. Logic chuyển đổi thông minh
+            if (totalQuantity <= 0 && car.Status == CarStatus.Available)
+            {
+                // Đang bán mà kho tụt xuống 0 -> Tự động chuyển thành Hết hàng
+                car.Status = CarStatus.Out_of_stock;
+                await _carRepo.UpdateAsync(car);
+            }
+            else if (totalQuantity > 0 && car.Status == CarStatus.Out_of_stock)
+            {
+                // Đang hết hàng mà kho lại lớn hơn 0 (do nhập thêm) -> Tự động mở bán lại
+                car.Status = CarStatus.Available;
+                await _carRepo.UpdateAsync(car);
+            }
+            // Nếu xe đang là Draft hoặc Coming_Soon thì kệ nó, không tự động đổi.
+        }
 
-        //    // 4. Khi đám "con nheo nhóc" đã bị dọn sạch, giờ thì tử hình thằng "Cha" (Car)
-        //    return await _carRepo.HardDeleteCarAsync(id);
-        //}
+        // ==========================================
+        // KHU VỰC QUYỀN LỰC CỦA MANAGER (QUẢN LÝ)
+        // ==========================================
+
+        // 11. DUYỆT XE (Cho phép xe lên Web)
+        public async Task<(bool Success, string Message)> ApproveCarAsync(int carId)
+        {
+            var car = await _carRepo.GetByIdAsync(carId);
+            if (car == null) return (false, "Không tìm thấy xe!");
+
+            if (car.Status == CarStatus.Available)
+                return (false, "Xe này đang bán rồi, duyệt gì nữa ní!");
+
+            car.Status = CarStatus.Available; // Đóng mộc ĐÃ DUYỆT!
+            car.RejectionReason = null; // Chắc chắn là không còn lý do chê bai gì nữa
+            car.UpdatedAt = DateTime.Now;
+
+            await _carRepo.UpdateAsync(car);
+            return (true, "Đã duyệt xe thành công! Xe đã lên sóng.");
+        }
+
+        // 12. TỪ CHỐI XE (Kèm lời dặn dò cho lính)
+        public async Task<(bool Success, string Message)> RejectCarAsync(int carId, string reason)
+        {
+            var car = await _carRepo.GetByIdAsync(carId);
+            if (car == null) return (false, "Không tìm thấy xe!");
+
+            if (string.IsNullOrWhiteSpace(reason))
+                return (false, "Từ chối thì phải ghi rõ lý do cho lính nó biết đường sửa chứ sếp!");
+
+            car.Status = CarStatus.Rejected; // Đóng mộc TỪ CHỐI!
+            car.RejectionReason = reason; // Lưu lời vàng ý ngọc của Sếp vào DB
+            car.UpdatedAt = DateTime.Now;
+
+            await _carRepo.UpdateAsync(car);
+            return (true, "Đã từ chối và gửi phản hồi lại cho nhân viên!");
+
+        }
+
+        // 13. ĐỔI TRẠNG THÁI NHANH (Bàn tay Phật tổ của Sếp)
+        public async Task<(bool Success, string Message)> ChangeCarStatusAsync(int carId, CarStatus newStatus)
+        {
+            var car = await _carRepo.GetByIdAsync(carId);
+            if (car == null) return (false, "Không tìm thấy xe!");
+
+            car.Status = newStatus; // Đổi sang trạng thái Sếp chọn
+            car.UpdatedAt = DateTime.Now;
+
+            // Xóa luôn lý do từ chối (nếu có) cho nó sạch sẽ
+            car.RejectionReason = null;
+
+            await _carRepo.UpdateAsync(car); // Lưu vào DB
+            return (true, $"Đã ép trạng thái xe thành: {newStatus}");
+        }
     }
 }

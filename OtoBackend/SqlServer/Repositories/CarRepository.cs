@@ -3,6 +3,7 @@ using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces;
 using LogicBusiness.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.VisualBasic.FileIO;
 using SqlServer.DBContext;
 
 namespace SqlServer.Repositories
@@ -64,10 +65,13 @@ namespace SqlServer.Repositories
             // 4. Chốt đơn: Sắp xếp xe mới nhất lên đầu và lấy dữ liệu
             return await query.OrderByDescending(c => c.CreatedAt).ToListAsync();
         }
-        public async Task<(IEnumerable<Car> Cars, int TotalCount)> GetCustomerCarsAsync(string? search, string? brand, string? color, decimal? minPrice, decimal? maxPrice, CarStatus? status, string? transmission, string? bodyStyle, int page, int pageSize)
+        public async Task<(IEnumerable<Car> Cars, int TotalCount)> GetCustomerCarsAsync(string? search, string? brand, string? color, decimal? minPrice, decimal? maxPrice, CarStatus? status, string? transmission, string? bodyStyle, string? fuelType, string? location, int page, int pageSize)
         {
             // Bắt đầu với danh sách toàn bộ xe
-            var query = _context.Cars.AsQueryable();
+            var query = _context.Cars
+                                .Include(c => c.CarInventories) // Bước 1: Lấy danh sách kho
+                                    .ThenInclude(i => i.Showroom) // Bước 2: QUAN TRỌNG - Phải lấy luôn thông tin Showroom trong kho đó!
+                                .AsQueryable();
 
             // 1. LUÔN LUÔN GIẤU XE RÁC VÀ XE NHÁP
             query = query.Where(c => c.IsDeleted == false);
@@ -122,9 +126,26 @@ namespace SqlServer.Repositories
             {
                 query = query.Where(c => c.BodyStyle == bodyStyle.Trim());
             }
+            // 🌟 LỌC THEO NHIÊN LIỆU (Xăng, Điện, Dầu...)
+            if (!string.IsNullOrWhiteSpace(fuelType))
+            {
+                query = query.Where(c => c.FuelType != null && c.FuelType.ToLower() == fuelType.Trim().ToLower());
+            }
+
+            // 🌟 LỌC THEO ĐỊA CHỈ (Tỉnh/Thành phố)
+            // Cực kỳ bá đạo: Chỉ lọc ra những xe đang CÒN HÀNG ở cái Tỉnh/Thành phố mà khách chọn
+            if (!string.IsNullOrWhiteSpace(location))
+            {
+                string loc = location.Trim().ToLower();
+                query = query.Where(c => c.CarInventories.Any(inv =>
+                    inv.Quantity > 0 &&
+                    inv.Showroom != null &&
+                    (inv.Showroom.Province.ToLower().Contains(loc) || inv.Showroom.District.ToLower().Contains(loc))
+                ));
+            }
 
             // CHỈ HIỆN XE CÒN HÀNG (Quantity > 0)
-            query = query.Where(c => c.Quantity > 0);
+            query = query.Where(c => c.CarInventories.Any() && c.CarInventories.Sum(i => i.Quantity) > 0);
 
             // 👉 CHỐT ĐƠN: Đếm tổng số lượng (để chia trang) và cắt lấy dữ liệu
             int totalCount = await query.CountAsync();
@@ -141,63 +162,68 @@ namespace SqlServer.Repositories
         public async Task<Car?> GetCarDetailForCustomerAsync(int id)
         {
             return await _context.Cars
-                .Include(c => c.CarImages)
-                .Include(c => c.CarSpecifications) // Phải có cái này mới lấy được thông số
-                .Include(c => c.CarFeatures)       // Phải có cái này mới lấy được tiện ích
-                    .ThenInclude(cf => cf.Feature) // Lấy sâu vào bảng Feature để lấy FeatureName
-                .FirstOrDefaultAsync(c => c.CarId == id && c.IsDeleted == false);
+                .Include(c => c.CarImages) // Lấy album ảnh và ảnh 360
+                .Include(c => c.CarSpecifications) // Lấy thông số kỹ thuật (Động cơ, hộp số...)
+                .Include(c => c.CarFeatures) // Lấy tiện ích (Cửa sổ trời, Camera 360...)
+                    .ThenInclude(cf => cf.Feature) // Lấy chi tiết tên Feature
+                .Include(c => c.CarInventories) // 🌟 QUAN TRỌNG: Lấy thông tin tồn kho
+                    .ThenInclude(inv => inv.Showroom) // 🌟 QUAN TRỌNG: Lấy tên và địa chỉ Showroom
+                .FirstOrDefaultAsync(c => c.CarId == id && c.IsDeleted == false && c.Status != CarStatus.Draft);
         }
 
-        //public async Task<Car?> GetCarDetailForAdminAsync(int id)
-        //{
-        //    return await _context.Cars
-        //        .Include(c => c.CarImages) // Túm cổ toàn bộ ảnh phụ và 360
-        //        .FirstOrDefaultAsync(c => c.CarId == id); // Bắt mọi loại xe
-        //}
+
 
         public async Task<Car?> GetCarDetailForAdminAsync(int id)
         {
             return await _context.Cars
-                .Include(c => c.CarImages) // Đã có
-                .Include(c => c.CarSpecifications) // Thêm cái này để lấy "nồi lẩu" thông số
-                .Include(c => c.CarFeatures) // Thêm cái này để lấy Tiện ích
-                    .ThenInclude(cf => cf.Feature) // Lấy thêm tên Tiện ích từ bảng Features
+                .Include(c => c.CarImages)
+                .Include(c => c.CarSpecifications)
+                .Include(c => c.CarFeatures)
+                    .ThenInclude(cf => cf.Feature)
+                .Include(c => c.CarInventories)
+                    .ThenInclude(inv => inv.Showroom)
+        
                 .FirstOrDefaultAsync(c => c.CarId == id);
         }
 
-        public async Task<(IEnumerable<Car> Cars, int TotalCount)> GetAdminCarsAsync(string? search, CarStatus? status, bool? isDeleted, int page, int pageSize)
+
+        public async Task<(IEnumerable<Car> Cars, int TotalCount)> GetAdminCarsAsync(
+             string? search, string? brand, string? color,
+             decimal? minPrice, decimal? maxPrice, CarStatus? status,
+             string? transmission, string? bodyStyle,
+             string? fuelType, string? location,
+             bool? isDeleted, int page, int pageSize)
         {
-            var query = _context.Cars.AsQueryable();
+            var query = _context.Cars
+                                .Include(c => c.CarInventories)
+                                    .ThenInclude(i => i.Showroom) // 👈 Phải có ông này thì mới bốc được cái Province ra!
+                                .AsQueryable();
+            // --- BỘ LỌC MẠNH NHƯ CUSTOMER ---
+            if (!string.IsNullOrWhiteSpace(search)) query = query.Where(c => c.Name.ToLower().Contains(search.Trim().ToLower()));
+            if (!string.IsNullOrWhiteSpace(brand)) query = query.Where(c => c.Brand.ToUpper() == brand.Trim().ToUpper());
+            if (!string.IsNullOrWhiteSpace(color)) query = query.Where(c => c.Color.ToLower() == color.Trim().ToLower());
+            if (minPrice.HasValue) query = query.Where(c => c.Price >= minPrice.Value);
+            if (maxPrice.HasValue) query = query.Where(c => c.Price <= maxPrice.Value);
+            if (!string.IsNullOrWhiteSpace(transmission)) query = query.Where(c => c.Transmission == transmission.Trim());
+            if (!string.IsNullOrWhiteSpace(bodyStyle)) query = query.Where(c => c.BodyStyle == bodyStyle.Trim());
+            if (!string.IsNullOrWhiteSpace(fuelType)) query = query.Where(c => c.FuelType != null && c.FuelType.ToLower() == fuelType.Trim().ToLower());
 
-            // 1. TÌM KIẾM THEO TÊN HOẶC HÃNG XE
-            if (!string.IsNullOrEmpty(search))
+            if (!string.IsNullOrWhiteSpace(location))
             {
-                query = query.Where(c => c.Name.Contains(search) || c.Brand.Contains(search));
+                string loc = location.Trim().ToLower();
+                query = query.Where(c => c.CarInventories.Any(inv =>
+                    inv.Showroom != null &&
+                    (inv.Showroom.Province.ToLower().Contains(loc) || inv.Showroom.District.ToLower().Contains(loc))
+                ));
             }
 
-            // 2. LỌC THEO TRẠNG THÁI MỞ BÁN (Draft, Available, Out_of_stock...)
-            if (status.HasValue)
-            {
-                query = query.Where(c => c.Status == status.Value);
-            }
+            // --- ĐẶC QUYỀN ADMIN ---
+            if (status.HasValue) query = query.Where(c => c.Status == status.Value);
+            if (isDeleted.HasValue) query = query.Where(c => c.IsDeleted == isDeleted.Value);
 
-            // 3. TÍNH NĂNG "THÙNG RÁC": Lọc xe đã xóa hoặc chưa xóa
-            // Nếu FE truyền isDeleted = true -> Lấy xe trong thùng rác
-            // Nếu FE truyền isDeleted = false -> Lấy xe đang hoạt động bình thường
-            // Nếu FE không truyền gì (null) -> Lấy TẤT CẢ
-            if (isDeleted.HasValue)
-            {
-                query = query.Where(c => c.IsDeleted == isDeleted.Value);
-            }
-
-            // 4. ĐẾM VÀ PHÂN TRANG
-            var totalCount = await query.CountAsync();
-
-            var cars = await query
-                .OrderByDescending(c => c.CreatedAt) // Mới nhất xếp lên đầu
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
+            int totalCount = await query.CountAsync();
+            var cars = await query.OrderByDescending(c => c.CreatedAt)
+                .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
 
             return (cars, totalCount);
         }

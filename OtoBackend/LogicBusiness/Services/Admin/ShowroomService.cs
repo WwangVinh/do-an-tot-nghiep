@@ -14,82 +14,104 @@ namespace LogicBusiness.Services.Admin
     {
         private readonly IShowroomRepository _showroomRepository;
         private readonly ICarInventoryRepository _inventoryRepository;
+        private readonly IShowroomRepository _showroomRepo;
 
-        public ShowroomService(IShowroomRepository showroomRepository, ICarInventoryRepository inventoryRepository  )
+        public ShowroomService(IShowroomRepository showroomRepo)
         {
-            _showroomRepository = showroomRepository;
-            _inventoryRepository = inventoryRepository;
+            _showroomRepo = showroomRepo;
         }
 
-        public async Task<IEnumerable<ShowroomResponseDto>> GetAllShowroomsAsync()
+        // 1. LẤY TẤT CẢ (Đã bóc tách địa chỉ)
+        public async Task<IEnumerable<ShowroomDto>> GetAllShowroomsAsync()
         {
-            var showrooms = await _showroomRepository.GetAllAsync();
-            return showrooms.Select(s => new ShowroomResponseDto
+            var showrooms = await _showroomRepo.GetAllAsync();
+            return showrooms.Select(s => new ShowroomDto
             {
                 ShowroomId = s.ShowroomId,
                 Name = s.Name,
-                Address = s.Address,
+                Province = s.Province,
+                District = s.District,
+                StreetAddress = s.StreetAddress,
+                FullAddress = s.FullAddress, // Xài cái getter xịn mình mới thêm ở Model
                 Hotline = s.Hotline
             });
         }
 
-        public async Task<ShowroomResponseDto?> GetShowroomByIdAsync(int id)
+        // 2. LẤY CHI TIẾT THEO ID
+        public async Task<ShowroomDto?> GetShowroomByIdAsync(int id)
         {
-            var showroom = await _showroomRepository.GetByIdAsync(id);
-            if (showroom == null) return null;
+            var s = await _showroomRepo.GetByIdAsync(id);
+            if (s == null) return null;
 
-            return new ShowroomResponseDto
+            return new ShowroomDto
             {
-                ShowroomId = showroom.ShowroomId,
-                Name = showroom.Name,
-                Address = showroom.Address,
-                Hotline = showroom.Hotline
+                ShowroomId = s.ShowroomId,
+                Name = s.Name,
+                Province = s.Province,
+                District = s.District,
+                StreetAddress = s.StreetAddress,
+                FullAddress = s.FullAddress,
+                Hotline = s.Hotline
             };
         }
 
-        public async Task<ShowroomResponseDto> CreateShowroomAsync(ShowroomRequestDto request)
+        // 3. TẠO MỚI (Bắt Admin nhập chuẩn 3 thành phần)
+        public async Task<(bool Success, string Message)> CreateShowroomAsync(ShowroomCreateDto dto)
         {
-            var newShowroom = new Showroom
+            // Kiểm tra trùng lặp dựa trên combo: Tên + Tỉnh + Huyện + Đường
+            if (await _showroomRepo.CheckExistsAsync(dto.Name.Trim(), dto.Province.Trim(), dto.District.Trim(), dto.StreetAddress.Trim()))
             {
-                Name = request.Name,
-                Address = request.Address,
-                Hotline = request.Hotline
+                return (false, "Cơ sở này đã tồn tại ở địa chỉ này rồi ní ơi!");
+            }
+
+            var showroom = new Showroom
+            {
+                Name = dto.Name.Trim(),
+                Province = dto.Province.Trim(),
+                District = dto.District.Trim(),
+                StreetAddress = dto.StreetAddress.Trim(),
+                Hotline = dto.Hotline?.Trim()
             };
 
-            await _showroomRepository.AddAsync(newShowroom);
+            await _showroomRepo.AddAsync(showroom);
+            return (true, "Thêm cơ sở mới cực kỳ chuẩn chỉ!");
+        }
 
-            return new ShowroomResponseDto
+        // 4. CẬP NHẬT
+        public async Task<(bool Success, string Message)> UpdateShowroomAsync(int id, ShowroomUpdateDto dto)
+        {
+            var showroom = await _showroomRepo.GetByIdAsync(id);
+            if (showroom == null) return (false, "Không tìm thấy cơ sở!");
+
+            // Kiểm tra trùng lặp (trừ chính nó ra)
+            if (await _showroomRepo.CheckExistsAsync(dto.Name.Trim(), dto.Province.Trim(), dto.District.Trim(), dto.StreetAddress.Trim(), id))
             {
-                ShowroomId = newShowroom.ShowroomId,
-                Name = newShowroom.Name,
-                Address = newShowroom.Address,
-                Hotline = newShowroom.Hotline
-            };
+                return (false, "Thông tin này bị trùng với một chi nhánh khác mất rồi!");
+            }
+
+            showroom.Name = dto.Name.Trim();
+            showroom.Province = dto.Province.Trim();
+            showroom.District = dto.District.Trim();
+            showroom.StreetAddress = dto.StreetAddress.Trim();
+            showroom.Hotline = dto.Hotline?.Trim();
+
+            await _showroomRepo.UpdateAsync(showroom);
+            return (true, "Cập nhật địa chỉ showroom thành công!");
         }
 
-        public async Task<bool> UpdateShowroomAsync(int id, ShowroomRequestDto request)
+        // 5. XÓA (Giữ nguyên logic cũ)
+        public async Task<(bool Success, string Message)> DeleteShowroomAsync(int id)
         {
-            var showroom = await _showroomRepository.GetByIdAsync(id);
-            if (showroom == null) return false;
+            var showroom = await _showroomRepo.GetByIdAsync(id);
+            if (showroom == null) return (false, "Không tìm thấy cơ sở!");
 
-            showroom.Name = request.Name;
-            showroom.Address = request.Address;
-            showroom.Hotline = request.Hotline;
-
-            await _showroomRepository.UpdateAsync(showroom);
-            return true;
+            await _showroomRepo.DeleteAsync(showroom);
+            return (true, "Xóa cơ sở thành công!");
         }
 
-        public async Task<bool> DeleteShowroomAsync(int id)
-        {
-            var showroom = await _showroomRepository.GetByIdAsync(id);
-            if (showroom == null) return false;
-
-            // Xóa cứng vì bảng này độc lập và ít rủi ro
-            await _showroomRepository.DeleteAsync(showroom);
-            return true;
-        }
-
+        // ============================================
+        // MÓN MỚI CỦA ĐỒNG ĐỘI
+        // ============================================
         public async Task<IEnumerable<ShowroomCarResponseDto>> GetCarsInShowroomAsync(int showroomId)
         {
             // 1. Gọi Repo lấy dữ liệu thô
@@ -99,13 +121,12 @@ namespace LogicBusiness.Services.Admin
             return inventories.Select(inv => new ShowroomCarResponseDto
             {
                 CarId = inv.CarId,
-                Name = inv.Car!.Name,
+                Name = inv.Car.Name,
                 //Price = inv.Car.Price,
                 Quantity = inv.Quantity,
                 DisplayStatus = inv.DisplayStatus,
-                // Ưu tiên lấy ảnh chính (IsMainImage = true), nếu không có thì lấy đại tấm đầu tiên
-                //MainImageUrl = inv.Car.CarImages.FirstOrDefault(img => img.IsMainImage)?.ImageUrl
-                //               ?? inv.Car.CarImages.FirstOrDefault()?.ImageUrl
+                // Ưu tiên lấy ảnh chính...
+                //MainImageUrl = inv.Car.CarImages.FirstOrDefault(...)
             });
         }
     }

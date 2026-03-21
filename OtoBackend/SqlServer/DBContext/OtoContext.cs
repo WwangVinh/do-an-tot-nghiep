@@ -396,9 +396,17 @@ namespace SqlServer.DBContext
             {
                 entity.HasKey(e => e.ShowroomId).HasName("PK__Showroom__A7726CBBA913B30F");
 
-                entity.Property(e => e.Address).HasMaxLength(500);
                 entity.Property(e => e.Hotline).HasMaxLength(20);
                 entity.Property(e => e.Name).HasMaxLength(255);
+                entity.Property(e => e.Province)
+                      .HasMaxLength(100)
+                      .IsRequired(); // Bắt buộc phải có Tỉnh/Thành
+
+                entity.Property(e => e.District)
+                      .HasMaxLength(100);
+
+                entity.Property(e => e.StreetAddress)
+                      .HasMaxLength(300);
             });
 
             modelBuilder.Entity<SystemAuditLog>(entity =>
