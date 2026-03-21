@@ -14,7 +14,6 @@ namespace LogicBusiness.Interfaces.Admin
         Task<(bool Success, string Message)> CreateShowroomAsync(ShowroomCreateDto dto);
         Task<(bool Success, string Message)> UpdateShowroomAsync(int id, ShowroomUpdateDto dto);
         Task<(bool Success, string Message)> DeleteShowroomAsync(int id);
-
         Task<IEnumerable<ShowroomCarResponseDto>> GetCarsInShowroomAsync(int showroomId);
     }
 }

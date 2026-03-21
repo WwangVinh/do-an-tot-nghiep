@@ -17,5 +17,7 @@ namespace LogicBusiness.Interfaces.Admin
 
         // Tính tổng số lượng xe đang có trên toàn quốc
         Task<int> GetTotalQuantityAsync(int carId);
+
+        Task<IEnumerable<CarInventory>> GetCarsByShowroomIdAsync(int showroomId);
     }
 }

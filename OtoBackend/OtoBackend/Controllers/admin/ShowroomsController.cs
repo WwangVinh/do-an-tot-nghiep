@@ -5,10 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace OtoBackend.Controllers.admin
 {
-    [Route("api/admin/[controller]")]
+    [Route("api/admin/showrooms")] // Đã đổi thành số nhiều /showrooms
     [ApiController]
-    [Authorize(Roles = "Admin")] // Mặc định khóa toàn bộ, chỉ Admin được vào
-    public class ShowroomsController : ControllerBase
+    public class ShowroomsController : ControllerBase // Đã thêm 's' vào tên Class
     {
         private readonly IShowroomService _showroomService;
 
@@ -17,72 +16,59 @@ namespace OtoBackend.Controllers.admin
             _showroomService = showroomService;
         }
 
-        // GET: api/admin/showrooms (Mở khóa cho Khách hàng xem danh sách)
         [HttpGet]
-        [AllowAnonymous]
-        public async Task<IActionResult> GetAllShowrooms()
+        public async Task<IActionResult> GetAll()
         {
-            var showrooms = await _showroomService.GetAllShowroomsAsync();
-            return Ok(showrooms);
+            var result = await _showroomService.GetAllShowroomsAsync();
+            return Ok(result);
         }
 
-        // GET: api/admin/showrooms/5
         [HttpGet("{id}")]
-        [AllowAnonymous]
-        public async Task<IActionResult> GetShowroomById(int id)
+        public async Task<IActionResult> GetById(int id)
         {
-            var showroom = await _showroomService.GetShowroomByIdAsync(id);
-            if (showroom == null) return NotFound(new { message = "Không tìm thấy Showroom này!" });
-            return Ok(showroom);
+            var result = await _showroomService.GetShowroomByIdAsync(id);
+            if (result == null) return NotFound(new { Message = "Không tìm thấy cơ sở" });
+            return Ok(result);
         }
 
-        // POST: api/admin/showrooms (Chỉ Admin)
         [HttpPost]
-        public async Task<IActionResult> CreateShowroom([FromBody] ShowroomRequestDto request)
+        public async Task<IActionResult> Create([FromBody] ShowroomCreateDto dto)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-
-            var result = await _showroomService.CreateShowroomAsync(request);
-            return CreatedAtAction(nameof(GetShowroomById), new { id = result.ShowroomId }, new { message = "Thêm mới Showroom thành công!", data = result });
+            var result = await _showroomService.CreateShowroomAsync(dto);
+            if (!result.Success) return BadRequest(new { result.Message });
+            return Ok(new { result.Message });
         }
 
-        // PUT: api/admin/showrooms/5 (Chỉ Admin)
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateShowroom(int id, [FromBody] ShowroomRequestDto request)
+        public async Task<IActionResult> Update(int id, [FromBody] ShowroomUpdateDto dto)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-
-            var success = await _showroomService.UpdateShowroomAsync(id, request);
-            if (!success) return NotFound(new { message = "Không tìm thấy Showroom để cập nhật!" });
-
-            return Ok(new { message = "Cập nhật Showroom thành công!" });
+            var result = await _showroomService.UpdateShowroomAsync(id, dto);
+            if (!result.Success) return BadRequest(new { result.Message });
+            return Ok(new { result.Message });
         }
 
-        // DELETE: api/admin/showrooms/5 (Chỉ Admin)
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteShowroom(int id)
+        public async Task<IActionResult> Delete(int id)
         {
-            var success = await _showroomService.DeleteShowroomAsync(id);
-            if (!success) return NotFound(new { message = "Không tìm thấy Showroom để xóa!" });
-
-            return Ok(new { message = "Xóa Showroom thành công!" });
+            var result = await _showroomService.DeleteShowroomAsync(id);
+            if (!result.Success) return BadRequest(new { result.Message });
+            return Ok(new { result.Message });
         }
 
+        // API dành cho Khách xem xe tại Showroom cụ thể
         [HttpGet("{id}/cars")]
-        [AllowAnonymous] // Phải có cờ này để Khách hàng vãng lai xem được xe trên Web
+        [AllowAnonymous]
         public async Task<IActionResult> GetCarsInShowroom(int id)
         {
-            // 1. Kiểm tra xem Showroom có tồn tại không
             var showroom = await _showroomService.GetShowroomByIdAsync(id);
             if (showroom == null)
             {
                 return NotFound(new { message = "Không tìm thấy Showroom này!" });
             }
 
-            // 2. Lấy danh sách xe trong kho của Showroom đó
+            // Gọi hàm từ Service (Lỗi CS1061 sẽ biến mất sau khi làm Bước 1)
             var cars = await _showroomService.GetCarsInShowroomAsync(id);
 
-            // 3. Trả về Frontend 1 cục JSON xịn xò chứa cả info Showroom và info Xe
             return Ok(new
             {
                 message = "Lấy dữ liệu thành công!",

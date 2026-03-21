@@ -57,12 +57,8 @@ namespace SqlServer.Repositories
         public async Task<IEnumerable<CarInventory>> GetCarsByShowroomIdAsync(int showroomId)
         {
             return await _context.CarInventories
-                .Include(inv => inv.Car) // Kéo theo thông tin Xe
-                    .ThenInclude(c => c.CarImages) // Từ Xe kéo tiếp bộ Ảnh
-                .Where(inv => inv.ShowroomId == showroomId
-                           && inv.DisplayStatus != "InWarehouse" // Bỏ qua xe cất trong kho kín
-                           && inv.Car != null
-                           && inv.Car.IsDeleted == false) // Bỏ qua xe đã bị xóa (Soft Delete)
+                .Include(inv => inv.Car) // 👈 Quan trọng: Để lấy được Tên và Giá xe
+                .Where(inv => inv.ShowroomId == showroomId && inv.Quantity > 0)
                 .ToListAsync();
         }
     }

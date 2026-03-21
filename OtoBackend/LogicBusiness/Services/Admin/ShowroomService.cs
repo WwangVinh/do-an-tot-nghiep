@@ -2,23 +2,19 @@
 using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Admin;
 using LogicBusiness.Interfaces.Repositories;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace LogicBusiness.Services.Admin
 {
     public class ShowroomService : IShowroomService
     {
-        private readonly IShowroomRepository _showroomRepository;
-        private readonly ICarInventoryRepository _inventoryRepository;
         private readonly IShowroomRepository _showroomRepo;
+        private readonly ICarInventoryRepository _inventoryRepository;
 
-        public ShowroomService(IShowroomRepository showroomRepo)
+        public ShowroomService(IShowroomRepository showroomRepo, ICarInventoryRepository inventoryRepo)
         {
             _showroomRepo = showroomRepo;
+            _inventoryRepository = inventoryRepo;
         }
 
         // 1. LẤY TẤT CẢ (Đã bóc tách địa chỉ)
@@ -109,24 +105,19 @@ namespace LogicBusiness.Services.Admin
             return (true, "Xóa cơ sở thành công!");
         }
 
-        // ============================================
-        // MÓN MỚI CỦA ĐỒNG ĐỘI
-        // ============================================
         public async Task<IEnumerable<ShowroomCarResponseDto>> GetCarsInShowroomAsync(int showroomId)
         {
-            // 1. Gọi Repo lấy dữ liệu thô
+            // Gọi repo lấy dữ liệu (nhớ nạp _inventoryRepository vào Constructor của Service này)
             var inventories = await _inventoryRepository.GetCarsByShowroomIdAsync(showroomId);
 
-            // 2. Map sang DTO
             return inventories.Select(inv => new ShowroomCarResponseDto
             {
                 CarId = inv.CarId,
                 Name = inv.Car.Name,
-                //Price = inv.Car.Price,
+                Price = inv.Car?.Price ?? 0,
                 Quantity = inv.Quantity,
                 DisplayStatus = inv.DisplayStatus,
-                // Ưu tiên lấy ảnh chính...
-                //MainImageUrl = inv.Car.CarImages.FirstOrDefault(...)
+                MainImageUrl = inv.Car.ImageUrl // Hoặc logic lấy ảnh của ní
             });
         }
     }

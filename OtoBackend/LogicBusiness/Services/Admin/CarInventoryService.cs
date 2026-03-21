@@ -1,11 +1,13 @@
 ﻿using CoreEntities.Models;
 using LogicBusiness.Interfaces.Admin;
 using LogicBusiness.Interfaces.Repositories;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
 
 namespace LogicBusiness.Services.Admin
 {
@@ -13,9 +15,11 @@ namespace LogicBusiness.Services.Admin
     {
         private readonly ICarInventoryRepository _inventoryRepo;
 
+
         public CarInventoryService(ICarInventoryRepository inventoryRepo)
         {
             _inventoryRepo = inventoryRepo;
+
         }
 
         public async Task<(bool Success, string Message)> UpdateStockAsync(int carId, int showroomId, int newQuantity)
@@ -61,6 +65,12 @@ namespace LogicBusiness.Services.Admin
         public async Task<int> GetTotalQuantityAsync(int carId)
         {
             return await _inventoryRepo.GetTotalQuantityByCarIdAsync(carId);
+        }
+
+        public async Task<IEnumerable<CarInventory>> GetCarsByShowroomIdAsync(int showroomId)
+        {
+            // Chỉ gọi qua Repo thôi, không dùng trực tiếp _context ở đây nhé
+            return await _inventoryRepo.GetCarsByShowroomIdAsync(showroomId);
         }
     }
 }

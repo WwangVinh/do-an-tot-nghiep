@@ -12,7 +12,7 @@ namespace SqlServer.Repositories
 {
     public class ShowroomRepository : IShowroomRepository
     {
-        private readonly OtoContext _context;
+        private readonly OtoContext _context; // Nhớ đổi tên Context nếu của ní khác nha
 
         public ShowroomRepository(OtoContext context)
         {
@@ -61,6 +61,13 @@ namespace SqlServer.Repositories
                 s.Province.ToLower() == province.ToLower() &&
                 s.District.ToLower() == district.ToLower() &&
                 s.StreetAddress.ToLower() == streetAddress.ToLower());
+        }
+        public async Task<IEnumerable<CarInventory>> GetCarsByShowroomIdAsync(int showroomId)
+        {
+            return await _context.CarInventories
+                .Include(inv => inv.Car) // 👈 Phải Include để lấy được tên xe, giá xe
+                .Where(inv => inv.ShowroomId == showroomId && inv.Quantity > 0)
+                .ToListAsync();
         }
     }
 }

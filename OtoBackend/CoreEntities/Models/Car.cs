@@ -77,5 +77,5 @@ public partial class Car
     public virtual ICollection<CarInventory> CarInventories { get; set; } = new List<CarInventory>();
 
     public virtual ICollection<CarFeature> CarFeatures { get; set; } = new List<CarFeature>();
-    public int Quantity { get; set; }
+   
 }
