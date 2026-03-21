@@ -228,5 +228,19 @@ namespace OtoBackend.Controllers.Admin
             }
             return BadRequest(new { message = result.Message });
         }
+        /// <summary>
+        /// SẾP ĐỔI TRẠNG THÁI NHANH: Thích xe thành Coming Soon hay Nháp đều được
+        /// </summary>
+        [HttpPut("{id}/change-status")]
+        public async Task<IActionResult> ChangeCarStatus(int id, [FromBody] ChangeStatusRequestDto request)
+        {
+            // Controller cực kỳ nhàn nhã, chỉ việc gọi Service ra xử lý
+            var result = await _adminService.ChangeCarStatusAsync(id, request.NewStatus);
+            if (result.Success)
+            {
+                return Ok(new { message = result.Message });
+            }
+            return BadRequest(new { message = result.Message });
+        }
     }
 }

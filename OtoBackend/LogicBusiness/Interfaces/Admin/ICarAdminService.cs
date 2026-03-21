@@ -36,5 +36,7 @@ namespace LogicBusiness.Interfaces.Admin
 
         Task<(bool Success, string Message)> ApproveCarAsync(int carId);
         Task<(bool Success, string Message)> RejectCarAsync(int carId, string reason);
+
+        Task<(bool Success, string Message)> ChangeCarStatusAsync(int carId, CarStatus newStatus);
     }
 }

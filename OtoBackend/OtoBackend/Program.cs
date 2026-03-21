@@ -108,6 +108,7 @@ builder.Services.AddScoped<ICarFeatureRepository, CarFeatureRepository>();
 builder.Services.AddScoped<IFeatureRepository, FeatureRepository>();
 builder.Services.AddScoped<ICarInventoryRepository, CarInventoryRepository>();
 builder.Services.AddScoped<IShowroomRepository, ShowroomRepository>();
+builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICarService, CarService>();
@@ -118,6 +119,7 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IShowroomService, ShowroomService>();
 builder.Services.AddScoped<ICarInventoryService, CarInventoryService>();
+builder.Services.AddScoped<IBookingService, BookingService>();
 var app = builder.Build();
 
 

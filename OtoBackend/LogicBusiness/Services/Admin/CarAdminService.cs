@@ -738,6 +738,23 @@ namespace LogicBusiness.Services.Admin
 
             await _carRepo.UpdateAsync(car);
             return (true, "Đã từ chối và gửi phản hồi lại cho nhân viên!");
+
+        }
+
+        // 13. ĐỔI TRẠNG THÁI NHANH (Bàn tay Phật tổ của Sếp)
+        public async Task<(bool Success, string Message)> ChangeCarStatusAsync(int carId, CarStatus newStatus)
+        {
+            var car = await _carRepo.GetByIdAsync(carId);
+            if (car == null) return (false, "Không tìm thấy xe!");
+
+            car.Status = newStatus; // Đổi sang trạng thái Sếp chọn
+            car.UpdatedAt = DateTime.Now;
+
+            // Xóa luôn lý do từ chối (nếu có) cho nó sạch sẽ
+            car.RejectionReason = null;
+
+            await _carRepo.UpdateAsync(car); // Lưu vào DB
+            return (true, $"Đã ép trạng thái xe thành: {newStatus}");
         }
     }
 }
