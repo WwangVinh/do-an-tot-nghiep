@@ -12,7 +12,7 @@ namespace SqlServer.Repositories
 {
     public class ShowroomRepository : IShowroomRepository
     {
-        private readonly OtoContext _context; // Nhớ đổi tên Context nếu của ní khác nha
+        private readonly OtoContext _context;
 
         public ShowroomRepository(OtoContext context)
         {

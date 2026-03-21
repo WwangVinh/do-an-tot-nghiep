@@ -1,4 +1,5 @@
-﻿using LogicBusiness.Interfaces.Customer;
+﻿using LogicBusiness.DTOs;
+using LogicBusiness.Interfaces.Customer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -46,6 +47,26 @@ namespace OtoBackend.Controllers.Admin
             }
 
             return Ok(new { Message = "Xóa người dùng thành công!" });
+        }
+
+        [HttpPost("staff")]
+        public async Task<IActionResult> CreateStaffAccount([FromBody] StaffAccountRequestDto request)
+        {
+            // Kiểm tra các trường bắt buộc (Required) từ DTO
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // Chuyển dữ liệu xuống tầng Service xử lý
+            var result = await _userService.CreateStaffAccountAsync(request);
+
+            if (!result.Success)
+            {
+                return BadRequest(new { message = result.Message });
+            }
+
+            return Ok(new { message = result.Message });
         }
     }
 }

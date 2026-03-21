@@ -2,11 +2,18 @@
 using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Admin;
 using LogicBusiness.Interfaces.Repositories;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace LogicBusiness.Services.Admin
 {
     public class ShowroomService : IShowroomService
     {
+        private readonly IShowroomRepository _showroomRepository;
+        private readonly ICarInventoryRepository _inventoryRepository;
         private readonly IShowroomRepository _showroomRepo;
 
         public ShowroomService(IShowroomRepository showroomRepo)
@@ -100,6 +107,27 @@ namespace LogicBusiness.Services.Admin
 
             await _showroomRepo.DeleteAsync(showroom);
             return (true, "Xóa cơ sở thành công!");
+        }
+
+        // ============================================
+        // MÓN MỚI CỦA ĐỒNG ĐỘI
+        // ============================================
+        public async Task<IEnumerable<ShowroomCarResponseDto>> GetCarsInShowroomAsync(int showroomId)
+        {
+            // 1. Gọi Repo lấy dữ liệu thô
+            var inventories = await _inventoryRepository.GetCarsByShowroomIdAsync(showroomId);
+
+            // 2. Map sang DTO
+            return inventories.Select(inv => new ShowroomCarResponseDto
+            {
+                CarId = inv.CarId,
+                Name = inv.Car.Name,
+                //Price = inv.Car.Price,
+                Quantity = inv.Quantity,
+                DisplayStatus = inv.DisplayStatus,
+                // Ưu tiên lấy ảnh chính...
+                //MainImageUrl = inv.Car.CarImages.FirstOrDefault(...)
+            });
         }
     }
 }

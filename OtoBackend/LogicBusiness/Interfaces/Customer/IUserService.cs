@@ -12,5 +12,7 @@ namespace LogicBusiness.Interfaces.Customer
         Task<IEnumerable<UserResponseDto>> GetAllUsersAsync();
         Task<bool> DeleteUserAsync(int userId, int? deletedByUserId);
         Task<object> GetFilteredUsersAsync(bool isDeleted, string? search, int page, int pageSize);
+
+        Task<(bool Success, string Message)> CreateStaffAccountAsync(StaffAccountRequestDto request);
     }
 }
