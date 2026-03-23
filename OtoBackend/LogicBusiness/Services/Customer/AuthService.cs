@@ -74,13 +74,21 @@ namespace LogicBusiness.Services.Customer
             var jwtSettings = _configuration.GetSection("Jwt");
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]));
 
-            var claims = new[]
+            // 1. Khởi tạo danh sách các thẻ cơ bản
+            var claims = new List<Claim>
             {
                 new Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
                 new Claim(ClaimTypes.Name, user.Username),
                 new Claim(ClaimTypes.Role, user.Role)
             };
 
+            // 2. 👇 BÍ KÍP Ở ĐÂY: Nếu là Nhân viên/Quản lý có ShowroomId, nhét luôn vào Token!
+            if (user.ShowroomId.HasValue)
+            {
+                claims.Add(new Claim("ShowroomId", user.ShowroomId.Value.ToString()));
+            }
+
+            // 3. Tiến hành đúc Token
             var token = new JwtSecurityToken(
                 issuer: jwtSettings["Issuer"],
                 audience: jwtSettings["Audience"],

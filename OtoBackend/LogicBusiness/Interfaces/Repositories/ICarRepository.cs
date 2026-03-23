@@ -41,12 +41,14 @@ namespace LogicBusiness.Interfaces.Repositories
             decimal? minPrice, decimal? maxPrice, CarStatus? status,
             string? transmission, string? bodyStyle,
             string? fuelType, string? location,
-            bool? isDeleted, int page, int pageSize);
+            bool? isDeleted, int page, int pageSize, int? userShowroomId = null);
 
 
         Task<Car> GetCarByIdAsync(int id);
 
         Task<bool> CheckCarListingExistAsync(string name, string brand, int? year, string color, int condition, decimal? mileage, int? excludeId = null);
+
+        Task<Car?> GetExistingNewCarAsync(string name, string brand, int year);
         Task AddCarAsync(Car car);
         Task UpdateCarAsync(Car car);
         // Trong file ICarRepository.cs
@@ -55,5 +57,7 @@ namespace LogicBusiness.Interfaces.Repositories
         //Task DeleteCarAsync(Car car);
         Task<bool> DeleteCarAsync(int id);
         bool CarExists(int id);
+
+        Task<IEnumerable<Car>> SearchMasterCarsAsync(string query);
     }
 }

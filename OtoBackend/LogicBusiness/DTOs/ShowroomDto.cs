@@ -47,11 +47,23 @@ namespace LogicBusiness.DTOs
     }
     public class ShowroomCarResponseDto
     {
+        // 1. Thông tin định danh cơ bản
         public int CarId { get; set; }
-        public string Name { get; set; } = null!;
+        public string Name { get; set; } = null!; // Tên xe đầy đủ (VD: VinFast VF8 Plus)
         public decimal Price { get; set; }
         public string? MainImageUrl { get; set; }
+
+        // 2. Thông tin "Thần thánh" để hiển thị & lọc (SỬA Ở ĐÂY)
+        public string? BrandName { get; set; }       // Hãng xe (VinFast)
+        public string? SegmentName { get; set; }     // Phân khúc (SUV-C)
+        public string? FuelTypeName { get; set; }    // Nhiên liệu (Điện)
+        public string? TransmissionName { get; set; } // Hộp số (Tự động)
+        public string? ColorName { get; set; }        // Màu sắc (Đỏ)
+        public int? ModelYear { get; set; }           // Năm sản xuất (2023)
+        public string? Origin { get; set; }          // Xuất xứ (Trong nước)
+
+        // 3. Thông tin tồn kho tại Showroom này
         public int Quantity { get; set; }
-        public string DisplayStatus { get; set; } = null!;
+        public string DisplayStatus { get; set; } = null!; // Available, Out of stock
     }
 }

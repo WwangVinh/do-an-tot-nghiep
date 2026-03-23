@@ -1,6 +1,6 @@
 ﻿using CoreEntities.Models;
 using LogicBusiness.DTOs;
-using LogicBusiness.Interfaces.Customer;
+using LogicBusiness.Interfaces.Admin;
 using LogicBusiness.Interfaces.Repositories;
 using System;
 using System.Collections.Generic;
@@ -40,29 +40,15 @@ namespace LogicBusiness.Services.Admin
             });
         }
 
-        public async Task<bool> DeleteUserAsync(int userId, int? deletedByUserId)
+        // LẤY DANH SÁCH (Có bộ lọc phân khu và quyền)
+        public async Task<object> GetFilteredUsersAsync(
+            string userType, bool isDeleted, string? search, int page, int pageSize, 
+            string currentUserRole, int? currentUserShowroomId, 
+            int? filterShowroomId = null) // 👈 THÊM CÁI NÀY NÈ
         {
-            var user = await _userRepository.GetUserByIdAsync(userId);
-
-            // Nếu không tìm thấy hoặc user đã bị xóa trước đó rồi
-            if (user == null || user.IsDeleted)
-            {
-                return false;
-            }
-
-            // XÓA MỀM (Soft Delete)
-            user.IsDeleted = true;
-            user.DeletedAt = DateTime.Now;
-            user.DeletedBy = deletedByUserId;
-            user.Status = "Inactive"; // Cập nhật trạng thái
-
-            await _userRepository.UpdateUserAsync(user);
-            return true;
-        }
-
-        public async Task<object> GetFilteredUsersAsync(bool isDeleted, string? search, int page, int pageSize)
-        {
-            var result = await _userRepository.GetFilteredUsersAsync(isDeleted, search, page, pageSize);
+            // 👇 CHUYỀN TRÁI BÓNG XUỐNG REPO (Thêm filterShowroomId vào cuối)
+            var result = await _userRepository.GetFilteredUsersAdminAsync(
+                userType, isDeleted, search, page, pageSize, currentUserRole, currentUserShowroomId, filterShowroomId);
 
             var userDtos = result.Users.Select(u => new UserResponseDto
             {
@@ -75,10 +61,9 @@ namespace LogicBusiness.Services.Admin
                 Status = u.Status,
                 AvatarUrl = u.AvatarUrl,
                 CreatedAt = u.CreatedAt,
-                DeletedAt = u.DeletedAt // Trả về thêm ngày xóa để React hiển thị
+                DeletedAt = u.DeletedAt
             });
 
-            // Trả về object giống hệt cấu trúc React đang chờ
             return new
             {
                 Data = userDtos,
@@ -86,33 +71,39 @@ namespace LogicBusiness.Services.Admin
             };
         }
 
-        public async Task<(bool Success, string Message)> CreateStaffAccountAsync(StaffAccountRequestDto request)
+        // TẠO TÀI KHOẢN NHÂN VIÊN (Bản có Phân quyền)
+        public async Task<(bool Success, string Message)> CreateStaffAccountAsync(StaffAccountRequestDto request, string currentUserRole, int? currentUserShowroomId)
         {
-            // 1. NGHIỆP VỤ 1: Kiểm tra Role có hợp lệ không (Chống hách bằng Postman)
+            // 👇 BÍ KÍP PHÂN QUYỀN Ở ĐÂY 👇
+            if (currentUserRole == "ShowroomManager")
+            {
+                // Quản lý không được phép tạo 1 Quản lý khác
+                if (request.Role != "ShowroomSales")
+                    return (false, "Sếp chỉ được phép tạo tài khoản cho Nhân viên (Sales) thôi ạ!");
+
+                // Quản lý không được đưa nhân viên sang chi nhánh khác
+                if (request.ShowroomId != currentUserShowroomId)
+                    return (false, "Sếp chỉ được phép bổ nhiệm nhân viên vào Showroom của mình!");
+            }
+            else if (currentUserRole != "Admin")
+            {
+                return (false, "Bạn không có quyền thực hiện chức năng này!");
+            }
+
             var validRoles = new List<string> { "ShowroomManager", "ShowroomSales" };
             if (!validRoles.Contains(request.Role))
-            {
-                return (false, "Quyền (Role) không hợp lệ. Chỉ chấp nhận Manager hoặc Sales.");
-            }
+                return (false, "Quyền (Role) không hợp lệ.");
 
-            // 2. NGHIỆP VỤ 2: Kiểm tra Username có bị trùng không
             var existingUser = await _userRepository.GetUserByUsernameAsync(request.Username);
             if (existingUser != null)
-            {
                 return (false, "Tên đăng nhập này đã có người sử dụng!");
-            }
 
-            // 3. NGHIỆP VỤ 3: Kiểm tra xem ID Showroom Admin truyền vào có thật không
             var showroom = await _showroomRepository.GetByIdAsync(request.ShowroomId);
             if (showroom == null)
-            {
                 return (false, "Showroom không tồn tại trong hệ thống!");
-            }
 
-            // 4. XỬ LÝ DỮ LIỆU: Băm (Hash) mật khẩu bằng thư viện BCrypt
             string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
-            // 5. GÁN DỮ LIỆU: Map từ DTO sang Entity thực tế
             var newUser = new User
             {
                 Username = request.Username,
@@ -121,15 +112,66 @@ namespace LogicBusiness.Services.Admin
                 Email = request.Email,
                 Phone = request.Phone,
                 Role = request.Role,
-                ShowroomId = request.ShowroomId, // Chìa khóa quan trọng nhất ở đây
+                ShowroomId = request.ShowroomId,
                 Status = "Active",
                 CreatedAt = DateTime.Now
             };
 
-            // 6. LƯU VÀO DB
             await _userRepository.AddUserAsync(newUser);
+            return (true, $"Tạo tài khoản {request.Role} cho {request.FullName} tại {showroom.Name} thành công!");
+        }
 
-            return (true, $"Tạo tài khoản {request.Role} cho {request.FullName} tại chi nhánh {showroom.Name} thành công!");
+        // KHÓA HOẶC XÓA TÀI KHOẢN (Chia quyền Admin/Manager)
+        public async Task<(bool Success, string Message)> HandleUserStatusAsync(int targetUserId, string action, int currentUserId, string currentUserRole, int? currentUserShowroomId)
+        {
+            var user = await _userRepository.GetUserByIdAsync(targetUserId);
+            if (user == null || user.IsDeleted) return (false, "Không tìm thấy người dùng hoặc đã bị xóa!");
+
+            // Không ai được tự khóa/xóa chính mình
+            if (user.UserId == currentUserId) return (false, "Đừng tự hủy ní ơi, không tự khóa tài khoản mình được đâu!");
+
+            // 👇 QUẢN LÝ (MANAGER) RA TAY
+            if (currentUserRole == "ShowroomManager")
+            {
+                if (user.Role == "Admin" || user.Role == "ShowroomManager")
+                    return (false, "Sếp không có quyền thao tác lên cấp trên hoặc đồng cấp!");
+
+                if (user.ShowroomId != currentUserShowroomId)
+                    return (false, "Nhân viên này thuộc chi nhánh khác, sếp không quản lý được!");
+
+                if (action == "Delete")
+                    return (false, "Sếp chỉ được quyền Khóa (Vô hiệu hóa) nhân viên, Xóa là việc của Admin!");
+
+                // Manager chỉ được Khóa (Inactive) / Mở khóa (Active)
+                user.Status = action == "Deactivate" ? "Inactive" : "Active";
+                //user.UpdatedAt = DateTime.Now;
+
+                await _userRepository.UpdateUserAsync(user);
+                return (true, $"Đã {(action == "Deactivate" ? "khóa" : "mở khóa")} nhân viên thành công!");
+            }
+
+            // 👇 ADMIN RA TAY (Đấng tối cao)
+            if (currentUserRole == "Admin")
+            {
+                if (action == "Delete")
+                {
+                    user.IsDeleted = true; // Admin chém phát là Xóa mềm luôn
+                    user.DeletedAt = DateTime.Now;
+                    user.DeletedBy = currentUserId;
+                    user.Status = "Inactive";
+                    await _userRepository.UpdateUserAsync(user);
+                    return (true, "Đã xóa tài khoản ra khỏi hệ thống!");
+                }
+                else
+                {
+                    user.Status = action == "Deactivate" ? "Inactive" : "Active";
+                    //user.UpdatedAt = DateTime.Now;
+                    await _userRepository.UpdateUserAsync(user);
+                    return (true, $"Đã {(action == "Deactivate" ? "khóa" : "mở khóa")} tài khoản thành công!");
+                }
+            }
+
+            return (false, "Lỗi quyền truy cập!");
         }
     }
 }

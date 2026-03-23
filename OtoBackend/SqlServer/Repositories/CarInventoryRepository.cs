@@ -56,10 +56,11 @@ namespace SqlServer.Repositories
 
         public async Task<IEnumerable<CarInventory>> GetCarsByShowroomIdAsync(int showroomId)
         {
+            // Nhớ viết thế này ở file CarInventoryRepository.cs nha ní:
             return await _context.CarInventories
-                .Include(inv => inv.Car) // 👈 Quan trọng: Để lấy được Tên và Giá xe
-                .Where(inv => inv.ShowroomId == showroomId && inv.Quantity > 0)
-                .ToListAsync();
+         .Include(inv => inv.Car) // Chỉ cần Include mỗi cái này là lấy được hết Hãng, Năm, Giá...
+         .Where(inv => inv.ShowroomId == showroomId && inv.Quantity > 0)
+         .ToListAsync();
         }
     }
 }

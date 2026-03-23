@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,6 +16,9 @@ namespace LogicBusiness.DTOs
         public string? Phone { get; set; }
 
         // Quyền của tài khoản: "ShowroomManager" hoặc "ShowroomSales"
+        [Required(ErrorMessage = "Bắt buộc phải truyền Quyền (Role) vào!")]
+        [RegularExpression("^(ShowroomManager|ShowroomSales)$",
+            ErrorMessage = "Hệ thống chỉ cho phép tạo quyền 'ShowroomManager' hoặc 'ShowroomSales' thôi!")]
         public string Role { get; set; } = null!;
 
         // ID của Showroom mà người này sẽ quản lý
