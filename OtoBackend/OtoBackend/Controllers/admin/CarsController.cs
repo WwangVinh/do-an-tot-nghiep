@@ -166,7 +166,7 @@ namespace OtoBackend.Controllers.Admin
             if (files == null || files.Count == 0) return BadRequest("Vui lòng chọn ít nhất 1 file ảnh 360.");
             var result = await _adminService.Upload360ImagesAsync(id, files);
             if (!result.Success) return NotFound(result.Message);
-            return Ok(new { message = $"Đã tải lên {files.Count} ảnh 360 thành công!", data = result.Data });
+            return Ok(new { message = $"Đã tải lên {files.Count} ảnh 360 thành công!"});
         }
 
         [HttpDelete("delete-image/{imageId}")]

@@ -120,6 +120,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IShowroomService, ShowroomService>();
 builder.Services.AddScoped<ICarInventoryService, CarInventoryService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
+builder.Services.AddScoped<IBookingAdminService, BookingAdminService>();
 var app = builder.Build();
 
 

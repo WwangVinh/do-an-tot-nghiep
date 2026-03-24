@@ -23,8 +23,8 @@ namespace LogicBusiness.Interfaces.Admin
 
         Task<(bool Success, string Message, int? NewCarId)> CloneCarAsync(int id, string userRole, int? userShowroomId);
 
-        Task<(bool Success, string Message, object? Data)> Upload360ImagesAsync(int carId, List<IFormFile> files);
-
+        //Task<(bool Success, string Message, object? Data)> Upload360ImagesAsync(int carId, List<IFormFile> files);
+        Task<(bool Success, string Message)> Upload360ImagesAsync(int carId, List<IFormFile> files);
         Task<bool> DeleteCarImageAsync(int imageId);
 
         Task<bool> SoftDeleteCarAsync(int id, int deletedByUserId);

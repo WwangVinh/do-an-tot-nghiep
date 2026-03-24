@@ -62,5 +62,16 @@ namespace SqlServer.Repositories
          .Where(inv => inv.ShowroomId == showroomId && inv.Quantity > 0)
          .ToListAsync();
         }
+        public async Task<bool> DeleteInventoriesByCarIdAsync(int carId)
+        {
+            var inventories = await _context.CarInventories.Where(i => i.CarId == carId).ToListAsync();
+            if (inventories.Any())
+            {
+                _context.CarInventories.RemoveRange(inventories);
+                await _context.SaveChangesAsync();
+            }
+            return true;
+        }
+
     }
 }

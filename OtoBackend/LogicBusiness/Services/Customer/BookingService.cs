@@ -26,52 +26,76 @@ namespace LogicBusiness.Services.Customer
 
         public async Task<(bool Success, string Message)> CreateBookingAsync(BookingCreateDto dto)
         {
-            // 1. Kiểm tra xe có tồn tại và có được phép bán không?
+            // 1. Kiểm tra xe còn trên sàn không?
             var car = await _carRepo.GetByIdAsync(dto.CarId);
             if (car == null)
                 return (false, "Xe không tồn tại!");
 
             if (car.Status != CarStatus.Available && car.Status != CarStatus.COMING_SOON)
-                return (false, "Rất tiếc, xe này hiện không được mở bán.");
+                return (false, "Rất tiếc, xe này hiện đã có người cọc hoặc ngừng giao dịch.");
 
-            // 2. BƯỚC TỬ THẦN: Kiểm tra kho tại chi nhánh khách chọn
+            // 2. Kiểm tra xem xe có đang ở chi nhánh khách muốn đến xem không?
             var inventory = await _inventoryRepo.GetInventoryAsync(dto.CarId, dto.ShowroomId);
-
             if (inventory == null || inventory.Quantity <= 0)
-                return (false, "Chậm mất rồi ní ơi! Xe ở cơ sở này vừa có người đặt cọc hoặc đã hết. Vui lòng chọn cơ sở khác!");
+                return (false, "Chi nhánh này hiện không có sẵn mẫu xe bạn chọn. Ní thử chọn cơ sở khác xem!");
 
-            // 3. Vượt qua cửa ải -> Khách nạp tiền cọc thành công -> Lên Đơn!
+            // 3. BÍ KÍP CHỐNG ĐỤNG ĐỘ: Kiểm tra xem có ai hẹn xem con xe ĐỘC BẢN này cùng giờ không?
+            // Giả sử 1 ca lái thử / tư vấn tốn khoảng 2 tiếng (Ní phải viết thêm hàm này trong BookingRepo nhé)
+            bool isTimeSlotTaken = await _bookingRepo.IsTimeSlotBookedAsync(dto.CarId, dto.ShowroomId, dto.BookingDate, dto.BookingTime);
+            if (isTimeSlotTaken)
+            {
+                return (false, "Khung giờ này đã có khách VIP khác hẹn xem xe rồi. Ní vui lòng chọn giờ khác nhé!");
+            }
+
+            // 4. LÊN LỊCH HẸN TRẢI NGHIỆM (Tuyệt đối KHÔNG trừ kho)
             var booking = new Booking
             {
                 CarId = dto.CarId,
-                ShowroomId = dto.ShowroomId, // Giờ thì đã biết trừ ở đâu
+                ShowroomId = dto.ShowroomId,
                 CustomerName = dto.CustomerName,
                 Phone = dto.Phone,
                 BookingDate = dto.BookingDate,
                 BookingTime = dto.BookingTime,
                 Note = dto.Note,
                 UserId = dto.UserId,
-                Status = "Deposited", // Trạng thái: Đã đặt cọc (Chắc ăn 100%)
+                Status = "Scheduled", // Trạng thái: Đã lên lịch hẹn xem xe
                 CreatedAt = DateTime.Now
             };
 
-            // 4. TRỪ KHO NGAY LẬP TỨC (Giữ chỗ)
-            inventory.Quantity -= 1;
-
-            // Nếu kho tụt về 0, tự động treo biển hết hàng ở cơ sở đó
-            if (inventory.Quantity == 0)
-            {
-                inventory.DisplayStatus = "Out of stock";
-            }
-
-            // 5. CHỐT LƯU VÀO DATABASE
             await _bookingRepo.AddAsync(booking);
-            await _inventoryRepo.UpdateInventoryAsync(inventory);
 
-            // Tùy chọn: Gọi cái hàm SyncCarStatusAsync (như bên Admin) để check xem 
-            // nếu TẤT CẢ các cơ sở đều kho = 0 thì ép trạng thái con xe về Hết Hàng (Out_of_stock) luôn.
+            return (true, "Đặt lịch hẹn lái thử thành công! Sale bên em sẽ liên hệ để đón ní nhé.");
+        }
 
-            return (true, "Chúc mừng! Đặt cọc thành công, xe đã được giữ riêng cho bạn.");
+        // Nhớ thêm 2 hàm này vào IBookingService.cs nữa nha ní
+        public async Task<IEnumerable<object>> GetMyBookingsAsync(int userId)
+        {
+            var bookings = await _bookingRepo.GetByUserIdAsync(userId); // Ní viết hàm này trong Repo nha
+            return bookings.Select(b => new {
+                b.BookingId,
+                b.BookingDate,
+                b.BookingTime,
+                b.Status,
+                CarName = b.Car?.Name,
+                ShowroomName = b.Showroom?.Name,
+                b.CreatedAt
+            });
+        }
+
+        public async Task<(bool Success, string Message)> CancelBookingAsync(int bookingId, int userId)
+        {
+            var booking = await _bookingRepo.GetByIdAsync(bookingId);
+            if (booking == null || booking.UserId != userId)
+                return (false, "Không tìm thấy lịch hẹn hoặc ní không có quyền hủy lịch này!");
+
+            if (booking.Status != "Scheduled")
+                return (false, "Lịch hẹn này không ở trạng thái có thể hủy.");
+
+            booking.Status = "Cancelled";
+            booking.UpdatedAt = DateTime.Now;
+
+            await _bookingRepo.UpdateAsync(booking);
+            return (true, "Đã hủy lịch hẹn thành công!");
         }
     }
 }

@@ -357,7 +357,7 @@ namespace SqlServer.Repositories
         {
             return await _context.Cars
                 .Where(c => c.Condition == CarCondition.New &&
-                            !c.IsDeleted &&
+                            c.IsDeleted == false &&
                             (c.Name.Contains(query) || c.Brand.Contains(query)))
                 .ToListAsync();
         }

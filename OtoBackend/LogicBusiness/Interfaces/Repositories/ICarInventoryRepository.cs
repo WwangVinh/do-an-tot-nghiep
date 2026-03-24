@@ -21,5 +21,6 @@ namespace LogicBusiness.Interfaces.Repositories
         Task UpdateInventoryAsync(CarInventory inventory);
         Task<int> GetTotalQuantityByCarIdAsync(int carId);
         Task<IEnumerable<CarInventory>> GetCarsByShowroomIdAsync(int showroomId);
+        Task<bool> DeleteInventoriesByCarIdAsync(int carId);
     }
 }

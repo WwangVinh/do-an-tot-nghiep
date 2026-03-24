@@ -119,7 +119,7 @@ namespace SqlServer.DBContext
 
             modelBuilder.Entity<Booking>(entity =>
             {
-                entity.HasKey(e => e.Id).HasName("PK__Bookings__3214EC07B3AB1A46");
+                entity.HasKey(e => e.BookingId).HasName("PK__Bookings__3214EC07B3AB1A46");
 
                 entity.Property(e => e.BookingTime)
                     .HasMaxLength(10)

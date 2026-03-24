@@ -5,7 +5,7 @@ namespace CoreEntities.Models;
 
 public partial class Booking
 {
-    public int Id { get; set; }
+    public int BookingId { get; set; }
 
     public int CarId { get; set; }
 
@@ -26,6 +26,7 @@ public partial class Booking
     public string Status { get; set; } = null!;
 
     public int? ShowroomId { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
     public virtual Car Car { get; set; } = null!;
 

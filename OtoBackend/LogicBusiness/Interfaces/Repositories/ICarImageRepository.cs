@@ -12,6 +12,7 @@ namespace LogicBusiness.Interfaces.Repositories
         Task<bool> UpdateImageDescriptionAsync(int imageId, string description, string title);
         Task<CarImage> GetCarImageByIdAsync(int imageId);
         Task DeleteCarImageAsync(int imageId);
+        Task<bool> DeleteAll360ImagesByCarIdAsync(int carId);
         Task DeleteAllImagesByCarIdAsync(int carId);
     }
 }
