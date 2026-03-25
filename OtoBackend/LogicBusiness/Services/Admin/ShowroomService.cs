@@ -2,6 +2,7 @@
 using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Admin;
 using LogicBusiness.Interfaces.Repositories;
+using LogicBusiness.Interfaces.Shared;
 
 
 namespace LogicBusiness.Services.Admin
@@ -10,11 +11,13 @@ namespace LogicBusiness.Services.Admin
     {
         private readonly IShowroomRepository _showroomRepo;
         private readonly ICarInventoryRepository _inventoryRepo;
+        private readonly INotificationService _notiService;
 
-        public ShowroomService(IShowroomRepository showroomRepo, ICarInventoryRepository inventoryRepo)
+        public ShowroomService(IShowroomRepository showroomRepo, ICarInventoryRepository inventoryRepo, INotificationService notiService)
         {
             _showroomRepo = showroomRepo;
             _inventoryRepo = inventoryRepo;
+            _notiService = notiService;
         }
 
         // 1. LẤY TẤT CẢ (Đã bóc tách địa chỉ)
@@ -70,6 +73,14 @@ namespace LogicBusiness.Services.Admin
             };
 
             await _showroomRepo.AddAsync(showroom);
+            await _notiService.CreateNotificationAsync(
+                userId: null,
+                showroomId: null, // Gửi Broadcast cho tất cả mọi người
+                title: "Tưng bừng khai trương chi nhánh mới! 🎊",
+                content: $"Công ty vừa mở thêm Showroom tại {dto.District}, {dto.Province}. Chúc công ty ngày càng phát triển!",
+                actionUrl: "/admin/showrooms", // Link trỏ về danh sách Showroom
+                type: "System" // Icon hệ thống
+            );
             return (true, "Thêm cơ sở mới cực kỳ chuẩn chỉ!");
         }
 

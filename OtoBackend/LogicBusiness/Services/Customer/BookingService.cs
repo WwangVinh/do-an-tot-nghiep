@@ -2,6 +2,7 @@
 using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Customer;
 using LogicBusiness.Interfaces.Repositories;
+using LogicBusiness.Interfaces.Shared;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,12 +17,14 @@ namespace LogicBusiness.Services.Customer
         private readonly IBookingRepository _bookingRepo; // Ní tự tạo Repo này nhé
         private readonly ICarInventoryRepository _inventoryRepo;
         private readonly ICarRepository _carRepo;
+        private readonly INotificationService _notiService;
 
-        public BookingService(IBookingRepository bookingRepo, ICarInventoryRepository inventoryRepo, ICarRepository carRepo)
+        public BookingService(IBookingRepository bookingRepo, ICarInventoryRepository inventoryRepo, ICarRepository carRepo, INotificationService notiService)
         {
             _bookingRepo = bookingRepo;
             _inventoryRepo = inventoryRepo;
             _carRepo = carRepo;
+            _notiService = notiService;
         }
 
         public async Task<(bool Success, string Message)> CreateBookingAsync(BookingCreateDto dto)
@@ -44,7 +47,7 @@ namespace LogicBusiness.Services.Customer
             bool isTimeSlotTaken = await _bookingRepo.IsTimeSlotBookedAsync(dto.CarId, dto.ShowroomId, dto.BookingDate, dto.BookingTime);
             if (isTimeSlotTaken)
             {
-                return (false, "Khung giờ này đã có khách VIP khác hẹn xem xe rồi. Ní vui lòng chọn giờ khác nhé!");
+                return (false, "Khung giờ này đã có khách khác hẹn xem xe rồi. Ní vui lòng chọn giờ khác nhé!");
             }
 
             // 4. LÊN LỊCH HẸN TRẢI NGHIỆM (Tuyệt đối KHÔNG trừ kho)
@@ -63,6 +66,16 @@ namespace LogicBusiness.Services.Customer
             };
 
             await _bookingRepo.AddAsync(booking);
+
+            string formattedDate = dto.BookingDate.ToString("dd/MM/yyyy");
+            await _notiService.CreateNotificationAsync(
+                userId: null,
+                showroomId: dto.ShowroomId,
+                title: "Có lịch hẹn xem xe mới! 📅",
+                content: $"Khách hàng {dto.CustomerName} ({dto.Phone}) vừa đặt lịch xem mẫu {car.Brand} {car.Name} vào lúc {dto.BookingTime} ngày {formattedDate}.",
+                actionUrl: "/admin/bookings", // Link để Sales click vào xem danh sách lịch hẹn
+                type: "Booking"
+            );
 
             return (true, "Đặt lịch hẹn lái thử thành công! Sale bên em sẽ liên hệ để đón ní nhé.");
         }
@@ -95,6 +108,15 @@ namespace LogicBusiness.Services.Customer
             booking.UpdatedAt = DateTime.Now;
 
             await _bookingRepo.UpdateAsync(booking);
+
+            await _notiService.CreateNotificationAsync(
+                userId: null,
+                showroomId: booking.ShowroomId,
+                title: "Khách tự hủy lịch hẹn ❌",
+                content: $"Khách hàng {booking.CustomerName} đã tự hủy lịch xem xe trên web. Anh em cập nhật lại lịch trình nhé!",
+                actionUrl: "/admin/bookings",
+                type: "Booking"
+            );
             return (true, "Đã hủy lịch hẹn thành công!");
         }
     }

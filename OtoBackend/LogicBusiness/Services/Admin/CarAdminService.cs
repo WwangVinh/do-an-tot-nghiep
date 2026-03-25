@@ -6,7 +6,8 @@ using LogicBusiness.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
-//using LogicBusiness.Services.Repositories;
+using System.Linq;
+using LogicBusiness.Interfaces.Shared;
 
 namespace LogicBusiness.Services.Admin
 {
@@ -17,14 +18,16 @@ namespace LogicBusiness.Services.Admin
         private readonly ICarFeatureRepository _carFeatureRepo;             
         private readonly ICarSpecificationRepository _carSpecificationRepo;
         private readonly ICarInventoryRepository _inventoryRepo;
+        private readonly INotificationService _notiService;
 
-        public CarAdminService(ICarRepository carRepo, ICarImageRepository imageRepo, ICarFeatureRepository carFeatureRepo, ICarSpecificationRepository carSpecificationRepo, ICarInventoryRepository inventoryRepo)
+        public CarAdminService(ICarRepository carRepo, ICarImageRepository imageRepo, ICarFeatureRepository carFeatureRepo, ICarSpecificationRepository carSpecificationRepo, ICarInventoryRepository inventoryRepo, INotificationService notiService)
         {
             _carRepo = carRepo;
             _imageRepo = imageRepo;
             _carFeatureRepo = carFeatureRepo;
             _carSpecificationRepo = carSpecificationRepo;
             _inventoryRepo = inventoryRepo;
+            _notiService = notiService;
         }
 
         // 1. GET ALL
@@ -306,9 +309,22 @@ namespace LogicBusiness.Services.Admin
                 if (carSpecs.Any()) await _carSpecificationRepo.AddRangeAsync(carSpecs);
             }
 
+            if (finalStatus == CarStatus.PendingApproval)
+            {
+                await _notiService.CreateNotificationAsync(
+                    userId: null,
+                    showroomId: targetShowroomId, // Báo cho mấy ông sếp cùng chi nhánh
+                    title: "Có xe mới cần duyệt",
+                    content: $"Nhân viên vừa đăng mẫu {car.Brand} {car.Name}. Sếp vào duyệt nhé!",
+                    actionUrl: $"/admin/cars/approve/{car.CarId}",
+                    type: "CarApproval"
+                );
+            }
+
             string finalMsg = (finalStatus == CarStatus.Available) ? "Đã lên sàn con xe mới tinh!" : "Đã tạo yêu cầu, đợi sếp gật đầu là xe lên sóng nha!";
             return (true, finalMsg, car);
         }
+
 
         // 4. UPDATE (Bản Chốt Hạ 2026)
         public async Task<(bool Success, string Message, Car? Car)> UpdateCarAsync(int id, CarUpdateDto dto, string userRole, int? userShowroomId)
@@ -444,6 +460,18 @@ namespace LogicBusiness.Services.Admin
                             UpdatedAt = DateTime.Now
                         });
                     }
+                }
+
+                if ((userRole == "ShowroomSales" || userRole == "Staff") && car.Status == CarStatus.PendingApproval)
+                {
+                    await _notiService.CreateNotificationAsync(
+                        userId: null,
+                        showroomId: dto.ShowroomId, // Báo cho sếp của chi nhánh này
+                        title: "Có bản cập nhật xe cần duyệt 📝",
+                        content: $"Nhân viên vừa sửa và nộp lại thông tin mẫu {car.Brand} {car.Name}. Sếp vào kiểm tra nhé!",
+                        actionUrl: $"/admin/cars/approve/{car.CarId}", // Trỏ sếp thẳng vào trang duyệt
+                        type: "CarApproval"
+                    );
                 }
 
                 await SyncCarStatusAsync(id);
@@ -842,6 +870,16 @@ namespace LogicBusiness.Services.Admin
             car.UpdatedAt = DateTime.Now;
 
             await _carRepo.UpdateAsync(car);
+
+            var showroomId = (await _inventoryRepo.GetInventoriesByCarIdAsync(carId)).FirstOrDefault()?.ShowroomId;
+            await _notiService.CreateNotificationAsync(
+                userId: null,
+                showroomId: showroomId, // Báo cho cả lò biết xe đã lên sàn
+                title: "Xe đã lên sóng! 🎉",
+                content: $"Sếp đã duyệt mẫu {car.Brand} {car.Name}. Anh em đẩy số đi!",
+                actionUrl: $"/admin/cars/detail/{carId}",
+                type: "CarApproval"
+            );
             return (true, "Đã duyệt xe thành công! Xe đã lên sóng.");
         }
 
@@ -859,6 +897,16 @@ namespace LogicBusiness.Services.Admin
             car.UpdatedAt = DateTime.Now;
 
             await _carRepo.UpdateAsync(car);
+
+            var showroomId = (await _inventoryRepo.GetInventoriesByCarIdAsync(carId)).FirstOrDefault()?.ShowroomId;
+            await _notiService.CreateNotificationAsync(
+                userId: null,
+                showroomId: showroomId,
+                title: "Xe bị từ chối duyệt 🚨",
+                content: $"Mẫu {car.Brand} {car.Name} bị sếp chê. Lý do: {reason}",
+                actionUrl: $"/admin/cars/edit/{carId}", // Trỏ link về chỗ sửa xe luôn
+                type: "CarApproval"
+            );
             return (true, "Đã từ chối và gửi phản hồi lại cho nhân viên!");
 
         }

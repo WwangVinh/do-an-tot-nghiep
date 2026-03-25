@@ -1,6 +1,7 @@
 ﻿using CoreEntities.Models;
 using LogicBusiness.Interfaces.Admin;
 using LogicBusiness.Interfaces.Repositories;
+using LogicBusiness.Interfaces.Shared;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,10 +11,12 @@ namespace LogicBusiness.Services.Admin
     public class BookingAdminService : IBookingAdminService
     {
         private readonly IBookingRepository _bookingRepo;
+        private readonly INotificationService _notiService;
 
-        public BookingAdminService(IBookingRepository bookingRepo)
+        public BookingAdminService(IBookingRepository bookingRepo, INotificationService notiService)
         {
             _bookingRepo = bookingRepo;
+            _notiService = notiService;
         }
 
         // 1. LẤY DANH SÁCH (Chặn lỗ hổng filter null)
@@ -95,6 +98,19 @@ namespace LogicBusiness.Services.Admin
             booking.UpdatedAt = DateTime.Now;
 
             await _bookingRepo.UpdateAsync(booking);
+
+            if (booking.UserId.HasValue)
+            {
+                string statusVN = newStatus == "Confirmed" ? "Đã được xác nhận" : newStatus == "Completed" ? "Đã hoàn thành" : newStatus;
+                await _notiService.CreateNotificationAsync(
+                    userId: booking.UserId.Value, // Bắn đích danh vào tài khoản của khách
+                    showroomId: null,
+                    title: "Cập nhật lịch hẹn lái thử 📅",
+                    content: $"Lịch hẹn xem xe của bạn {statusVN}. Vui lòng kiểm tra chi tiết!",
+                    actionUrl: $"/customer/my-bookings/{bookingId}", // Link trỏ khách về trang quản lý lịch của họ
+                    type: "Booking"
+                );
+            }
             return (true, $"[{userRole}] Đã cập nhật trạng thái thành: {newStatus}");
         }
 
@@ -121,6 +137,17 @@ namespace LogicBusiness.Services.Admin
                 : $"{booking.Note}\n[{timeStamp} - {userRole} hủy]: {cancelReason}";
 
             await _bookingRepo.UpdateAsync(booking);
+            if (booking.UserId.HasValue)
+            {
+                await _notiService.CreateNotificationAsync(
+                    userId: booking.UserId.Value,
+                    showroomId: null,
+                    title: "Lịch hẹn đã bị hủy ❌",
+                    content: $"Lịch hẹn của bạn đã bị hủy bởi Showroom. Lý do: {cancelReason}",
+                    actionUrl: $"/customer/my-bookings/{bookingId}",
+                    type: "Booking"
+                );
+            }
             return (true, "Đã hủy lịch hẹn thành công.");
         }
     }

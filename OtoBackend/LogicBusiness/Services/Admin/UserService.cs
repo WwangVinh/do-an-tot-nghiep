@@ -2,6 +2,7 @@
 using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Admin;
 using LogicBusiness.Interfaces.Repositories;
+using LogicBusiness.Interfaces.Shared;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,11 +15,13 @@ namespace LogicBusiness.Services.Admin
     {
         private readonly IUserRepository _userRepository;
         private readonly IShowroomRepository _showroomRepository;
+        private readonly INotificationService _notiService;
 
-        public UserService(IUserRepository userRepository, IShowroomRepository showroomRepository)
+        public UserService(IUserRepository userRepository, IShowroomRepository showroomRepository, INotificationService notiService)
         {
             _userRepository = userRepository;
             _showroomRepository = showroomRepository;
+            _notiService = notiService;
         }
 
         public async Task<IEnumerable<UserResponseDto>> GetAllUsersAsync()
@@ -118,6 +121,14 @@ namespace LogicBusiness.Services.Admin
             };
 
             await _userRepository.AddUserAsync(newUser);
+            await _notiService.CreateNotificationAsync(
+                userId: null,
+                showroomId: request.ShowroomId, // Báo cho cả lò chi nhánh đó biết
+                title: "Nhân sự mới gia nhập! 🎉",
+                content: $"Chào mừng {request.FullName} vừa được cấp tài khoản {request.Role} tại chi nhánh chúng ta.",
+                actionUrl: "/admin/users", // Trỏ về trang quản lý nhân sự
+                type: "System"
+            );
             return (true, $"Tạo tài khoản {request.Role} cho {request.FullName} tại {showroom.Name} thành công!");
         }
 
@@ -147,6 +158,16 @@ namespace LogicBusiness.Services.Admin
                 //user.UpdatedAt = DateTime.Now;
 
                 await _userRepository.UpdateUserAsync(user);
+
+                string actionText = action == "Deactivate" ? "bị đình chỉ hoạt động" : "được mở khóa lại";
+                await _notiService.CreateNotificationAsync(
+                    userId: targetUserId,
+                    showroomId: null,
+                    title: "Thay đổi trạng thái tài khoản ⚠️",
+                    content: $"Tài khoản của bạn vừa {actionText} bởi Quản lý. Liên hệ sếp nếu có thắc mắc.",
+                    actionUrl: "#",
+                    type: "System"
+                );
                 return (true, $"Đã {(action == "Deactivate" ? "khóa" : "mở khóa")} nhân viên thành công!");
             }
 
@@ -160,6 +181,17 @@ namespace LogicBusiness.Services.Admin
                     user.DeletedBy = currentUserId;
                     user.Status = "Inactive";
                     await _userRepository.UpdateUserAsync(user);
+                    if (user.ShowroomId.HasValue)
+                    {
+                        await _notiService.CreateNotificationAsync(
+                            userId: null,
+                            showroomId: user.ShowroomId.Value,
+                            title: "Tài khoản bị Xóa ❌",
+                            content: $"Admin vừa gạch tên {user.FullName} ({user.Role}) khỏi hệ thống chi nhánh này.",
+                            actionUrl: "/admin/users",
+                            type: "System"
+                        );
+                    }
                     return (true, "Đã xóa tài khoản ra khỏi hệ thống!");
                 }
                 else
@@ -167,6 +199,16 @@ namespace LogicBusiness.Services.Admin
                     user.Status = action == "Deactivate" ? "Inactive" : "Active";
                     //user.UpdatedAt = DateTime.Now;
                     await _userRepository.UpdateUserAsync(user);
+
+                    string actionText = action == "Deactivate" ? "bị khóa" : "được khôi phục hoạt động";
+                    await _notiService.CreateNotificationAsync(
+                        userId: targetUserId,
+                        showroomId: null,
+                        title: "Thay đổi trạng thái tài khoản ⚠️",
+                        content: $"Tài khoản của bạn vừa {actionText} bởi Admin hệ thống.", 
+                        actionUrl: "#",
+                        type: "System"
+                    );
                     return (true, $"Đã {(action == "Deactivate" ? "khóa" : "mở khóa")} tài khoản thành công!");
                 }
             }

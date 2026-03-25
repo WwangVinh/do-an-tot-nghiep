@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SqlServer.DBContext;
 
@@ -11,9 +12,11 @@ using SqlServer.DBContext;
 namespace SqlServer.Migrations
 {
     [DbContext(typeof(OtoContext))]
-    partial class OtoContextModelSnapshot : ModelSnapshot
+    [Migration("20260325160433_AddNotificationTable")]
+    partial class AddNotificationTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -710,10 +713,6 @@ namespace SqlServer.Migrations
 
                     b.Property<bool>("IsRead")
                         .HasColumnType("bit");
-
-                    b.Property<string>("NotificationType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("ShowroomId")
                         .HasColumnType("int");

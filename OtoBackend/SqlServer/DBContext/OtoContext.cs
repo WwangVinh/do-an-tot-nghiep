@@ -63,6 +63,8 @@ namespace SqlServer.DBContext
 
         public virtual DbSet<UserLogin> UserLogins { get; set; }
 
+        public virtual DbSet<Notification> Notifications { get; set; }
+
         public DbSet<ConsultationProfile> ConsultationProfiles { get; set; }
         public DbSet<CarInventory> CarInventories { get; set; }
         public DbSet<Consignment> Consignments { get; set; }
@@ -487,6 +489,18 @@ namespace SqlServer.DBContext
                     .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("FK__UserLogin__UserI__503BEA1C");
             });
+
+            modelBuilder.Entity<Notification>()
+                .HasOne(n => n.User)
+                .WithMany() // Giả sử trong model User ní không tạo ICollection<Notification>
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull); // Xóa User thì thông báo vẫn còn, chỉ bị set Null ID
+
+            modelBuilder.Entity<Notification>()
+                .HasOne(n => n.Showroom)
+                .WithMany()
+                .HasForeignKey(n => n.ShowroomId)
+                .OnDelete(DeleteBehavior.ClientSetNull); // Xóa Showroom thì ID trong thông báo thành Null
 
             modelBuilder.Entity<CarInventory>()
                         .HasIndex(ci => new { ci.ShowroomId, ci.CarId })
