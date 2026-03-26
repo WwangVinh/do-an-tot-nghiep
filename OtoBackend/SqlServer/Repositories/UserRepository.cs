@@ -81,5 +81,13 @@ namespace SqlServer.Repositories
 
             return (users, totalCount);
         }
+
+        public async Task<IEnumerable<User>> GetStaffForChatAsync()
+        {
+            // Chỉ lấy những người có quyền Sales hoặc Manager và tài khoản đang Active
+            return await _context.Users
+                .Where(u => (u.Role == "ShowroomSales" || u.Role == "ShowroomManager") && u.Status == "Active")
+                .ToListAsync();
+        }
     }
 }

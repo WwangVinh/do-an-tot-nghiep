@@ -12,6 +12,7 @@ using SqlServer.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.AspNetCore.SignalR;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -120,6 +121,12 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IShowroomService, ShowroomService>();
 builder.Services.AddScoped<ICarInventoryService, CarInventoryService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
+builder.Services.AddScoped<IChatRepository, ChatRepository>();
+builder.Services.AddScoped<IChatService, ChatService>();
+
+builder.Services.AddSignalR();
+
+
 var app = builder.Build();
 
 
@@ -138,6 +145,8 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 //app.UseCors("AllowAll"); // Bật CORS Ploicy Error lên
+
+app.MapHub<LogicBusiness.Hubs.ChatHub >("/chathub");
 
 app.UseAuthorization();
 

@@ -17,5 +17,7 @@ namespace LogicBusiness.Interfaces.Repositories
         Task<User?> GetUserByIdAsync(int userId);
         Task UpdateUserAsync(User user);
         Task<(IEnumerable<User> Users, int TotalCount)> GetFilteredUsersAsync(bool isDeleted, string? search, int page, int pageSize);
+
+        Task<IEnumerable<User>> GetStaffForChatAsync();
     }
 }
