@@ -75,22 +75,28 @@ namespace SqlServer.Repositories
                 {
                     query = query.Where(u => u.ShowroomId == currentUserShowroomId.Value);
                 }
+                // 👇 THÊM CÁI NÀY NÈ: Nếu là Admin và có chọn Showroom từ Dropdown để lọc
+                else if (filterShowroomId.HasValue && filterShowroomId.Value > 0)
+                {
+                    query = query.Where(u => u.ShowroomId == filterShowroomId.Value);
+                }
             }
             else if (userType == "Customer")
             {
                 // Chỉ bốc ra những ông là khách hàng
                 query = query.Where(u => u.Role == "Customer");
             }
-
             // 3. Lọc theo từ khóa tìm kiếm (Search)
             if (!string.IsNullOrWhiteSpace(search))
             {
-                var kw = search.Trim().ToLower();
-                query = query.Where(u => u.Username.ToLower().Contains(kw)
-                                      || u.Email.ToLower().Contains(kw)
-                                      || u.FullName.ToLower().Contains(kw));
-            }
+                var kw = $"%{search.Trim()}%"; // Bọc % 2 đầu để tìm kiếm LIKE trong SQL
 
+                query = query.Where(u =>
+                    (u.Username != null && EF.Functions.Like(u.Username, kw)) ||
+                    (u.Email != null && EF.Functions.Like(u.Email, kw)) ||
+                    (u.FullName != null && EF.Functions.Like(u.FullName, kw))
+                );
+            }
             // 4. Đếm tổng số lượng (để React làm phân trang)
             int totalCount = await query.CountAsync();
 
@@ -110,6 +116,12 @@ namespace SqlServer.Repositories
             return await _context.Users
                 .Where(u => (u.Role == "ShowroomSales" || u.Role == "ShowroomManager") && u.Status == "Active")
                 .ToListAsync();
+        }
+
+        public async Task HardDeleteUserAsync(User user)
+        {
+            _context.Users.Remove(user); // 👈 Tuyệt chiêu bứng gốc
+            await _context.SaveChangesAsync();
         }
     }
 }

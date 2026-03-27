@@ -62,6 +62,7 @@ namespace LogicBusiness.Services.Admin
                 Phone = u.Phone,
                 Role = u.Role,
                 Status = u.Status,
+                ShowroomId = u.ShowroomId,
                 AvatarUrl = u.AvatarUrl,
                 CreatedAt = u.CreatedAt,
                 DeletedAt = u.DeletedAt
@@ -132,7 +133,7 @@ namespace LogicBusiness.Services.Admin
             return (true, $"Tạo tài khoản {request.Role} cho {request.FullName} tại {showroom.Name} thành công!");
         }
 
-        // KHÓA HOẶC XÓA TÀI KHOẢN (Chia quyền Admin/Manager)
+        // KHÓA HOẶC XÓA TÀI KHOẢN (Bản nâng cấp chống lỗi hoa/thường)
         public async Task<(bool Success, string Message)> HandleUserStatusAsync(int targetUserId, string action, int currentUserId, string currentUserRole, int? currentUserShowroomId)
         {
             var user = await _userRepository.GetUserByIdAsync(targetUserId);
@@ -141,8 +142,12 @@ namespace LogicBusiness.Services.Admin
             // Không ai được tự khóa/xóa chính mình
             if (user.UserId == currentUserId) return (false, "Đừng tự hủy ní ơi, không tự khóa tài khoản mình được đâu!");
 
+            // 👇 1. CHUẨN HÓA CHUỖI: Bắt Frontend gửi gì cũng chuyển về chữ thường hết để dễ so sánh
+            string safeAction = action?.Trim().ToLower() ?? "";
+            string safeRole = currentUserRole?.Trim().ToLower() ?? "";
+
             // 👇 QUẢN LÝ (MANAGER) RA TAY
-            if (currentUserRole == "ShowroomManager")
+            if (safeRole == "showroommanager")
             {
                 if (user.Role == "Admin" || user.Role == "ShowroomManager")
                     return (false, "Sếp không có quyền thao tác lên cấp trên hoặc đồng cấp!");
@@ -150,16 +155,26 @@ namespace LogicBusiness.Services.Admin
                 if (user.ShowroomId != currentUserShowroomId)
                     return (false, "Nhân viên này thuộc chi nhánh khác, sếp không quản lý được!");
 
-                if (action == "Delete")
+                if (safeAction == "delete")
                     return (false, "Sếp chỉ được quyền Khóa (Vô hiệu hóa) nhân viên, Xóa là việc của Admin!");
 
-                // Manager chỉ được Khóa (Inactive) / Mở khóa (Active)
-                user.Status = action == "Deactivate" ? "Inactive" : "Active";
-                //user.UpdatedAt = DateTime.Now;
+                // Manager chỉ được Khóa / Mở khóa
+                if (safeAction == "deactivate" || safeAction == "inactive" || safeAction == "lock")
+                {
+                    user.Status = "Inactive";
+                }
+                else if (safeAction == "activate" || safeAction == "active" || safeAction == "unlock")
+                {
+                    user.Status = "Active";
+                }
+                else
+                {
+                    return (false, $"Hành động '{action}' từ hệ thống không hợp lệ!");
+                }
 
                 await _userRepository.UpdateUserAsync(user);
 
-                string actionText = action == "Deactivate" ? "bị đình chỉ hoạt động" : "được mở khóa lại";
+                string actionText = user.Status == "Inactive" ? "bị đình chỉ hoạt động" : "được mở khóa lại";
                 await _notiService.CreateNotificationAsync(
                     userId: targetUserId,
                     showroomId: null,
@@ -168,19 +183,20 @@ namespace LogicBusiness.Services.Admin
                     actionUrl: "#",
                     type: "System"
                 );
-                return (true, $"Đã {(action == "Deactivate" ? "khóa" : "mở khóa")} nhân viên thành công!");
+                return (true, $"Đã {(user.Status == "Inactive" ? "khóa" : "mở khóa")} nhân viên thành công!");
             }
 
             // 👇 ADMIN RA TAY (Đấng tối cao)
-            if (currentUserRole == "Admin")
+            else if (safeRole == "admin")
             {
-                if (action == "Delete")
+                if (safeAction == "delete")
                 {
                     user.IsDeleted = true; // Admin chém phát là Xóa mềm luôn
                     user.DeletedAt = DateTime.Now;
                     user.DeletedBy = currentUserId;
                     user.Status = "Inactive";
                     await _userRepository.UpdateUserAsync(user);
+
                     if (user.ShowroomId.HasValue)
                     {
                         await _notiService.CreateNotificationAsync(
@@ -194,26 +210,73 @@ namespace LogicBusiness.Services.Admin
                     }
                     return (true, "Đã xóa tài khoản ra khỏi hệ thống!");
                 }
+                // 👇 THÊM NHÁNH XÓA CỨNG VÀO ĐÂY 👇
+                else if (safeAction == "hard_delete")
+                {
+                    try
+                    {
+                        // 1. Lưu lại thông tin trước khi bứng gốc để tí còn biết tên mà báo cáo
+                        string deletedName = user.FullName;
+                        string deletedRole = user.Role;
+                        int? showroomId = user.ShowroomId;
+
+                        // 2. Ra đòn kết liễu
+                        await _userRepository.HardDeleteUserAsync(user);
+
+                        // 3. Bắn chuông cho Showroom
+                        if (showroomId.HasValue)
+                        {
+                            await _notiService.CreateNotificationAsync(
+                                userId: null,
+                                showroomId: showroomId.Value,
+                                title: "Tài khoản bị XÓA VĨNH VIỄN ☠️",
+                                content: $"Admin vừa bứng gốc tài khoản {deletedName} ({deletedRole}) khỏi hệ thống. Dữ liệu này không thể khôi phục!",
+                                actionUrl: "/admin/users",
+                                type: "System"
+                            );
+                        }
+
+                        return (true, "Đã xóa CỨNG (vĩnh viễn) tài khoản ra khỏi hệ thống!");
+                    }
+                    catch (Exception)
+                    {
+                        // Bắt lỗi rớt khóa ngoại của SQL Server
+                        return (false, "Không thể xóa vĩnh viễn người này vì họ đã có lịch sử giao dịch/đặt lịch trong hệ thống. Chỉ nên dùng Xóa mềm!");
+                    }
+                }
+                // 👆 KẾT THÚC NHÁNH XÓA CỨNG 👆
                 else
                 {
-                    user.Status = action == "Deactivate" ? "Inactive" : "Active";
-                    //user.UpdatedAt = DateTime.Now;
+                    // Admin Khóa / Mở khóa
+                    if (safeAction == "deactivate" || safeAction == "inactive" || safeAction == "lock")
+                    {
+                        user.Status = "Inactive";
+                    }
+                    else if (safeAction == "activate" || safeAction == "active" || safeAction == "unlock")
+                    {
+                        user.Status = "Active";
+                    }
+                    else
+                    {
+                        return (false, $"Hành động '{action}' không hợp lệ!");
+                    }
+
                     await _userRepository.UpdateUserAsync(user);
 
-                    string actionText = action == "Deactivate" ? "bị khóa" : "được khôi phục hoạt động";
+                    string actionText = user.Status == "Inactive" ? "bị khóa" : "được khôi phục hoạt động";
                     await _notiService.CreateNotificationAsync(
                         userId: targetUserId,
                         showroomId: null,
                         title: "Thay đổi trạng thái tài khoản ⚠️",
-                        content: $"Tài khoản của bạn vừa {actionText} bởi Admin hệ thống.", 
+                        content: $"Tài khoản của bạn vừa {actionText} bởi Admin hệ thống.",
                         actionUrl: "#",
                         type: "System"
                     );
-                    return (true, $"Đã {(action == "Deactivate" ? "khóa" : "mở khóa")} tài khoản thành công!");
+                    return (true, $"Đã {(user.Status == "Inactive" ? "khóa" : "mở khóa")} tài khoản thành công!");
                 }
             }
 
-            return (false, "Lỗi quyền truy cập!");
+            return (false, "Lỗi quyền truy cập! Không xác định được chức vụ của bạn.");
         }
     }
 }

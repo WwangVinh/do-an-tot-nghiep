@@ -15,6 +15,7 @@ namespace LogicBusiness.DTOs
         public string? Phone { get; set; }
         public string Role { get; set; } = null!;
         public string Status { get; set; } = null!;
+        public int? ShowroomId { get; set; }
         public string? AvatarUrl { get; set; }
         public DateTime? CreatedAt { get; set; }
         public DateTime? DeletedAt { get; set; }
