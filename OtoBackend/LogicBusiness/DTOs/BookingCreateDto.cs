@@ -14,7 +14,7 @@ namespace LogicBusiness.DTOs
         public string Phone { get; set; } = null!;
         public DateOnly BookingDate { get; set; }
         public string? BookingTime { get; set; }
-
+        public string? TimeSpan { get; set; }
         public string? Note { get; set; }
         public int? UserId { get; set; }
     }

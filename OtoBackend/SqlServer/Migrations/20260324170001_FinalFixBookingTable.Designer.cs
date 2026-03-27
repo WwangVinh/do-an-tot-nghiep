@@ -12,8 +12,8 @@ using SqlServer.DBContext;
 namespace SqlServer.Migrations
 {
     [DbContext(typeof(OtoContext))]
-    [Migration("20260320065758_AddRejectionReasonToCar")]
-    partial class AddRejectionReasonToCar
+    [Migration("20260324170001_FinalFixBookingTable")]
+    partial class FinalFixBookingTable
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -150,11 +150,11 @@ namespace SqlServer.Migrations
 
             modelBuilder.Entity("CoreEntities.Models.Booking", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("BookingId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("BookingId"));
 
                     b.Property<DateOnly>("BookingDate")
                         .HasColumnType("date");
@@ -196,10 +196,13 @@ namespace SqlServer.Migrations
                         .HasColumnType("nvarchar(50)")
                         .HasDefaultValue("Pending");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int?>("UserId")
                         .HasColumnType("int");
 
-                    b.HasKey("Id")
+                    b.HasKey("BookingId")
                         .HasName("PK__Bookings__3214EC07B3AB1A46");
 
                     b.HasIndex("CarId");

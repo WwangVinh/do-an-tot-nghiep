@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using CoreEntities.Models;
+using Microsoft.AspNetCore.Http;
 using OtoBackend.Helpers;
 using System;
 using System.Collections.Generic;
@@ -53,5 +54,7 @@ namespace LogicBusiness.DTOs
         // Chuỗi Specifications thần thánh của tụi mình nè ní!
         // Định dạng: "Nhóm|Tên|Giá trị ; Nhóm|Tên|Giá trị"
         public string? Specifications { get; set; }
+
+        public CarStatus? Status { get; set; }
     }
 }

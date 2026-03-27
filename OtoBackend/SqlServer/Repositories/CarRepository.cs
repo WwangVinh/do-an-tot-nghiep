@@ -192,12 +192,17 @@ namespace SqlServer.Repositories
              decimal? minPrice, decimal? maxPrice, CarStatus? status,
              string? transmission, string? bodyStyle,
              string? fuelType, string? location,
-             bool? isDeleted, int page, int pageSize)
+             bool? isDeleted, int page, int pageSize, int? userShowroomId = null)
         {
             var query = _context.Cars
                                 .Include(c => c.CarInventories)
                                     .ThenInclude(i => i.Showroom) // 👈 Phải có ông này thì mới bốc được cái Province ra!
                                 .AsQueryable();
+
+            if (userShowroomId.HasValue)
+            {
+                query = query.Where(c => c.CarInventories.Any(inv => inv.ShowroomId == userShowroomId.Value));
+            }
             // --- BỘ LỌC MẠNH NHƯ CUSTOMER ---
             if (!string.IsNullOrWhiteSpace(search)) query = query.Where(c => c.Name.ToLower().Contains(search.Trim().ToLower()));
             if (!string.IsNullOrWhiteSpace(brand)) query = query.Where(c => c.Brand.ToUpper() == brand.Trim().ToUpper());
@@ -249,6 +254,17 @@ namespace SqlServer.Repositories
                 c.Condition == (CarCondition)condition &&
                 c.Mileage == (mileage ?? 0m) && // Check Mileage kiểu decimal
                 (excludeId == null || c.CarId != excludeId));
+        }
+
+        public async Task<Car?> GetExistingNewCarAsync(string name, string brand, int year)
+        {
+            return await _context.Cars
+                .FirstOrDefaultAsync(c =>
+                    c.Name == name &&
+                    c.Brand == brand &&
+                    c.Year == year &&
+                    c.Condition == CarCondition.New && // Chỉ tìm xe mới
+                    c.IsDeleted == false);
         }
 
         public async Task AddCarAsync(Car car)
@@ -335,6 +351,15 @@ namespace SqlServer.Repositories
         public bool CarExists(int id)
         {
             return _context.Cars.Any(e => e.CarId == id);
+        }
+
+        public async Task<IEnumerable<Car>> SearchMasterCarsAsync(string query)
+        {
+            return await _context.Cars
+                .Where(c => c.Condition == CarCondition.New &&
+                            c.IsDeleted == false &&
+                            (c.Name.Contains(query) || c.Brand.Contains(query)))
+                .ToListAsync();
         }
     }
 }

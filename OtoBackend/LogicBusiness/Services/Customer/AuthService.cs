@@ -13,6 +13,7 @@ using BCrypt.Net;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.Extensions.Configuration;
 using LogicBusiness.Interfaces.Repositories;
+using LogicBusiness.Interfaces.Shared;
 
 namespace LogicBusiness.Services.Customer
 {
@@ -20,11 +21,13 @@ namespace LogicBusiness.Services.Customer
     {
         private readonly IUserRepository _userRepository;
         private readonly IConfiguration _configuration;
+        private readonly INotificationService _notiService;
 
-        public AuthService(IUserRepository userRepository, IConfiguration configuration)
+        public AuthService(IUserRepository userRepository, IConfiguration configuration, INotificationService notiService)
         {
             _userRepository = userRepository;
             _configuration = configuration;
+            _notiService = notiService;
         }
 
         public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
@@ -47,6 +50,17 @@ namespace LogicBusiness.Services.Customer
             };
 
             await _userRepository.AddUserAsync(user);
+
+            // TẠO LỜI CHÀO MỪNG CHO KHÁCH HÀNG MỚI
+            // (Lưu ý: Sau khi AddUserAsync, cái object 'user' đã tự động có UserId từ DB rồi nhé)
+            await _notiService.CreateNotificationAsync(
+                userId: user.UserId, // Bắn đích danh vào tài khoản khách vừa tạo
+                showroomId: null,
+                title: "Chào mừng bạn gia nhập! 🎉",
+                content: $"Xin chào {user.FullName}, chúc bạn sớm tìm được chiếc xe ưng ý tại Showroom của chúng tôi!",
+                actionUrl: "/", // Trỏ về trang chủ
+                type: "System"
+            );
 
             return new AuthResponse { Success = true, Message = "Đăng ký thành công!" };
         }
@@ -86,13 +100,21 @@ namespace LogicBusiness.Services.Customer
             var jwtSettings = _configuration.GetSection("Jwt");
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]));
 
-            var claims = new[]
+            // 1. Khởi tạo danh sách các thẻ cơ bản
+            var claims = new List<Claim>
             {
                 new Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
                 new Claim(ClaimTypes.Name, user.Username),
                 new Claim(ClaimTypes.Role, user.Role)
             };
 
+            // 2. 👇 BÍ KÍP Ở ĐÂY: Nếu là Nhân viên/Quản lý có ShowroomId, nhét luôn vào Token!
+            if (user.ShowroomId.HasValue)
+            {
+                claims.Add(new Claim("ShowroomId", user.ShowroomId.Value.ToString()));
+            }
+
+            // 3. Tiến hành đúc Token
             var token = new JwtSecurityToken(
                 issuer: jwtSettings["Issuer"],
                 audience: jwtSettings["Audience"],

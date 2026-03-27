@@ -147,11 +147,11 @@ namespace SqlServer.Migrations
 
             modelBuilder.Entity("CoreEntities.Models.Booking", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("BookingId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("BookingId"));
 
                     b.Property<DateOnly>("BookingDate")
                         .HasColumnType("date");
@@ -193,10 +193,13 @@ namespace SqlServer.Migrations
                         .HasColumnType("nvarchar(50)")
                         .HasDefaultValue("Pending");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int?>("UserId")
                         .HasColumnType("int");
 
-                    b.HasKey("Id")
+                    b.HasKey("BookingId")
                         .HasName("PK__Bookings__3214EC07B3AB1A46");
 
                     b.HasIndex("CarId");
@@ -684,6 +687,52 @@ namespace SqlServer.Migrations
                         .HasName("PK__Location__E7FEA49744FC6D16");
 
                     b.ToTable("LocationTaxes");
+                });
+
+            modelBuilder.Entity("CoreEntities.Models.Notification", b =>
+                {
+                    b.Property<int>("NotificationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("NotificationId"));
+
+                    b.Property<string>("ActionUrl")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Content")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("NotificationType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ShowroomId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("NotificationId");
+
+                    b.HasIndex("ShowroomId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("CoreEntities.Models.Order", b =>
@@ -1315,6 +1364,21 @@ namespace SqlServer.Migrations
                         .HasForeignKey("UserId");
 
                     b.Navigation("ChatSession");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("CoreEntities.Models.Notification", b =>
+                {
+                    b.HasOne("CoreEntities.Models.Showroom", "Showroom")
+                        .WithMany()
+                        .HasForeignKey("ShowroomId");
+
+                    b.HasOne("CoreEntities.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId");
+
+                    b.Navigation("Showroom");
 
                     b.Navigation("User");
                 });

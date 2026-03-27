@@ -48,7 +48,7 @@ namespace OtoBackend.Controllers.admin
         [HttpPut("update-stock")]
         public async Task<IActionResult> UpdateStock([FromBody] UpdateStockDto request)
         {
-            var result = await _inventoryService.UpdateStockAsync(request.CarId, request.ShowroomId, request.Quantity);
+            var result = await _inventoryService.UpdateStockAsync(request.CarId, request.ShowroomId, request.Quantity, request.DisplayStatus);
 
             if (result.Success)
             {

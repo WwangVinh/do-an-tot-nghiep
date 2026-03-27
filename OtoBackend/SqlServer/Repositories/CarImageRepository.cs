@@ -107,5 +107,32 @@ namespace SqlServer.Repositories
                 await _context.SaveChangesAsync();
             }
         }
+
+        public async Task<bool> DeleteAll360ImagesByCarIdAsync(int carId)
+        {
+            // Tìm tất cả ảnh của xe này mà có mác 360 độ
+            var images360 = await _context.CarImages
+                .Where(img => img.CarId == carId && img.Is360Degree == true)
+                .ToListAsync();
+
+            if (images360.Any())
+            {
+                // Tùy chọn: Xóa file vật lý để đỡ tốn dung lượng ổ cứng
+                foreach (var img in images360)
+                {
+                    if (!string.IsNullOrEmpty(img.ImageUrl) && !img.ImageUrl.StartsWith("http"))
+                    {
+                        var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", img.ImageUrl.TrimStart('/'));
+                        if (File.Exists(filePath)) File.Delete(filePath);
+                    }
+                }
+
+                // Xóa trong Database
+                _context.CarImages.RemoveRange(images360);
+                await _context.SaveChangesAsync();
+            }
+
+            return true;
+        }
     }
 }

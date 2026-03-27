@@ -10,7 +10,7 @@ namespace LogicBusiness.Interfaces.Admin
     public interface ICarInventoryService
     {
         // Hàm này để Admin cập nhật lại số lượng xe trong kho (Nhập thêm hoặc bán bớt)
-        Task<(bool Success, string Message)> UpdateStockAsync(int carId, int showroomId, int newQuantity);
+        Task<(bool Success, string Message)> UpdateStockAsync(int carId, int showroomId, int newQuantity, string displayStatus);
 
         // Lấy chi tiết xe này đang nằm ở những showroom nào
         Task<IEnumerable<CarInventory>> GetInventoriesByCarIdAsync(int carId);

@@ -2,6 +2,7 @@
 using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Admin;
 using LogicBusiness.Interfaces.Repositories;
+using LogicBusiness.Interfaces.Shared;
 
 
 namespace LogicBusiness.Services.Admin
@@ -9,12 +10,14 @@ namespace LogicBusiness.Services.Admin
     public class ShowroomService : IShowroomService
     {
         private readonly IShowroomRepository _showroomRepo;
-        private readonly ICarInventoryRepository _inventoryRepository;
+        private readonly ICarInventoryRepository _inventoryRepo;
+        private readonly INotificationService _notiService;
 
-        public ShowroomService(IShowroomRepository showroomRepo, ICarInventoryRepository inventoryRepo)
+        public ShowroomService(IShowroomRepository showroomRepo, ICarInventoryRepository inventoryRepo, INotificationService notiService)
         {
             _showroomRepo = showroomRepo;
-            _inventoryRepository = inventoryRepo;
+            _inventoryRepo = inventoryRepo;
+            _notiService = notiService;
         }
 
         // 1. LẤY TẤT CẢ (Đã bóc tách địa chỉ)
@@ -70,6 +73,14 @@ namespace LogicBusiness.Services.Admin
             };
 
             await _showroomRepo.AddAsync(showroom);
+            await _notiService.CreateNotificationAsync(
+                userId: null,
+                showroomId: null, // Gửi Broadcast cho tất cả mọi người
+                title: "Tưng bừng khai trương chi nhánh mới! 🎊",
+                content: $"Công ty vừa mở thêm Showroom tại {dto.District}, {dto.Province}. Chúc công ty ngày càng phát triển!",
+                actionUrl: "/admin/showrooms", // Link trỏ về danh sách Showroom
+                type: "System" // Icon hệ thống
+            );
             return (true, "Thêm cơ sở mới cực kỳ chuẩn chỉ!");
         }
 
@@ -105,19 +116,29 @@ namespace LogicBusiness.Services.Admin
             return (true, "Xóa cơ sở thành công!");
         }
 
+        // LogicBusiness/Services/Admin/ShowroomService.cs (CẬP NHẬT MAPPING)
         public async Task<IEnumerable<ShowroomCarResponseDto>> GetCarsInShowroomAsync(int showroomId)
         {
-            // Gọi repo lấy dữ liệu (nhớ nạp _inventoryRepository vào Constructor của Service này)
-            var inventories = await _inventoryRepository.GetCarsByShowroomIdAsync(showroomId);
+            // 1. Gọi Repo lấy dữ liệu (nhớ là ní đã Include các bảng liên quan ở Repo rồi nha)
+            var inventories = await _inventoryRepo.GetCarsByShowroomIdAsync(showroomId);
 
+            // 2. Map dữ liệu sang DTO "xịn" (CẬP NHẬT Ở ĐÂY)
             return inventories.Select(inv => new ShowroomCarResponseDto
             {
                 CarId = inv.CarId,
-                Name = inv.Car.Name,
+                Name = inv.Car?.Name ?? "N/A",
                 Price = inv.Car?.Price ?? 0,
                 Quantity = inv.Quantity,
                 DisplayStatus = inv.DisplayStatus,
-                MainImageUrl = inv.Car.ImageUrl // Hoặc logic lấy ảnh của ní
+                MainImageUrl = inv.Car?.ImageUrl, // Hoặc logic lấy ảnh của ní
+
+                // 👇 ĐIỀN THÔNG TIN MỚI NÂNG CẤP VÀO ĐÂY (Dùng Navigation Properties)
+                // 👇 ĐIỀN THÔNG TIN (DB của ní lưu thẳng chuỗi nên không cần chấm Name)
+                BrandName = inv.Car?.Brand,              // Bỏ .Name đi
+                SegmentName = inv.Car?.BodyStyle,        // Ní dùng BodyStyle (Sedan, Bán tải...) thay cho Segment
+                FuelTypeName = inv.Car?.FuelType,        // Bỏ .Name đi
+                TransmissionName = inv.Car?.Transmission,// Lấy thêm Hộp số (Số tự động/Số sàn)
+                ModelYear = inv.Car?.Year                // Cột trong DB của ní tên là Year
             });
         }
     }

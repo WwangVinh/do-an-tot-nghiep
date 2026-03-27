@@ -5,24 +5,25 @@
 namespace SqlServer.Migrations
 {
     /// <inheritdoc />
-    public partial class AddRejectionReasonToCar : Migration
+    public partial class AddNotificationTypeColumn : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<string>(
-                name: "RejectionReason",
-                table: "Cars",
+                name: "NotificationType",
+                table: "Notifications",
                 type: "nvarchar(max)",
-                nullable: true);
+                nullable: false,
+                defaultValue: "");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "RejectionReason",
-                table: "Cars");
+                name: "NotificationType",
+                table: "Notifications");
         }
     }
 }

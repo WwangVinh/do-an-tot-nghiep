@@ -54,25 +54,47 @@ namespace SqlServer.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task<(IEnumerable<User> Users, int TotalCount)> GetFilteredUsersAsync(bool isDeleted, string? search, int page, int pageSize)
+        // BẢN NÂNG CẤP: LỌC USER CÓ PHÂN QUYỀN (Thay thế cho hàm GetFilteredUsersAsync cũ)
+        public async Task<(IEnumerable<User> Users, int TotalCount)> GetFilteredUsersAdminAsync(
+            string userType, bool isDeleted, string? search, int page, int pageSize,
+            string currentUserRole, int? currentUserShowroomId, int? filterShowroomId = null)
         {
             var query = _context.Users.AsQueryable();
 
             // 1. Lọc theo trạng thái xóa (Thùng rác hay Không)
             query = query.Where(u => u.IsDeleted == isDeleted);
 
-            // 2. Lọc theo từ khóa tìm kiếm (Search)
-            if (!string.IsNullOrWhiteSpace(search))
+            // 2. TÁCH KHU VỰC & BẢO KÊ PHÂN QUYỀN 
+            if (userType == "Staff")
             {
-                query = query.Where(u => u.Username.Contains(search)
-                                      || u.Email.Contains(search)
-                                      || u.FullName.Contains(search));
+                // Chỉ bốc ra những ông là nhân sự (Sales hoặc Manager)
+                query = query.Where(u => u.Role == "ShowroomManager" || u.Role == "ShowroomSales");
+
+                // 👇 Nếu người đang xem là Manager -> ÉP CHỈ ĐƯỢC THẤY NHÂN VIÊN SHOWROOM MÌNH
+                if (currentUserRole == "ShowroomManager" && currentUserShowroomId.HasValue)
+                {
+                    query = query.Where(u => u.ShowroomId == currentUserShowroomId.Value);
+                }
+            }
+            else if (userType == "Customer")
+            {
+                // Chỉ bốc ra những ông là khách hàng
+                query = query.Where(u => u.Role == "Customer");
             }
 
-            // Đếm tổng số lượng (để React làm phân trang)
+            // 3. Lọc theo từ khóa tìm kiếm (Search)
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var kw = search.Trim().ToLower();
+                query = query.Where(u => u.Username.ToLower().Contains(kw)
+                                      || u.Email.ToLower().Contains(kw)
+                                      || u.FullName.ToLower().Contains(kw));
+            }
+
+            // 4. Đếm tổng số lượng (để React làm phân trang)
             int totalCount = await query.CountAsync();
 
-            // 3. Phân trang (Pagination) và sắp xếp
+            // 5. Phân trang (Pagination) và sắp xếp
             var users = await query
                 .OrderByDescending(u => u.CreatedAt)
                 .Skip((page - 1) * pageSize)
