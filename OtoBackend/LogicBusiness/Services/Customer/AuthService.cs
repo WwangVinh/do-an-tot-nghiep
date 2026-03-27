@@ -80,7 +80,19 @@ namespace LogicBusiness.Services.Customer
             }
 
             var token = GenerateJwtToken(user);
-            return new AuthResponse { Success = true, Message = "Đăng nhập thành công!", Token = token };
+
+            // SỬA LẠI ĐOẠN NÀY: Trả về thêm Role và thông tin User
+            return new AuthResponse
+            {
+                Success = true,
+                Message = "Đăng nhập thành công!",
+                Token = token,
+                // Bơm thêm data cho FE:
+                UserId = user.UserId,
+                Username = user.Username,
+                Role = user.Role,
+                ShowroomId = user.ShowroomId
+            };
         }
 
         private string GenerateJwtToken(User user)

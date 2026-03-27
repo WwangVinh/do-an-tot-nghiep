@@ -31,10 +31,10 @@ namespace OtoBackend.Controllers.Customer
 
             var result = await _wishlistService.ToggleWishlistAsync(userId, carId);
 
-            if (!result.Success) return BadRequest(new { Success = false, Message = result.Message });
+            if (!result.Success) return BadRequest(new { Success = false, result.Message });
 
             // FE nhận cục này sẽ biết đường tô đỏ hay làm rỗng hình trái tim
-            return Ok(new { Success = true, Message = result.Message, IsHearted = result.IsHearted });
+            return Ok(new { Success = true, result.Message, result.IsHearted });
         }
 
         // VÀO TRANG CÁ NHÂN ĐỂ XEM DANH SÁCH XE ĐÃ LƯU

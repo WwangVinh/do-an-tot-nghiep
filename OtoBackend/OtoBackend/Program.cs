@@ -14,6 +14,7 @@ using Microsoft.OpenApi.Models;
 using SqlServer.DBContext;
 using SqlServer.Repositories;
 using System.Text;
+using Microsoft.AspNetCore.SignalR;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -129,6 +130,12 @@ builder.Services.AddScoped<IBookingAdminService, BookingAdminService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IConsignmentService, ConsignmentService>();
 builder.Services.AddScoped<ICarWishlistService, CarWishlistService>();
+builder.Services.AddScoped<IChatRepository, ChatRepository>();
+builder.Services.AddScoped<IChatService, ChatService>();
+
+builder.Services.AddSignalR();
+
+
 var app = builder.Build();
 
 
@@ -147,6 +154,8 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 //app.UseCors("AllowAll"); // Bật CORS Ploicy Error lên
+
+app.MapHub<LogicBusiness.Hubs.ChatHub >("/chathub");
 
 app.UseAuthorization();
 

@@ -22,4 +22,5 @@ public partial class ChatSession
     public virtual ICollection<ChatMessage> ChatMessages { get; set; } = new List<ChatMessage>();
 
     public virtual User? User { get; set; }
+    public DateTime LastMessageAt { get; set; }
 }
