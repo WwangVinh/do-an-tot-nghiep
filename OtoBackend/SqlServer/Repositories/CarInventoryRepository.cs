@@ -20,6 +20,7 @@ namespace SqlServer.Repositories
             _context = context;
         }
 
+
         public async Task<CarInventory?> GetInventoryAsync(int carId, int showroomId)
         {
             return await _context.CarInventories
@@ -30,7 +31,7 @@ namespace SqlServer.Repositories
         {
             // Lấy tất cả các kho đang chứa con xe này, VÀ nối luôn bảng Showroom để lấy tên tỉnh
             return await _context.CarInventories
-                .Include(i => i.Showroom) // Bước cực kỳ quan trọng để không bị mù thông tin Showroom
+                .Include(i => i.Showroom)
                 .Where(i => i.CarId == carId)
                 .ToListAsync();
         }
@@ -38,13 +39,13 @@ namespace SqlServer.Repositories
         public async Task AddInventoryAsync(CarInventory inventory)
         {
             await _context.CarInventories.AddAsync(inventory);
-            await _context.SaveChangesAsync(); // Chốt lưu DB
+            await _context.SaveChangesAsync(); 
         }
 
         public async Task UpdateInventoryAsync(CarInventory inventory)
         {
             _context.CarInventories.Update(inventory);
-            await _context.SaveChangesAsync(); // Chốt lưu DB
+            await _context.SaveChangesAsync(); 
         }
         public async Task<int> GetTotalQuantityByCarIdAsync(int carId)
         {
@@ -56,9 +57,8 @@ namespace SqlServer.Repositories
 
         public async Task<IEnumerable<CarInventory>> GetCarsByShowroomIdAsync(int showroomId)
         {
-            // Nhớ viết thế này ở file CarInventoryRepository.cs nha ní:
             return await _context.CarInventories
-         .Include(inv => inv.Car) // Chỉ cần Include mỗi cái này là lấy được hết Hãng, Năm, Giá...
+         .Include(inv => inv.Car)
          .Where(inv => inv.ShowroomId == showroomId && inv.Quantity > 0)
          .ToListAsync();
         }

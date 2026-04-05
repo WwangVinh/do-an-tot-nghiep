@@ -14,27 +14,14 @@ namespace SqlServer.Repositories
             _context = context;
         }
 
+        // Thêm nhiều tính năng cho một chiếc xe (Dùng khi tạo hoặc cập nhật xe)
         public async Task AddRangeAsync(IEnumerable<CarFeature> carFeatures)
         {
             await _context.CarFeatures.AddRangeAsync(carFeatures);
             await _context.SaveChangesAsync();
         }
 
-        //public async Task DeleteByCarIdAsync(int carId)
-        //{
-        //    // Tìm tất cả các "sợi dây" đang nối vào con xe này
-        //    var itemsToDelete = await _context.CarFeatures
-        //                                      .Where(x => x.CarId == carId)
-        //                                      .ToListAsync();
-
-        //    if (itemsToDelete.Any())
-        //    {
-        //        // Cắt đứt hết
-        //        _context.CarFeatures.RemoveRange(itemsToDelete);
-        //        await _context.SaveChangesAsync();
-        //    }
-        //}
-
+        // Xóa tất cả tính năng của một chiếc xe (Dùng khi cập nhật xe, xóa xe)
         public async Task DeleteByCarIdAsync(int carId)
         {
             var features = await _context.CarFeatures.Where(x => x.CarId == carId).ToListAsync();

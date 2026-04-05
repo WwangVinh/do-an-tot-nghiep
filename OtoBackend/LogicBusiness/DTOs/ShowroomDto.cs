@@ -12,11 +12,10 @@ namespace LogicBusiness.DTOs
         public int ShowroomId { get; set; }
         public string Name { get; set; } = null!;
 
-        // --- CẤU TRÚC ĐỊA CHỈ MỚI ---
         public string Province { get; set; } = null!;
         public string District { get; set; } = null!;
         public string StreetAddress { get; set; } = null!;
-        public string? FullAddress { get; set; } // Gom lại sẵn cho FE lười ghép chuỗi
+        public string? FullAddress { get; set; } // Gom lại sẵn cho FE
 
         public string? Hotline { get; set; }
     }
@@ -25,8 +24,6 @@ namespace LogicBusiness.DTOs
     public class ShowroomCreateDto
     {
         public string Name { get; set; } = null!;
-
-        // Buộc Admin phải nhập đủ 3 phần này
         public string Province { get; set; } = null!;
         public string District { get; set; } = null!;
         public string StreetAddress { get; set; } = null!;
@@ -45,15 +42,17 @@ namespace LogicBusiness.DTOs
 
         public string? Hotline { get; set; }
     }
+
+    // DTO để trả về thông tin xe đang có tại Showroom (Dùng cho cả danh sách & chi tiết)
     public class ShowroomCarResponseDto
     {
-        // 1. Thông tin định danh cơ bản
+        //Thông tin định danh cơ bản
         public int CarId { get; set; }
         public string Name { get; set; } = null!; // Tên xe đầy đủ (VD: VinFast VF8 Plus)
         public decimal Price { get; set; }
         public string? MainImageUrl { get; set; }
 
-        // 2. Thông tin "Thần thánh" để hiển thị & lọc (SỬA Ở ĐÂY)
+        // Thông tin chi tiết để hiển thị & lọc (SỬA Ở ĐÂY)
         public string? BrandName { get; set; }       // Hãng xe (VinFast)
         public string? SegmentName { get; set; }     // Phân khúc (SUV-C)
         public string? FuelTypeName { get; set; }    // Nhiên liệu (Điện)

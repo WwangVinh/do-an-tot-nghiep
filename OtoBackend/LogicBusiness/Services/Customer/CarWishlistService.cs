@@ -19,7 +19,7 @@ namespace LogicBusiness.Services.Customer
             _carRepo = carRepo;
         }
 
-        // CÁI NÀY LÀ LINH HỒN CỦA TÍNH NĂNG NÈ:
+        // Toggle Wishlist: Thả tim hoặc bỏ tim
         public async Task<(bool Success, string Message, bool IsHearted)> ToggleWishlistAsync(int userId, int carId)
         {
             // Kiểm tra xe có tồn tại không đã

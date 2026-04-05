@@ -3,6 +3,7 @@ using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Customer;
 using LogicBusiness.Interfaces.Repositories;
 using SqlServer.Repositories;
+using LogicBusiness.Interfaces.Shared;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,11 +16,13 @@ namespace LogicBusiness.Services.Customer
     {
         private readonly IChatRepository _chatRepo;
         private readonly IUserRepository _userRepo;
+        private readonly INotificationService _notiService;
 
-        public ChatService(IChatRepository chatRepo, IUserRepository userRepo)
+        public ChatService(IChatRepository chatRepo, IUserRepository userRepo, INotificationService notiService)
         {
             _chatRepo = chatRepo;
             _userRepo = userRepo;
+            _notiService = notiService;
         }
 
         public async Task<IEnumerable<ChatMessageResponseDto>> GetChatHistoryAsync(int sessionId)
@@ -82,19 +85,35 @@ namespace LogicBusiness.Services.Customer
             };
         }
 
-        public async Task<ChatSessionResponseDto> CreateSessionAsync(int? userId, string? guestToken, int? assignedTo)
+        public async Task<ChatSessionResponseDto> CreateSessionAsync(int? userId, string? guestToken, int? assignedTo, int? showroomId)
         {
             var newSession = new ChatSession
             {
                 UserId = userId,
                 GuestToken = guestToken,
                 AssignedTo = assignedTo,
+                ShowroomId = showroomId,
                 Status = "Open",
                 CreatedAt = DateTime.Now,
                 LastMessageAt = DateTime.Now
             };
 
             var savedSession = await _chatRepo.CreateSessionAsync(newSession);
+
+            // BẮN THÔNG BÁO CHO NHÂN VIÊN
+            // Nếu assignedTo == null (Nghĩa là chưa có nhân viên nào nhận kèo chat này)
+            if (assignedTo == null)
+            {
+                await _notiService.CreateNotificationAsync(
+                    userId: null,
+                    showroomId: showroomId, // 🎯 Phải truyền ID showroom vào đây!
+                    roleTarget: "Employee",
+                    title: "Khách hàng tại chi nhánh đang chờ! 💬",
+                    content: $"Khách hàng vừa yêu cầu tư vấn tại showroom của bạn. Vào nhận ngay!",
+                    actionUrl: $"/admin/chats/session/{savedSession.SessionId}",
+                    type: "Chat"
+                );
+            }
 
             return new ChatSessionResponseDto
             {

@@ -12,11 +12,11 @@ namespace OtoBackend.Controllers.Shared
 
         public NotificationsController(INotificationService notiService) => _notiService = notiService;
 
-        // FE gọi API này để lấy list thông báo (Nhớ truyền user/showroom ID từ token nhé, ở đây tui giả lập)
+
         [HttpGet]
-        public async Task<IActionResult> GetMyNotifications(int? userId, int? showroomId)
+        public async Task<IActionResult> GetMyNotifications(int? userId, int? showroomId, string? userRole)
         {
-            var data = await _notiService.GetMyNotificationsAsync(userId, showroomId);
+            var data = await _notiService.GetMyNotificationsAsync(userId, showroomId, userRole);
             return Ok(new { Success = true, Data = data });
         }
 

@@ -38,7 +38,7 @@ namespace SqlServer.Repositories
 
         public async Task<IEnumerable<ChatMessage>> GetChatHistoryAsync(int sessionId)
         {
-            // Lấy toàn bộ tin nhắn của 1 phiên chat, sắp xếp cũ nhất lên trước (như Messenger)
+            // Lấy toàn bộ tin nhắn của 1 phiên chat, sắp xếp cũ nhất lên trước
             return await _context.ChatMessages
                 .Where(m => m.SessionId == sessionId)
                 .OrderBy(m => m.CreatedAt)

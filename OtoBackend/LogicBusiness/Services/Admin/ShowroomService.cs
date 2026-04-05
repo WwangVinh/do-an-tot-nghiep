@@ -75,7 +75,8 @@ namespace LogicBusiness.Services.Admin
             await _showroomRepo.AddAsync(showroom);
             await _notiService.CreateNotificationAsync(
                 userId: null,
-                showroomId: null, // Gửi Broadcast cho tất cả mọi người
+                showroomId: null,// Gửi Broadcast cho tất cả mọi người
+                roleTarget: null,
                 title: "Tưng bừng khai trương chi nhánh mới! 🎊",
                 content: $"Công ty vừa mở thêm Showroom tại {dto.District}, {dto.Province}. Chúc công ty ngày càng phát triển!",
                 actionUrl: "/admin/showrooms", // Link trỏ về danh sách Showroom
@@ -130,15 +131,12 @@ namespace LogicBusiness.Services.Admin
                 Price = inv.Car?.Price ?? 0,
                 Quantity = inv.Quantity,
                 DisplayStatus = inv.DisplayStatus,
-                MainImageUrl = inv.Car?.ImageUrl, // Hoặc logic lấy ảnh của ní
-
-                // 👇 ĐIỀN THÔNG TIN MỚI NÂNG CẤP VÀO ĐÂY (Dùng Navigation Properties)
-                // 👇 ĐIỀN THÔNG TIN (DB của ní lưu thẳng chuỗi nên không cần chấm Name)
-                BrandName = inv.Car?.Brand,              // Bỏ .Name đi
-                SegmentName = inv.Car?.BodyStyle,        // Ní dùng BodyStyle (Sedan, Bán tải...) thay cho Segment
-                FuelTypeName = inv.Car?.FuelType,        // Bỏ .Name đi
-                TransmissionName = inv.Car?.Transmission,// Lấy thêm Hộp số (Số tự động/Số sàn)
-                ModelYear = inv.Car?.Year                // Cột trong DB của ní tên là Year
+                MainImageUrl = inv.Car?.ImageUrl,
+                BrandName = inv.Car?.Brand,
+                SegmentName = inv.Car?.BodyStyle,
+                FuelTypeName = inv.Car?.FuelType,
+                TransmissionName = inv.Car?.Transmission,
+                ModelYear = inv.Car?.Year
             });
         }
     }

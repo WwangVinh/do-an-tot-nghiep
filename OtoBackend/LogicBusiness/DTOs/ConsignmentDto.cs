@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LogicBusiness.DTOs
 {
-    // 1. Dành cho khách hàng lúc nộp đơn
+    // Dành cho khách hàng lúc nộp đơn
     public class ConsignmentCreateDto
     {
         public string Brand { get; set; } = null!;
@@ -17,7 +17,7 @@ namespace LogicBusiness.DTOs
         public decimal ExpectedPrice { get; set; }
     }
 
-    // 2. Dành cho sếp lúc duyệt/thẩm định xe
+    // Dành cho Admin/Manager lúc duyệt/thẩm định xe
     public class ConsignmentUpdateDto
     {
         public string Status { get; set; } = null!; // Pending, Appraising, Approved, Rejected, Completed
@@ -26,7 +26,7 @@ namespace LogicBusiness.DTOs
         public int? LinkedCarId { get; set; } // Khi xe được đăng bán thì nhét ID xe vào đây
     }
 
-    // 3. Dữ liệu trả về cho cả 2 bên xem
+    // Dữ liệu trả về cho cả 2 bên xem
     public class ConsignmentResponseDto
     {
         public int ConsignmentId { get; set; }

@@ -19,10 +19,10 @@ namespace LogicBusiness.Services.Admin
             _notiService = notiService;
         }
 
-        // 1. LẤY DANH SÁCH (Chặn lỗ hổng filter null)
+        // LẤY DANH SÁCH
         public async Task<object> GetBookingsForAdminAsync(int page, int pageSize, string? search, string? status, string userRole, int? userShowroomId)
         {
-            // BẢO MẬT: Nếu không phải Admin mà cũng không có ShowroomId -> Chặn luôn không cho lấy gì hết
+            // Nếu không phải Admin mà cũng không có ShowroomId -> Chặn
             if (userRole != "Admin" && !userShowroomId.HasValue)
             {
                 return new { TotalCount = 0, Data = new List<object>() };
@@ -48,13 +48,13 @@ namespace LogicBusiness.Services.Admin
                 })
             };
         }
-        // 2. XEM CHI TIẾT (Check quyền lấn sân chi nhánh)
+        // XEM CHI TIẾT
         public async Task<object?> GetBookingDetailAsync(int bookingId, string userRole, int? userShowroomId)
         {
             var booking = await _bookingRepo.GetByIdAsync(bookingId);
             if (booking == null) return null;
 
-            // Chặn chéo: Manager/Sales chi nhánh này không xem được chi nhánh kia
+            // Manager/Sales chi nhánh này không xem được chi nhánh kia
             if (userRole != "Admin")
             {
                 if (!userShowroomId.HasValue || booking.ShowroomId != userShowroomId.Value)
@@ -77,20 +77,18 @@ namespace LogicBusiness.Services.Admin
             };
         }
 
-        // 3. ĐỔI TRẠNG THÁI (Check quyền gắt gao)
+        // ĐỔI TRẠNG THÁI
         public async Task<(bool Success, string Message)> UpdateBookingStatusAsync(int bookingId, string newStatus, string userRole, int? userShowroomId)
         {
             var booking = await _bookingRepo.GetByIdAsync(bookingId);
             if (booking == null) return (false, "Không tìm thấy lịch hẹn.");
 
-            // CHẶN CHÉO TUYỆT ĐỐI
             if (userRole != "Admin")
             {
                 if (!userShowroomId.HasValue || booking.ShowroomId != userShowroomId.Value)
                     return (false, "Ní không có quyền can thiệp vào lịch hẹn của chi nhánh khác!");
             }
 
-            // Chặn đổi trạng thái nếu lịch đã đóng
             if (booking.Status == "Cancelled" || booking.Status == "Completed")
                 return (false, "Lịch hẹn này đã kết thúc, không thể thay đổi trạng thái.");
 
@@ -103,24 +101,24 @@ namespace LogicBusiness.Services.Admin
             {
                 string statusVN = newStatus == "Confirmed" ? "Đã được xác nhận" : newStatus == "Completed" ? "Đã hoàn thành" : newStatus;
                 await _notiService.CreateNotificationAsync(
-                    userId: booking.UserId.Value, // Bắn đích danh vào tài khoản của khách
+                    userId: booking.UserId.Value, 
                     showroomId: null,
+                    roleTarget: null,
                     title: "Cập nhật lịch hẹn lái thử 📅",
                     content: $"Lịch hẹn xem xe của bạn {statusVN}. Vui lòng kiểm tra chi tiết!",
-                    actionUrl: $"/customer/my-bookings/{bookingId}", // Link trỏ khách về trang quản lý lịch của họ
+                    actionUrl: $"/customer/my-bookings/{bookingId}",
                     type: "Booking"
                 );
             }
             return (true, $"[{userRole}] Đã cập nhật trạng thái thành: {newStatus}");
         }
 
-        // 4. HỦY LỊCH (Admin/Manager/Sales hủy khi khách bom)
+        // HỦY LỊCH (Admin/Manager/Sales hủy khi khách bom)
         public async Task<(bool Success, string Message)> CancelBookingByAdminAsync(int bookingId, string cancelReason, string userRole, int? userShowroomId)
         {
             var booking = await _bookingRepo.GetByIdAsync(bookingId);
             if (booking == null) return (false, "Không tìm thấy lịch hẹn.");
 
-            // Kiểm tra quyền showroom
             if (userRole != "Admin" && booking.ShowroomId != userShowroomId)
                 return (false, "Ní không có quyền hủy lịch của chi nhánh khác!");
 
@@ -142,6 +140,7 @@ namespace LogicBusiness.Services.Admin
                 await _notiService.CreateNotificationAsync(
                     userId: booking.UserId.Value,
                     showroomId: null,
+                    roleTarget: null,
                     title: "Lịch hẹn đã bị hủy ❌",
                     content: $"Lịch hẹn của bạn đã bị hủy bởi Showroom. Lý do: {cancelReason}",
                     actionUrl: $"/customer/my-bookings/{bookingId}",

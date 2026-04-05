@@ -52,10 +52,10 @@ namespace LogicBusiness.Services.Customer
             await _userRepository.AddUserAsync(user);
 
             // TẠO LỜI CHÀO MỪNG CHO KHÁCH HÀNG MỚI
-            // (Lưu ý: Sau khi AddUserAsync, cái object 'user' đã tự động có UserId từ DB rồi nhé)
             await _notiService.CreateNotificationAsync(
-                userId: user.UserId, // Bắn đích danh vào tài khoản khách vừa tạo
+                userId: user.UserId,
                 showroomId: null,
+                roleTarget: null,
                 title: "Chào mừng bạn gia nhập! 🎉",
                 content: $"Xin chào {user.FullName}, chúc bạn sớm tìm được chiếc xe ưng ý tại Showroom của chúng tôi!",
                 actionUrl: "/", // Trỏ về trang chủ
@@ -81,13 +81,12 @@ namespace LogicBusiness.Services.Customer
 
             var token = GenerateJwtToken(user);
 
-            // SỬA LẠI ĐOẠN NÀY: Trả về thêm Role và thông tin User
+
             return new AuthResponse
             {
                 Success = true,
                 Message = "Đăng nhập thành công!",
                 Token = token,
-                // Bơm thêm data cho FE:
                 UserId = user.UserId,
                 Username = user.Username,
                 Role = user.Role,
@@ -100,7 +99,7 @@ namespace LogicBusiness.Services.Customer
             var jwtSettings = _configuration.GetSection("Jwt");
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]));
 
-            // 1. Khởi tạo danh sách các thẻ cơ bản
+            // Khởi tạo danh sách các thẻ cơ bản
             var claims = new List<Claim>
             {
                 new Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
@@ -108,13 +107,12 @@ namespace LogicBusiness.Services.Customer
                 new Claim(ClaimTypes.Role, user.Role)
             };
 
-            // 2. 👇 BÍ KÍP Ở ĐÂY: Nếu là Nhân viên/Quản lý có ShowroomId, nhét luôn vào Token!
+            // Nếu là Nhân viên/Quản lý có ShowroomId, nhét luôn vào Token!
             if (user.ShowroomId.HasValue)
             {
                 claims.Add(new Claim("ShowroomId", user.ShowroomId.Value.ToString()));
             }
 
-            // 3. Tiến hành đúc Token
             var token = new JwtSecurityToken(
                 issuer: jwtSettings["Issuer"],
                 audience: jwtSettings["Audience"],

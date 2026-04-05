@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace LogicBusiness.DTOs
 {
+
     public class RejectRequestDto
     {
         public string Reason { get; set; } = null!;

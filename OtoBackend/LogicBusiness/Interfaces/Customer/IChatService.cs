@@ -13,7 +13,7 @@ namespace LogicBusiness.Interfaces.Customer
         Task<ChatMessageResponseDto?> SaveMessageAsync(SendMessageRequestDto request);
 
         Task<ChatSessionResponseDto?> GetCurrentSessionAsync(int? userId, string? guestToken);
-        Task<ChatSessionResponseDto> CreateSessionAsync(int? userId, string? guestToken, int? assignedTo);
+        Task<ChatSessionResponseDto> CreateSessionAsync(int? userId, string? guestToken, int? assignedTo, int? showroomId);
 
         Task<IEnumerable<StaffForChatDto>> GetAvailableStaffAsync();
     }

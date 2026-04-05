@@ -1,9 +1,10 @@
-﻿using LogicBusiness.DTOs;
+﻿using CoreEntities.Models.DTOs;
+using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Admin;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt; // Nhớ có dòng này nha
+using System.Security.Claims;
 
 namespace OtoBackend.Controllers.Admin
 {

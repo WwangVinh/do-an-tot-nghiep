@@ -32,6 +32,8 @@ namespace CoreEntities.Models
         [MaxLength(255)]
         public string? ActionUrl { get; set; }
 
+        public string? RoleTarget { get; set; }
+
         // Đã đọc hay chưa? (Dùng để tắt cái chấm đỏ trên cái chuông 🔔)
         public bool IsRead { get; set; } = false;
 

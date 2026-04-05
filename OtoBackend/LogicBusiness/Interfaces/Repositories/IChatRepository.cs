@@ -14,7 +14,6 @@ namespace SqlServer.Repositories
         Task UpdateSessionAsync(ChatSession session);
         Task<IEnumerable<ChatMessage>> GetChatHistoryAsync(int sessionId);
 
-        // Thêm 2 dòng này vào dưới các hàm đã có
         Task<ChatSession?> GetActiveSessionAsync(int? userId, string? guestToken);
         Task<ChatSession> CreateSessionAsync(ChatSession session);
     }

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace LogicBusiness.DTOs
 {
+    // Dùng chung cho cả NotificationController và ChatHub (Tin nhắn hệ thống)
     public class NotificationDto
     {
         public int NotificationId { get; set; }

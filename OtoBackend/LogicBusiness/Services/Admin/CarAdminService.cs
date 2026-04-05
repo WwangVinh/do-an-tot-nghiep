@@ -276,7 +276,7 @@ namespace LogicBusiness.Services.Admin
                 string targetName = $"{car.Brand}_{car.Name}";
                 car.ImageUrl = await FileHelper.UploadFileAsync(dto.ImageFile, subFolder, targetName);
             }
-            else car.ImageUrl = "/uploads/Cars/default-car.jpg.png";
+            else car.ImageUrl = "/uploads/Cars/default-car.png";
 
             await _carRepo.AddCarAsync(car);
 
@@ -293,7 +293,7 @@ namespace LogicBusiness.Services.Admin
                 });
             }
 
-            // 4. XỬ LÝ FEATURES & SPECS (Đoạn này ní giữ nguyên logic cũ của ní)
+            // 4. XỬ LÝ FEATURES & SPECS 
             if (!string.IsNullOrWhiteSpace(dto.FeatureIds))
             {
                 var fIds = dto.FeatureIds.Split(',').Select(id => id.Trim()).Where(id => int.TryParse(id, out _)).Select(int.Parse).ToList();
@@ -312,13 +312,14 @@ namespace LogicBusiness.Services.Admin
             if (finalStatus == CarStatus.PendingApproval)
             {
                 await _notiService.CreateNotificationAsync(
-                    userId: null,
-                    showroomId: targetShowroomId, // Báo cho mấy ông sếp cùng chi nhánh
-                    title: "Có xe mới cần duyệt",
-                    content: $"Nhân viên vừa đăng mẫu {car.Brand} {car.Name}. Sếp vào duyệt nhé!",
-                    actionUrl: $"/admin/cars/approve/{car.CarId}",
-                    type: "CarApproval"
-                );
+                     userId: null,
+                     showroomId: targetShowroomId,
+                     roleTarget: "ShowroomManager",
+                     title: "Có xe mới cần duyệt",
+                     content: $"Nhân viên vừa đăng mẫu {car.Brand} {car.Name}. Sếp vào duyệt nhé!",
+                     actionUrl: $"/admin/cars/approve/{car.CarId}",
+                     type: "CarApproval"
+                 );
             }
 
             string finalMsg = (finalStatus == CarStatus.Available) ? "Đã lên sàn con xe mới tinh!" : "Đã tạo yêu cầu, đợi sếp gật đầu là xe lên sóng nha!";
@@ -326,7 +327,7 @@ namespace LogicBusiness.Services.Admin
         }
 
 
-        // 4. UPDATE (Bản Chốt Hạ 2026)
+        // 4. UPDATE 
         public async Task<(bool Success, string Message, Car? Car)> UpdateCarAsync(int id, CarUpdateDto dto, string userRole, int? userShowroomId)
         {
             // 1. Tìm xe duy nhất 1 lần ở đầu hàm
@@ -466,10 +467,11 @@ namespace LogicBusiness.Services.Admin
                 {
                     await _notiService.CreateNotificationAsync(
                         userId: null,
-                        showroomId: dto.ShowroomId, // Báo cho sếp của chi nhánh này
+                        showroomId: dto.ShowroomId,
+                        roleTarget: "ShowroomManager", 
                         title: "Có bản cập nhật xe cần duyệt 📝",
                         content: $"Nhân viên vừa sửa và nộp lại thông tin mẫu {car.Brand} {car.Name}. Sếp vào kiểm tra nhé!",
-                        actionUrl: $"/admin/cars/approve/{car.CarId}", // Trỏ sếp thẳng vào trang duyệt
+                        actionUrl: $"/admin/cars/approve/{car.CarId}",
                         type: "CarApproval"
                     );
                 }
@@ -873,13 +875,14 @@ namespace LogicBusiness.Services.Admin
 
             var showroomId = (await _inventoryRepo.GetInventoriesByCarIdAsync(carId)).FirstOrDefault()?.ShowroomId;
             await _notiService.CreateNotificationAsync(
-                userId: null,
-                showroomId: showroomId, // Báo cho cả lò biết xe đã lên sàn
-                title: "Xe đã lên sóng! 🎉",
-                content: $"Sếp đã duyệt mẫu {car.Brand} {car.Name}. Anh em đẩy số đi!",
-                actionUrl: $"/admin/cars/detail/{carId}",
-                type: "CarApproval"
-            );
+                 userId: null,
+                 showroomId: showroomId,
+                 roleTarget: null,
+                 title: "Xe đã lên sàn! 🎉",
+                 content: $"Sếp đã duyệt mẫu {car.Brand} {car.Name}. Anh em đẩy số đi!",
+                 actionUrl: $"/admin/cars/detail/{carId}",
+                 type: "CarApproval"
+             );
             return (true, "Đã duyệt xe thành công! Xe đã lên sóng.");
         }
 
@@ -902,6 +905,7 @@ namespace LogicBusiness.Services.Admin
             await _notiService.CreateNotificationAsync(
                 userId: null,
                 showroomId: showroomId,
+                roleTarget: null,
                 title: "Xe bị từ chối duyệt 🚨",
                 content: $"Mẫu {car.Brand} {car.Name} bị sếp chê. Lý do: {reason}",
                 actionUrl: $"/admin/cars/edit/{carId}", // Trỏ link về chỗ sửa xe luôn

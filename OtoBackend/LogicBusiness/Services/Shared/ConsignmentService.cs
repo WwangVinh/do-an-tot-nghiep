@@ -1,7 +1,7 @@
 ﻿using CoreEntities.Models;
 using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Repositories;
-using LogicBusiness.Interfaces.Shared; // Nhớ có cái này để dùng Chuông thông báo
+using LogicBusiness.Interfaces.Shared;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,7 +20,7 @@ namespace LogicBusiness.Services.Shared
             _notiService = notiService;
         }
 
-        // 1. KHÁCH HÀNG TẠO YÊU CẦU KÝ GỬI
+        // KHÁCH HÀNG TẠO YÊU CẦU KÝ GỬI
         public async Task<(bool Success, string Message)> CreateConsignmentAsync(int userId, string customerName, ConsignmentCreateDto dto)
         {
             var consignment = new Consignment
@@ -39,10 +39,11 @@ namespace LogicBusiness.Services.Shared
 
             await _consignRepo.AddAsync(consignment);
 
-            // 👇 BẮN THÔNG BÁO CHO ADMIN/MANAGER BIẾT CÓ KÈO THƠM 👇
+            // THÔNG BÁO CHO ADMIN/MANAGER BIẾT
             await _notiService.CreateNotificationAsync(
                 userId: null,
-                showroomId: null, // Gửi cho dàn Quản lý tổng / Sales để vô giành khách
+                roleTarget: "ShowroomManager",
+                showroomId: null,
                 title: "Yêu cầu ký gửi xe mới! 🚗",
                 content: $"Khách hàng {customerName} muốn ký gửi chiếc {dto.Brand} {dto.Model} ({dto.Year}). Sếp vào check ngay!",
                 actionUrl: "/admin/consignments",
@@ -52,7 +53,7 @@ namespace LogicBusiness.Services.Shared
             return (true, "Gửi yêu cầu ký gửi thành công! Showroom sẽ liên hệ bạn sớm nhất để thẩm định xe.");
         }
 
-        // 2. SẾP / ADMIN CẬP NHẬT TRẠNG THÁI & CHỐT GIÁ
+        // ADMIN/MANAGER CẬP NHẬT TRẠNG THÁI & CHỐT GIÁ
         public async Task<(bool Success, string Message)> UpdateConsignmentStatusAsync(int consignmentId, ConsignmentUpdateDto dto, string adminRole)
         {
             var consignment = await _consignRepo.GetByIdAsync(consignmentId);
@@ -73,7 +74,7 @@ namespace LogicBusiness.Services.Shared
 
             await _consignRepo.UpdateAsync(consignment);
 
-            // 👇 BẮN THÔNG BÁO CHO KHÁCH HÀNG KHI HỒ SƠ ĐƯỢC CẬP NHẬT 👇
+            // THÔNG BÁO CHO KHÁCH HÀNG KHI HỒ SƠ ĐƯỢC CẬP NHẬT
             if (consignment.UserId > 0)
             {
                 string statusVN = dto.Status == "Appraising" ? "đang được thẩm định"
@@ -84,6 +85,7 @@ namespace LogicBusiness.Services.Shared
                 await _notiService.CreateNotificationAsync(
                     userId: consignment.UserId, // Gắn đích danh mã khách hàng
                     showroomId: null,
+                    roleTarget: null,
                     title: "Cập nhật hồ sơ ký gửi 📝",
                     content: $"Hồ sơ ký gửi xe {consignment.Brand} {consignment.Model} của bạn {statusVN}. Vui lòng kiểm tra chi tiết!",
                     actionUrl: "/customer/my-consignments",

@@ -19,14 +19,14 @@ namespace LogicBusiness.Hubs
             _chatService = chatService;
         }
 
-        // 1. Khách hàng hoặc Admin tham gia vào 1 "Phòng Chat" (Dựa theo SessionId)
+        // Khách hàng hoặc Admin tham gia vào 1 "Phòng Chat" (Dựa theo SessionId)
         public async Task JoinChatSession(int sessionId)
         {
             string groupName = $"Session_{sessionId}";
             await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
         }
 
-        // 2. Hàm nhận tin nhắn từ React, lưu DB và bắn ngược lại cho những người trong phòng
+        // Hàm nhận tin nhắn từ React, lưu DB và bắn ngược lại cho những người trong phòng
         public async Task SendMessage(SendMessageRequestDto request)
         {
             // Lưu xuống SQL Database

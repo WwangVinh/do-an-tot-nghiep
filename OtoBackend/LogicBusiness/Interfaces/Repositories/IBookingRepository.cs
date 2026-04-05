@@ -13,19 +13,17 @@ namespace LogicBusiness.Interfaces.Repositories
         Task AddAsync(Booking booking);
         Task<bool> IsTimeSlotBookedAsync(int carId, int showroomId, DateOnly bookingDate, string bookingTime);
 
-        // 3. Lấy chi tiết 1 lịch hẹn (kèm thông tin Xe và Showroom)
+        // Lấy chi tiết 1 lịch hẹn (kèm thông tin Xe và Showroom)
         Task<Booking?> GetByIdAsync(int bookingId);
 
-        // 4. Cập nhật thông tin lịch hẹn (Đổi trạng thái, ghi chú...)
+        // Cập nhật thông tin lịch hẹn (Đổi trạng thái, ghi chú...)
         Task UpdateAsync(Booking booking);
 
-        // 5. Lấy danh sách lịch hẹn cho trang Quản trị (Có phân trang, lọc, search)
+        // Lấy danh sách lịch hẹn cho trang Quản trị (Có phân trang, lọc, search)
         Task<(IEnumerable<Booking> Bookings, int TotalCount)> GetAdminBookingsAsync(
             int page, int pageSize, string? searchName, string? status,
             DateTime? fromDate, DateTime? toDate, int? targetShowroomId);
 
         Task<IEnumerable<Booking>> GetByUserIdAsync(int userId);
     }
-    // Sau này muốn làm thêm chức năng Hủy đơn, Xem lịch sử đơn... 
-    // thì mình sẽ khai báo thêm ở đây sau nha.
 }

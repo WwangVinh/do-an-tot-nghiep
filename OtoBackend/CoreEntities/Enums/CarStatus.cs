@@ -7,6 +7,6 @@
         Available = 2,          // Đang bán (Quản lý đã duyệt -> Hiện lên Web)
         Out_of_stock = 3,       // Hết hàng
         COMING_SOON = 4,        // Sắp về
-        Rejected = 5            // Từ chối (Quản lý chê nhập sai giá, trả về bắt sửa)
+        Rejected = 5            // Từ chối (Quản lý chê nhập sai giá, trả về sửa)
     }
 }

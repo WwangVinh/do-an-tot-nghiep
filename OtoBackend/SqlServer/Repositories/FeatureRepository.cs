@@ -31,7 +31,7 @@ namespace LogicBusiness.Repositories
                 query = query.Where(f => f.FeatureName.Contains(search));
             }
 
-            // Luôn xếp A-Z cho đẹp đội hình
+            // Luôn xếp A-Z
             return await query.OrderBy(f => f.FeatureName).ToListAsync();
         }
 

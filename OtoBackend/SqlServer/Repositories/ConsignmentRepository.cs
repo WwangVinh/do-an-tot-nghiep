@@ -32,7 +32,7 @@ namespace SqlServer.Repositories
         public async Task<Consignment?> GetByIdAsync(int id)
         {
             return await _context.Consignments
-                .Include(c => c.User) // 👈 Lấy kèm thông tin Khách hàng để Sếp dễ gọi điện
+                .Include(c => c.User) //Lấy kèm thông tin Khách hàng để dễ gọi điện
                 .FirstOrDefaultAsync(c => c.ConsignmentId == id);
         }
 

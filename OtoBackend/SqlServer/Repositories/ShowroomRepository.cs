@@ -12,7 +12,7 @@ namespace SqlServer.Repositories
 {
     public class ShowroomRepository : IShowroomRepository
     {
-        private readonly OtoContext _context; // Nhớ đổi tên Context nếu của ní khác nha
+        private readonly OtoContext _context;
 
         public ShowroomRepository(OtoContext context)
         {
@@ -65,7 +65,7 @@ namespace SqlServer.Repositories
         public async Task<IEnumerable<CarInventory>> GetCarsByShowroomIdAsync(int showroomId)
         {
             return await _context.CarInventories
-                .Include(inv => inv.Car) // 👈 Phải Include để lấy được tên xe, giá xe
+                .Include(inv => inv.Car)
                 .Where(inv => inv.ShowroomId == showroomId && inv.Quantity > 0)
                 .ToListAsync();
         }

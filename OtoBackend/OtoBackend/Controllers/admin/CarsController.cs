@@ -33,7 +33,7 @@ namespace OtoBackend.Controllers.Admin
         [FromQuery] string? bodyStyle,
         [FromQuery] string? fuelType,
         [FromQuery] string? location,
-        [FromQuery] bool? isDeleted, // Món đặc sản của Admin
+        [FromQuery] bool? isDeleted,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10)
         {
@@ -41,8 +41,6 @@ namespace OtoBackend.Controllers.Admin
             string currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
             string? claimShowroomId = User.FindFirst("ShowroomId")?.Value;
             int? currentUserShowroomId = string.IsNullOrEmpty(claimShowroomId) ? null : int.Parse(claimShowroomId);
-            // Gọi Service với đầy đủ 13 tham số
-            // Lưu ý: Ní kiểm tra xem biến Service trong Controller của ní tên là _adminService hay _carService nhé!
             var result = await _adminService.GetCarsAsync(
                 search, brand, color, minPrice, maxPrice, status,
                 transmission, bodyStyle, fuelType, location, isDeleted, page, pageSize, currentUserShowroomId);
@@ -50,14 +48,6 @@ namespace OtoBackend.Controllers.Admin
             return Ok(result);
         }
 
-        //[HttpGet]
-        //public async Task<IActionResult> GetAdminCars([FromQuery] CarFilterDto filter)
-        //{
-        //    // Gọi Service -> Gọi Repo (truyền isAdmin = true)
-        //    var cars = await _adminService.GetCarsAsync(filter, isAdmin: true);
-
-        //    return Ok(new { success = true, data = cars });
-        //}
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetCarDetailForAdmin(int id)
@@ -88,36 +78,18 @@ namespace OtoBackend.Controllers.Admin
             return BadRequest(new { message = result.Message });
         }
 
-        //[HttpPost]
-        //public async Task<IActionResult> PostCar([FromForm] Car car)
-        //{
-        //    var result = await _adminService.CreateCarAsync(car, car.ImageFile);
-        //    if (!result.Success) return BadRequest(result.Message); // Viết hoa chữ S và M
-        //    return Ok(result.Data);
-        //}
-
-        //[HttpGet("suggest-spec-names")]
-        //public async Task<IActionResult> GetSuggestedSpecNames()
-        //{
-        //    // Lấy danh sách các tên thông số không trùng nhau (Distinct) từ bảng có sẵn
-        //    var suggestions = await _context.CarSpecifications
-        //                                    .Select(s => s.SpecName)
-        //                                    .Distinct()
-        //                                    .ToListAsync();
-        //    return Ok(suggestions);
-        //}
 
         [HttpPut("{id}")]
         public async Task<IActionResult> PutCar(int id, [FromForm] CarUpdateDto dto)
         {
-            // ✂️ 1. Bóc Token lấy thông tin người dùng (Bắt buộc phải có cái này!)
+            // Bóc Token lấy thông tin người dùng (Bắt buộc phải có cái này!)
             string currentUserRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
             string? claimShowroomId = User.FindFirst("ShowroomId")?.Value;
             int? currentUserShowroomId = string.IsNullOrEmpty(claimShowroomId) ? null : int.Parse(claimShowroomId);
 
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            // ⚽️ 2. Chuyền bóng xuống Service (Thêm 2 biến vừa bóc vào cuối)
+            // Chuyền xuống Service (Thêm 2 biến vừa bóc vào cuối)
             var result = await _adminService.UpdateCarAsync(id, dto, currentUserRole, currentUserShowroomId);
 
             if (result.Success) return Ok(new { message = result.Message, data = result.Car });
@@ -126,7 +98,6 @@ namespace OtoBackend.Controllers.Admin
 
         [HttpPost("{carId}/images")]
         [Consumes("multipart/form-data")]
-        // 👈 Đổi IFormFile file thành List<IFormFile> files
         public async Task<IActionResult> UploadCarImages(
         [FromRoute] int carId,
         [FromForm] List<IFormFile> files,
@@ -222,9 +193,7 @@ namespace OtoBackend.Controllers.Admin
             return BadRequest(new { message = result.Message });
         }
 
-        /// <summary>
         /// SẾP DUYỆT XE: Cho phép xe hiển thị lên Web
-        /// </summary>
         [HttpPut("{id}/approve")]
         [Authorize(Roles = "Admin, ShowroomManager")]
         public async Task<IActionResult> ApproveCar(int id)
@@ -241,9 +210,7 @@ namespace OtoBackend.Controllers.Admin
             return BadRequest(new { message = result.Message });
         }
 
-        /// <summary>
         /// SẾP TỪ CHỐI XE: Trả về cho nhân viên sửa lại kèm lý do
-        /// </summary>
         [HttpPut("{id}/reject")]
         [Authorize(Roles = "Admin, ShowroomManager")]
         public async Task<IActionResult> RejectCar(int id, [FromBody] RejectRequestDto request)
@@ -259,14 +226,12 @@ namespace OtoBackend.Controllers.Admin
             }
             return BadRequest(new { message = result.Message });
         }
-        /// <summary>
+
         /// SẾP ĐỔI TRẠNG THÁI NHANH: Thích xe thành Coming Soon hay Nháp đều được
-        /// </summary>
         [HttpPut("{id}/change-status")]
         [Authorize(Roles = "Admin, ShowroomManager")]
         public async Task<IActionResult> ChangeCarStatus(int id, [FromBody] ChangeStatusRequestDto request)
         {
-            // Controller cực kỳ nhàn nhã, chỉ việc gọi Service ra xử lý
             var result = await _adminService.ChangeCarStatusAsync(id, request.NewStatus);
             if (result.Success)
             {

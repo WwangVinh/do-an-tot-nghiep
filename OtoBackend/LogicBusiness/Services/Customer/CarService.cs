@@ -13,28 +13,27 @@ namespace LogicBusiness.Services.Customer
             _carRepo = carRepo;
         }
 
-        // 👉 Bơm thêm fuelType và location vào đây nè
+
         public async Task<object> GetCarsAsync(string? search, string? brand, string? color, decimal? minPrice, decimal? maxPrice, CarStatus? status, string? transmission, string? bodyStyle, string? fuelType, string? location, int page, int pageSize)
         {
-            // Truyền đủ xuống Repo
             var result = await _carRepo.GetCustomerCarsAsync(search, brand, color, minPrice, maxPrice, status, transmission, bodyStyle, fuelType, location, page, pageSize);
 
             var cleanCars = result.Cars.Select(c => {
 
                 int totalQty = c.CarInventories != null ? c.CarInventories.Sum(i => i.Quantity) : 0;
-                string displayLocation = ""; // Khởi tạo rỗng trước
+                string displayLocation = "";
 
-                // 1. ƯU TIÊN 1: Check trạng thái xe trước
-                if (c.Status.ToString() == "ComingSoon") // Ní sửa lại thành tên Enum của ní cho đúng nhé (VD: CarStatus.ComingSoon)
+                // Check trạng thái xe trước
+                if (c.Status.ToString() == "ComingSoon")
                 {
                     displayLocation = "Sắp về";
                 }
-                // 2. ƯU TIÊN 2: Nếu xe đang bán nhưng hết tồn kho
+                // Nếu xe đang bán nhưng hết tồn kho
                 else if (totalQty == 0)
                 {
                     displayLocation = "Hết hàng";
                 }
-                // 3. ƯU TIÊN 3: Có hàng trong kho
+                // Có hàng trong kho
                 else if (c.CarInventories != null)
                 {
                     var activeLocations = c.CarInventories
@@ -57,7 +56,6 @@ namespace LogicBusiness.Services.Customer
                     }
                 }
 
-                // Trả về dữ liệu sạch sẽ cho Frontend
                 return new
                 {
                     c.CarId,
@@ -73,7 +71,7 @@ namespace LogicBusiness.Services.Customer
                     c.Transmission,
                     c.BodyStyle,
                     TotalQuantity = totalQty,
-                    Showrooms = displayLocation // Bây giờ nó sẽ cực kỳ thông minh
+                    Showrooms = displayLocation
                 };
             });
 
@@ -87,14 +85,13 @@ namespace LogicBusiness.Services.Customer
             };
         }
 
-        // ĐÓNG GÓI DỮ LIỆU (DTO) SIÊU SẠCH CHO KHÁCH HÀNG (Bản Full 2026)
+        // XEM CHI TIẾT
         public async Task<object?> GetCarDetailAsync(int id)
         {
             var car = await _carRepo.GetCarDetailForCustomerAsync(id);
 
             if (car == null) return null;
 
-            // ĐÓNG GÓI DỮ LIỆU (Bản nâng cấp đầy đủ 2026)
             return new
             {
                 car.CarId,
@@ -110,12 +107,12 @@ namespace LogicBusiness.Services.Customer
                 car.BodyStyle,    // SUV / Sedan...
                 TotalQuantity = car.CarInventories != null ? car.CarInventories.Sum(i => i.Quantity) : 0,
 
-                // ✅ THÊM VÀO ĐÂY: Trả về danh sách Showroom đang CÒN xe này
+                // danh sách Showroom đang có xe này
                 ShowroomDetails = car.CarInventories?
                     .Where(inv => inv.Quantity > 0)
                     .Select(inv => new {
                         ShowroomName = inv.Showroom?.Name,
-                        ShowroomAddress = inv.Showroom?.FullAddress, // 👈 Gọi cái Getter ở Model ní mới làm
+                        ShowroomAddress = inv.Showroom?.FullAddress,
                         Quantity = inv.Quantity
                     }).ToList(),
 
@@ -124,7 +121,7 @@ namespace LogicBusiness.Services.Customer
                 Condition = car.Condition.ToString(),
                 Status = car.Status.ToString(),
 
-                // 1. HIỆN THÔNG SỐ
+                // HIỆN THÔNG SỐ
                 Specifications = car.CarSpecifications
                     .GroupBy(s => s.Category)
                     .Select(group => new {
@@ -132,7 +129,7 @@ namespace LogicBusiness.Services.Customer
                         Items = group.Select(i => new { i.SpecName, i.SpecValue }).ToList()
                     }).ToList(),
 
-                // 2. TIỆN ÍCH NỔI BẬT
+                // TIỆN ÍCH NỔI BẬT
                 Features = car.CarFeatures
                     .Select(cf => new {
                         cf.FeatureId, // Giữ lại ID để làm key và match logic
@@ -140,7 +137,7 @@ namespace LogicBusiness.Services.Customer
                         Icon = cf.Feature?.Icon
                     }).ToList(),
 
-                // 3. ALBUM ẢNH
+                // ALBUM ẢNH
                 GalleryImages = car.CarImages
                     .Where(img => img.Is360Degree == false)
                     .GroupBy(img => img.ImageType)
@@ -149,7 +146,7 @@ namespace LogicBusiness.Services.Customer
                         Images = group.Select(i => new { i.Title, i.Description, i.ImageUrl }).ToList()
                     }).ToList(),
 
-                // 4. BỘ ẢNH 360
+                // BỘ ẢNH 360
                 Images360 = car.CarImages
                     .Where(img => img.Is360Degree == true)
                     .Select(img => img.ImageUrl)

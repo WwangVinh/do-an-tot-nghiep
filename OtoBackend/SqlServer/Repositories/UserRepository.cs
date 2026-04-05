@@ -54,28 +54,28 @@ namespace SqlServer.Repositories
             await _context.SaveChangesAsync();
         }
 
-        // BẢN NÂNG CẤP: LỌC USER CÓ PHÂN QUYỀN (Thay thế cho hàm GetFilteredUsersAsync cũ)
+        // LỌC USER CÓ PHÂN QUYỀN
         public async Task<(IEnumerable<User> Users, int TotalCount)> GetFilteredUsersAdminAsync(
             string userType, bool isDeleted, string? search, int page, int pageSize,
             string currentUserRole, int? currentUserShowroomId, int? filterShowroomId = null)
         {
             var query = _context.Users.AsQueryable();
 
-            // 1. Lọc theo trạng thái xóa (Thùng rác hay Không)
+            // Lọc theo trạng thái xóa (Thùng rác hay Không)
             query = query.Where(u => u.IsDeleted == isDeleted);
 
-            // 2. TÁCH KHU VỰC & BẢO KÊ PHÂN QUYỀN 
+            // TÁCH KHU VỰC 
             if (userType == "Staff")
             {
                 // Chỉ bốc ra những ông là nhân sự (Sales hoặc Manager)
                 query = query.Where(u => u.Role == "ShowroomManager" || u.Role == "ShowroomSales");
 
-                // 👇 Nếu người đang xem là Manager -> ÉP CHỈ ĐƯỢC THẤY NHÂN VIÊN SHOWROOM MÌNH
+                // Nếu người đang xem là Manager -> CHỈ ĐƯỢC THẤY NHÂN VIÊN SHOWROOM MÌNH
                 if (currentUserRole == "ShowroomManager" && currentUserShowroomId.HasValue)
                 {
                     query = query.Where(u => u.ShowroomId == currentUserShowroomId.Value);
                 }
-                // 👇 THÊM CÁI NÀY NÈ: Nếu là Admin và có chọn Showroom từ Dropdown để lọc
+                // Nếu là Admin và có chọn Showroom từ Dropdown để lọc
                 else if (filterShowroomId.HasValue && filterShowroomId.Value > 0)
                 {
                     query = query.Where(u => u.ShowroomId == filterShowroomId.Value);
@@ -86,7 +86,7 @@ namespace SqlServer.Repositories
                 // Chỉ bốc ra những ông là khách hàng
                 query = query.Where(u => u.Role == "Customer");
             }
-            // 3. Lọc theo từ khóa tìm kiếm (Search)
+            // Lọc theo từ khóa tìm kiếm (Search)
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var kw = $"%{search.Trim()}%"; // Bọc % 2 đầu để tìm kiếm LIKE trong SQL
@@ -97,10 +97,10 @@ namespace SqlServer.Repositories
                     (u.FullName != null && EF.Functions.Like(u.FullName, kw))
                 );
             }
-            // 4. Đếm tổng số lượng (để React làm phân trang)
+            // Đếm tổng số lượng (để React làm phân trang)
             int totalCount = await query.CountAsync();
 
-            // 5. Phân trang (Pagination) và sắp xếp
+            // Phân trang (Pagination) và sắp xếp
             var users = await query
                 .OrderByDescending(u => u.CreatedAt)
                 .Skip((page - 1) * pageSize)
@@ -120,7 +120,7 @@ namespace SqlServer.Repositories
 
         public async Task HardDeleteUserAsync(User user)
         {
-            _context.Users.Remove(user); // 👈 Tuyệt chiêu bứng gốc
+            _context.Users.Remove(user);
             await _context.SaveChangesAsync();
         }
     }

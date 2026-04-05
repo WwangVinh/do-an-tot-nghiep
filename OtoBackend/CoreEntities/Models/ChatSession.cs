@@ -7,6 +7,8 @@ public partial class ChatSession
 {
     public int SessionId { get; set; }
 
+    public int? ShowroomId { get; set; }
+
     public int? UserId { get; set; }
 
     public string? GuestToken { get; set; }

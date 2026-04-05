@@ -1,4 +1,5 @@
-﻿using LogicBusiness.DTOs;
+﻿using CoreEntities.Models.DTOs;
+using LogicBusiness.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Linq;

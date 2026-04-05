@@ -19,14 +19,24 @@ namespace SqlServer.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task<IEnumerable<Notification>> GetUserNotificationsAsync(int? userId, int? showroomId)
+        public async Task<IEnumerable<Notification>> GetUserNotificationsAsync(int? userId, int? showroomId, string? userRole)
         {
-            // Lấy thông báo cá nhân HOẶC thông báo chung của chi nhánh
             return await _context.Notifications
-                .Where(n => (userId.HasValue && n.UserId == userId) ||
-                            (showroomId.HasValue && n.ShowroomId == showroomId))
+                .Where(n =>
+                    // Tin nhắn cá nhân gửi đích danh (Có UserId)
+                    (userId.HasValue && n.UserId == userId) ||
+
+                    // Tin nhắn cho một Showroom cụ thể (Ai trong Showroom cũng thấy)
+                    (showroomId.HasValue && n.ShowroomId == showroomId && n.UserId == null && n.RoleTarget == null) ||
+
+                    // Tin nhắn công việc cho một Chức vụ cụ thể TẠI MỘT Showroom
+                    (showroomId.HasValue && n.ShowroomId == showroomId && n.RoleTarget == userRole) ||
+
+                    // Tin nhắn công việc cho một Chức vụ cụ thể TOÀN CỤC (Không ràng buộc Showroom)
+                    (n.ShowroomId == null && n.RoleTarget == userRole && n.UserId == null)
+                )
                 .OrderByDescending(n => n.CreatedAt)
-                .Take(50) // Chỉ lấy 50 cái mới nhất cho nhẹ web
+                .Take(50)
                 .ToListAsync();
         }
 

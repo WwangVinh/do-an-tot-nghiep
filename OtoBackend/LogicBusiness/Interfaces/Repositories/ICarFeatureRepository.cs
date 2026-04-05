@@ -9,11 +9,11 @@ namespace LogicBusiness.Interfaces.Repositories
 {
     public interface ICarFeatureRepository
     {
-        // Nhận vào nguyên một mảng các sợi dây để lưu một phát ăn ngay
+        // Nhận vào nguyên một mảng các liên kết giữa xe và tính năng để thêm vào database
         Task AddRangeAsync(IEnumerable<CarFeature> carFeatures);
 
 
-        // Dùng để cắt đứt hết dây cũ khi Admin xóa xe hoặc muốn cập nhật lại tính năng mới
+        // Dùng để cắt đứt hết liên kết khi Admin xóa xe
         Task DeleteByCarIdAsync(int carId);
     }
 }

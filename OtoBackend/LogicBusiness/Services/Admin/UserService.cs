@@ -1,4 +1,5 @@
 ﻿using CoreEntities.Models;
+using CoreEntities.Models.DTOs;
 using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Admin;
 using LogicBusiness.Interfaces.Repositories;
@@ -124,6 +125,7 @@ namespace LogicBusiness.Services.Admin
             await _userRepository.AddUserAsync(newUser);
             await _notiService.CreateNotificationAsync(
                 userId: null,
+                roleTarget: null,
                 showroomId: request.ShowroomId, // Báo cho cả lò chi nhánh đó biết
                 title: "Nhân sự mới gia nhập! 🎉",
                 content: $"Chào mừng {request.FullName} vừa được cấp tài khoản {request.Role} tại chi nhánh chúng ta.",
@@ -178,6 +180,7 @@ namespace LogicBusiness.Services.Admin
                 await _notiService.CreateNotificationAsync(
                     userId: targetUserId,
                     showroomId: null,
+                    roleTarget: null,
                     title: "Thay đổi trạng thái tài khoản ⚠️",
                     content: $"Tài khoản của bạn vừa {actionText} bởi Quản lý. Liên hệ sếp nếu có thắc mắc.",
                     actionUrl: "#",
@@ -201,6 +204,7 @@ namespace LogicBusiness.Services.Admin
                     {
                         await _notiService.CreateNotificationAsync(
                             userId: null,
+                            roleTarget: null,
                             showroomId: user.ShowroomId.Value,
                             title: "Tài khoản bị Xóa ❌",
                             content: $"Admin vừa gạch tên {user.FullName} ({user.Role}) khỏi hệ thống chi nhánh này.",
@@ -228,6 +232,7 @@ namespace LogicBusiness.Services.Admin
                         {
                             await _notiService.CreateNotificationAsync(
                                 userId: null,
+                                roleTarget: null,
                                 showroomId: showroomId.Value,
                                 title: "Tài khoản bị XÓA VĨNH VIỄN ☠️",
                                 content: $"Admin vừa bứng gốc tài khoản {deletedName} ({deletedRole}) khỏi hệ thống. Dữ liệu này không thể khôi phục!",
@@ -267,6 +272,7 @@ namespace LogicBusiness.Services.Admin
                     await _notiService.CreateNotificationAsync(
                         userId: targetUserId,
                         showroomId: null,
+                        roleTarget: null,
                         title: "Thay đổi trạng thái tài khoản ⚠️",
                         content: $"Tài khoản của bạn vừa {actionText} bởi Admin hệ thống.",
                         actionUrl: "#",

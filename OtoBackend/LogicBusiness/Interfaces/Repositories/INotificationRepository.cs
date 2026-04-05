@@ -7,7 +7,7 @@ namespace LogicBusiness.Interfaces.Repositories
     public interface INotificationRepository
     {
         Task AddAsync(Notification notification);
-        Task<IEnumerable<Notification>> GetUserNotificationsAsync(int? userId, int? showroomId);
+        Task<IEnumerable<Notification>> GetUserNotificationsAsync(int? userId, int? showroomId, string userRole);
         Task<Notification?> GetByIdAsync(int id);
         Task UpdateAsync(Notification notification);
     }

@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 
 namespace LogicBusiness.DTOs
 {
+
+    // Dùng chung cho cả GET Wishlist của Customer và GET Wishlist của Admin (Xem tất cả khách hàng đã thích xe nào)
     public class WishlistResponseDto
     {
         public int WishlistId { get; set; }

@@ -64,7 +64,12 @@ namespace OtoBackend.Controllers.Customer
             int? userId = userIdClaim != null ? int.Parse(userIdClaim.Value) : null;
 
             // Truyền thêm request.AssignedTo xuống Service
-            var newSession = await _chatService.CreateSessionAsync(userId, request.GuestToken, request.AssignedTo);
+            var newSession = await _chatService.CreateSessionAsync(
+                userId,
+                request.GuestToken,
+                request.AssignedTo,
+                request.ShowroomId // 👈 Phải có ông này mới hết gạch đỏ nè!
+            );
 
             return Ok(newSession);
         }

@@ -89,6 +89,15 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+builder.Services.AddCors(options => {
+    options.AddDefaultPolicy(policy => {
+        policy.WithOrigins("http://localhost:5173") // URL React của ní
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials(); // Bắt buộc cho SignalR
+    });
+});
+
 // --- THÊM KẾT NỐI DATABASE (DEPENDENCY INJECTION) VÀO ĐÂY ---
 builder.Services.AddDbContext<OtoContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));

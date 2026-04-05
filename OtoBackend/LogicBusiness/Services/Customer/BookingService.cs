@@ -14,7 +14,7 @@ namespace LogicBusiness.Services.Customer
 {
     public class BookingService : IBookingService
     {
-        private readonly IBookingRepository _bookingRepo; // Ní tự tạo Repo này nhé
+        private readonly IBookingRepository _bookingRepo;
         private readonly ICarInventoryRepository _inventoryRepo;
         private readonly ICarRepository _carRepo;
         private readonly INotificationService _notiService;
@@ -29,7 +29,7 @@ namespace LogicBusiness.Services.Customer
 
         public async Task<(bool Success, string Message)> CreateBookingAsync(BookingCreateDto dto)
         {
-            // 1. Kiểm tra xe còn trên sàn không?
+            // Kiểm tra xe còn trên sàn không?
             var car = await _carRepo.GetByIdAsync(dto.CarId);
             if (car == null)
                 return (false, "Xe không tồn tại!");
@@ -37,20 +37,20 @@ namespace LogicBusiness.Services.Customer
             if (car.Status != CarStatus.Available && car.Status != CarStatus.COMING_SOON)
                 return (false, "Rất tiếc, xe này hiện đã có người cọc hoặc ngừng giao dịch.");
 
-            // 2. Kiểm tra xem xe có đang ở chi nhánh khách muốn đến xem không?
+            // Kiểm tra xem xe có đang ở chi nhánh khách muốn đến xem không?
             var inventory = await _inventoryRepo.GetInventoryAsync(dto.CarId, dto.ShowroomId);
             if (inventory == null || inventory.Quantity <= 0)
                 return (false, "Chi nhánh này hiện không có sẵn mẫu xe bạn chọn. Ní thử chọn cơ sở khác xem!");
 
-            // 3. BÍ KÍP CHỐNG ĐỤNG ĐỘ: Kiểm tra xem có ai hẹn xem con xe ĐỘC BẢN này cùng giờ không?
-            // Giả sử 1 ca lái thử / tư vấn tốn khoảng 2 tiếng (Ní phải viết thêm hàm này trong BookingRepo nhé)
+            // Kiểm tra xem có ai hẹn xem con xe ĐỘC BẢN này cùng giờ không?
+            // Giả sử 1 ca lái thử / tư vấn tốn khoảng 2 tiếng
             bool isTimeSlotTaken = await _bookingRepo.IsTimeSlotBookedAsync(dto.CarId, dto.ShowroomId, dto.BookingDate, dto.BookingTime);
             if (isTimeSlotTaken)
             {
                 return (false, "Khung giờ này đã có khách khác hẹn xem xe rồi. Ní vui lòng chọn giờ khác nhé!");
             }
 
-            // 4. LÊN LỊCH HẸN TRẢI NGHIỆM (Tuyệt đối KHÔNG trừ kho)
+            // LÊN LỊCH HẸN TRẢI NGHIỆM
             var booking = new Booking
             {
                 CarId = dto.CarId,
@@ -70,6 +70,7 @@ namespace LogicBusiness.Services.Customer
             string formattedDate = dto.BookingDate.ToString("dd/MM/yyyy");
             await _notiService.CreateNotificationAsync(
                 userId: null,
+                roleTarget: null,
                 showroomId: dto.ShowroomId,
                 title: "Có lịch hẹn xem xe mới! 📅",
                 content: $"Khách hàng {dto.CustomerName} ({dto.Phone}) vừa đặt lịch xem mẫu {car.Brand} {car.Name} vào lúc {dto.BookingTime} ngày {formattedDate}.",
@@ -80,10 +81,10 @@ namespace LogicBusiness.Services.Customer
             return (true, "Đặt lịch hẹn lái thử thành công! Sale bên em sẽ liên hệ để đón ní nhé.");
         }
 
-        // Nhớ thêm 2 hàm này vào IBookingService.cs nữa nha ní
+
         public async Task<IEnumerable<object>> GetMyBookingsAsync(int userId)
         {
-            var bookings = await _bookingRepo.GetByUserIdAsync(userId); // Ní viết hàm này trong Repo nha
+            var bookings = await _bookingRepo.GetByUserIdAsync(userId);
             return bookings.Select(b => new {
                 b.BookingId,
                 b.BookingDate,
@@ -111,6 +112,7 @@ namespace LogicBusiness.Services.Customer
 
             await _notiService.CreateNotificationAsync(
                 userId: null,
+                roleTarget: null,
                 showroomId: booking.ShowroomId,
                 title: "Khách tự hủy lịch hẹn ❌",
                 content: $"Khách hàng {booking.CustomerName} đã tự hủy lịch xem xe trên web. Anh em cập nhật lại lịch trình nhé!",

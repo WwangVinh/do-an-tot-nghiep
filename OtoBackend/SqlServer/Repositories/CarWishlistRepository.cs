@@ -26,7 +26,7 @@ namespace SqlServer.Repositories
             return await _context.CarWishlists
                 .Include(w => w.Car)
                 .Where(w => w.UserId == userId)
-                .OrderByDescending(w => w.WishlistId) // Mới thả tim thì lên đầu
+                .OrderByDescending(w => w.WishlistId)
                 .ToListAsync();
         }
 
