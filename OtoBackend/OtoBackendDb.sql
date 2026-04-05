@@ -1,6 +1,6 @@
 USE [master]
 GO
-/****** Object:  Database [oto]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Database [oto]    Script Date: 4/5/2026 16:25:51 ******/
 CREATE DATABASE [oto]
  CONTAINMENT = NONE
  ON  PRIMARY 
@@ -84,7 +84,7 @@ ALTER DATABASE [oto] SET QUERY_STORE (OPERATION_MODE = READ_WRITE, CLEANUP_POLIC
 GO
 USE [oto]
 GO
-/****** Object:  Table [dbo].[__EFMigrationsHistory]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[__EFMigrationsHistory]    Script Date: 4/5/2026 16:25:51 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -98,7 +98,7 @@ CREATE TABLE [dbo].[__EFMigrationsHistory](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[AIRecommendations]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[AIRecommendations]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -117,7 +117,7 @@ CREATE TABLE [dbo].[AIRecommendations](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Articles]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[Articles]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -136,7 +136,7 @@ CREATE TABLE [dbo].[Articles](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Banners]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[Banners]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -156,13 +156,13 @@ CREATE TABLE [dbo].[Banners](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Bookings]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[Bookings]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
 CREATE TABLE [dbo].[Bookings](
-	[Id] [int] IDENTITY(1,1) NOT NULL,
+	[BookingId] [int] IDENTITY(1,1) NOT NULL,
 	[CarId] [int] NOT NULL,
 	[CustomerName] [nvarchar](100) NOT NULL,
 	[Phone] [varchar](20) NOT NULL,
@@ -173,13 +173,14 @@ CREATE TABLE [dbo].[Bookings](
 	[UserId] [int] NULL,
 	[Status] [nvarchar](50) NOT NULL,
 	[ShowroomId] [int] NULL,
+	[UpdatedAt] [datetime2](7) NULL,
  CONSTRAINT [PK__Bookings__3214EC07B3AB1A46] PRIMARY KEY CLUSTERED 
 (
-	[Id] ASC
+	[BookingId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[CarFeatures]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[CarFeatures]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -194,7 +195,7 @@ CREATE TABLE [dbo].[CarFeatures](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[CarImages]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[CarImages]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -216,7 +217,7 @@ CREATE TABLE [dbo].[CarImages](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[CarInventories]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[CarInventories]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -234,7 +235,7 @@ CREATE TABLE [dbo].[CarInventories](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Cars]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[Cars]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -260,13 +261,14 @@ CREATE TABLE [dbo].[Cars](
 	[DeletedBy] [int] NULL,
 	[Transmission] [nvarchar](max) NULL,
 	[BodyStyle] [nvarchar](max) NULL,
+	[RejectionReason] [nvarchar](max) NULL,
  CONSTRAINT [PK__Cars__68A0342EA480F904] PRIMARY KEY CLUSTERED 
 (
 	[CarId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[CarSpecifications]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[CarSpecifications]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -283,7 +285,7 @@ CREATE TABLE [dbo].[CarSpecifications](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[CarWishlist]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[CarWishlist]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -299,7 +301,7 @@ CREATE TABLE [dbo].[CarWishlist](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[ChatMessages]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[ChatMessages]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -317,7 +319,7 @@ CREATE TABLE [dbo].[ChatMessages](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[ChatSessions]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[ChatSessions]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -329,13 +331,15 @@ CREATE TABLE [dbo].[ChatSessions](
 	[AssignedTo] [int] NULL,
 	[Status] [nvarchar](50) NULL,
 	[CreatedAt] [datetime] NULL,
+	[LastMessageAt] [datetime2](7) NOT NULL,
+	[ShowroomId] [int] NULL,
  CONSTRAINT [PK__ChatSess__C9F49290924C9141] PRIMARY KEY CLUSTERED 
 (
 	[SessionId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Consignments]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[Consignments]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -361,7 +365,7 @@ CREATE TABLE [dbo].[Consignments](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[ConsultationProfiles]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[ConsultationProfiles]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -383,7 +387,7 @@ CREATE TABLE [dbo].[ConsultationProfiles](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Features]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[Features]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -398,7 +402,7 @@ CREATE TABLE [dbo].[Features](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[LocationTaxes]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[LocationTaxes]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -414,7 +418,29 @@ CREATE TABLE [dbo].[LocationTaxes](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[OrderItems]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[Notifications]    Script Date: 4/5/2026 16:25:52 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Notifications](
+	[NotificationId] [int] IDENTITY(1,1) NOT NULL,
+	[UserId] [int] NULL,
+	[ShowroomId] [int] NULL,
+	[Title] [nvarchar](200) NOT NULL,
+	[Content] [nvarchar](500) NULL,
+	[ActionUrl] [nvarchar](255) NULL,
+	[IsRead] [bit] NOT NULL,
+	[CreatedAt] [datetime2](7) NOT NULL,
+	[NotificationType] [nvarchar](max) NOT NULL,
+	[RoleTarget] [nvarchar](max) NULL,
+ CONSTRAINT [PK_Notifications] PRIMARY KEY CLUSTERED 
+(
+	[NotificationId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[OrderItems]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -431,7 +457,7 @@ CREATE TABLE [dbo].[OrderItems](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Orders]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[Orders]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -457,7 +483,7 @@ CREATE TABLE [dbo].[Orders](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[PaymentTransactions]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[PaymentTransactions]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -475,7 +501,7 @@ CREATE TABLE [dbo].[PaymentTransactions](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Promotions]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[Promotions]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -496,7 +522,7 @@ CREATE TABLE [dbo].[Promotions](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Reviews]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[Reviews]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -514,7 +540,7 @@ CREATE TABLE [dbo].[Reviews](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Showrooms]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[Showrooms]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -532,7 +558,7 @@ CREATE TABLE [dbo].[Showrooms](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[SystemAuditLogs]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[SystemAuditLogs]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -554,7 +580,7 @@ CREATE TABLE [dbo].[SystemAuditLogs](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[UserActivity]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[UserActivity]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -571,7 +597,7 @@ CREATE TABLE [dbo].[UserActivity](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[UserLogins]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[UserLogins]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -588,7 +614,7 @@ CREATE TABLE [dbo].[UserLogins](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Users]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Table [dbo].[Users]    Script Date: 4/5/2026 16:25:52 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -617,7 +643,21 @@ CREATE TABLE [dbo].[Users](
 GO
 INSERT [dbo].[__EFMigrationsHistory] ([MigrationId], [ProductVersion]) VALUES (N'20260319183604_InitialCreate', N'8.0.24')
 GO
+INSERT [dbo].[__EFMigrationsHistory] ([MigrationId], [ProductVersion]) VALUES (N'20260320065758_AddRejectionReasonToCar', N'8.0.24')
+GO
+INSERT [dbo].[__EFMigrationsHistory] ([MigrationId], [ProductVersion]) VALUES (N'20260324170001_FinalFixBookingTable', N'8.0.24')
+GO
+INSERT [dbo].[__EFMigrationsHistory] ([MigrationId], [ProductVersion]) VALUES (N'20260325160433_AddNotificationTable', N'8.0.24')
+GO
+INSERT [dbo].[__EFMigrationsHistory] ([MigrationId], [ProductVersion]) VALUES (N'20260325162458_AddNotificationTypeColumn', N'8.0.24')
+GO
+INSERT [dbo].[__EFMigrationsHistory] ([MigrationId], [ProductVersion]) VALUES (N'20260405071645_AddRoleTargetColumn', N'8.0.24')
+GO
+INSERT [dbo].[__EFMigrationsHistory] ([MigrationId], [ProductVersion]) VALUES (N'20260405080002_AddShowroomIdToChatSession', N'8.0.24')
+GO
 INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (1, 1)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (8, 1)
 GO
 INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (1, 2)
 GO
@@ -625,7 +665,11 @@ INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (1, 3)
 GO
 INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (6, 3)
 GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (8, 3)
+GO
 INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (1, 4)
+GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (8, 5)
 GO
 INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (6, 6)
 GO
@@ -637,23 +681,31 @@ INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (7, 9)
 GO
 INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (7, 10)
 GO
+INSERT [dbo].[CarFeatures] ([CarId], [FeatureId]) VALUES (8, 10)
+GO
 SET IDENTITY_INSERT [dbo].[CarInventories] ON 
 GO
 INSERT [dbo].[CarInventories] ([InventoryId], [ShowroomId], [CarId], [Quantity], [DisplayStatus], [UpdatedAt]) VALUES (1, 1, 1, 5, N'OnDisplay', CAST(N'2026-03-20T01:55:38.0497841' AS DateTime2))
 GO
-INSERT [dbo].[CarInventories] ([InventoryId], [ShowroomId], [CarId], [Quantity], [DisplayStatus], [UpdatedAt]) VALUES (4, 4, 6, 10, N'OnDisplay', CAST(N'2026-03-20T02:15:25.8782429' AS DateTime2))
+INSERT [dbo].[CarInventories] ([InventoryId], [ShowroomId], [CarId], [Quantity], [DisplayStatus], [UpdatedAt]) VALUES (4, 4, 6, 1, N'Available', CAST(N'2026-03-20T13:16:40.2294239' AS DateTime2))
 GO
-INSERT [dbo].[CarInventories] ([InventoryId], [ShowroomId], [CarId], [Quantity], [DisplayStatus], [UpdatedAt]) VALUES (5, 2, 7, 15, N'OnDisplay', CAST(N'2026-03-20T02:31:12.3606567' AS DateTime2))
+INSERT [dbo].[CarInventories] ([InventoryId], [ShowroomId], [CarId], [Quantity], [DisplayStatus], [UpdatedAt]) VALUES (5, 2, 7, 0, N'Out of stock', CAST(N'2026-03-20T13:08:49.6508395' AS DateTime2))
+GO
+INSERT [dbo].[CarInventories] ([InventoryId], [ShowroomId], [CarId], [Quantity], [DisplayStatus], [UpdatedAt]) VALUES (6, 1, 6, 1, N'Available', CAST(N'2026-03-20T13:16:34.4679323' AS DateTime2))
+GO
+INSERT [dbo].[CarInventories] ([InventoryId], [ShowroomId], [CarId], [Quantity], [DisplayStatus], [UpdatedAt]) VALUES (1006, 2, 8, 5, N'Pending', CAST(N'2026-04-05T13:07:08.8650543' AS DateTime2))
 GO
 SET IDENTITY_INSERT [dbo].[CarInventories] OFF
 GO
 SET IDENTITY_INSERT [dbo].[Cars] ON 
 GO
-INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Condition], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Transmission], [BodyStyle]) VALUES (1, N'VF 8 Plus', N'SUV Electric', 2024, 0, CAST(1270000000.00 AS Decimal(18, 2)), N'Trắng Trân Châu', N'Mẫu SUV điện thông minh hạng D với công nghệ hỗ trợ lái ADAS.', N'VINFAST', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 1, CAST(N'2026-03-20T01:55:37.810' AS DateTime), CAST(N'2026-03-20T01:55:37.810' AS DateTime), N'Điện', 0, NULL, NULL, N'Số tự động', N'SUV')
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Condition], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Transmission], [BodyStyle], [RejectionReason]) VALUES (1, N'VF 8 Plus', N'SUV Electric', 2024, 0, CAST(1270000000.00 AS Decimal(18, 2)), N'Trắng Trân Châu', N'Mẫu SUV điện thông minh hạng D với công nghệ hỗ trợ lái ADAS.', N'VINFAST', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 1, CAST(N'2026-03-20T01:55:37.810' AS DateTime), CAST(N'2026-03-20T01:55:37.810' AS DateTime), N'Điện', 0, NULL, NULL, N'Số tự động', N'SUV', NULL)
 GO
-INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Condition], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Transmission], [BodyStyle]) VALUES (6, N'Ranger Wildtrak 4.0L 4x4', N'Next-Gen Wildtrak', 2024, 0, CAST(979000000.00 AS Decimal(18, 2)), N'Cam Luxe', N'Mẫu bán tải đa năng nhất thế giới. Kết hợp hoàn hảo giữa sức mạnh vận hành và công nghệ thông minh hàng đầu.', N'FORD', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 1, CAST(N'2026-03-20T02:15:25.870' AS DateTime), CAST(N'2026-03-20T02:15:25.870' AS DateTime), N'Dầu', 0, NULL, NULL, N'Số tự động', N'Bán tải')
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Condition], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Transmission], [BodyStyle], [RejectionReason]) VALUES (6, N'Ranger Wildtrak 4.0L 4x4', N'Next-Gen Wildtrak', 2024, 0, CAST(979000000.00 AS Decimal(18, 2)), N'Cam Luxe', N'Mẫu bán tải đa năng nhất thế giới. Kết hợp hoàn hảo giữa sức mạnh vận hành và công nghệ thông minh hàng đầu.', N'FORD', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 1, CAST(N'2026-03-20T02:15:25.870' AS DateTime), CAST(N'2026-03-20T02:15:25.870' AS DateTime), N'Dầu', 0, NULL, NULL, N'Số tự động', N'Bán tải', NULL)
 GO
-INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Condition], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Transmission], [BodyStyle]) VALUES (7, N'Xpander Premium', N'MPV 7 chỗ', 2024, 0, CAST(658000000.00 AS Decimal(18, 2)), N'Trắng', N'Mẫu MPV 7 chỗ bán chạy nhất Việt Nam. Thiết kế Dynamic Shield hiện đại, khoảng sáng gầm cực cao (225mm) chấp mọi cung đường ngập lụt.', N'MITSUBISHI', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 0, CAST(N'2026-03-20T02:31:12.173' AS DateTime), CAST(N'2026-03-20T02:31:12.173' AS DateTime), N'Xăng', 0, NULL, NULL, N'Số tự động', N'MPV')
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Condition], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Transmission], [BodyStyle], [RejectionReason]) VALUES (7, N'Xpander Premium', N'MPV 7 chỗ', 2024, 0, CAST(658000000.00 AS Decimal(18, 2)), N'Trắng', N'Mẫu MPV 7 chỗ bán chạy nhất Việt Nam. Thiết kế Dynamic Shield hiện đại, khoảng sáng gầm cực cao (225mm) chấp mọi cung đường ngập lụt.', N'MITSUBISHI', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 0, CAST(N'2026-03-20T02:31:12.173' AS DateTime), CAST(N'2026-03-20T02:31:12.173' AS DateTime), N'Xăng', 0, NULL, NULL, N'Số tự động', N'MPV', NULL)
+GO
+INSERT [dbo].[Cars] ([CarId], [Name], [Model], [Year], [Condition], [Price], [Color], [Description], [Brand], [Mileage], [ImageUrl], [Status], [CreatedAt], [UpdatedAt], [FuelType], [IsDeleted], [DeletedAt], [DeletedBy], [Transmission], [BodyStyle], [RejectionReason]) VALUES (8, N'Toyota Alphard', N'2024 Executive Lounge', 2024, 0, CAST(4500000000.00 AS Decimal(18, 2)), N'Trắng Ngọc Trai', N'Xe mới 100%, nhập khẩu nguyên chiếc', N'TOYOTA', CAST(0.00 AS Decimal(18, 2)), N'/uploads/Cars/default-car.jpg.png', 1, CAST(N'2026-04-05T13:07:08.767' AS DateTime), CAST(N'2026-04-05T13:07:08.767' AS DateTime), N'Xăng', 0, NULL, NULL, N'Số tự động', N'MPV', NULL)
 GO
 SET IDENTITY_INSERT [dbo].[Cars] OFF
 GO
@@ -695,7 +747,17 @@ INSERT [dbo].[CarSpecifications] ([SpecId], [CarId], [Category], [SpecName], [Sp
 GO
 INSERT [dbo].[CarSpecifications] ([SpecId], [CarId], [Category], [SpecName], [SpecValue]) VALUES (18, 7, N'Tiện nghi', N'Phanh tay', N'Điện tử & Auto Hold')
 GO
+INSERT [dbo].[CarSpecifications] ([SpecId], [CarId], [Category], [SpecName], [SpecValue]) VALUES (19, 8, N'Động cơ', N'Mã lực', N'300 HP')
+GO
+INSERT [dbo].[CarSpecifications] ([SpecId], [CarId], [Category], [SpecName], [SpecValue]) VALUES (20, 8, N'Kích thước', N'Chiều dài', N'4940 mm')
+GO
 SET IDENTITY_INSERT [dbo].[CarSpecifications] OFF
+GO
+SET IDENTITY_INSERT [dbo].[CarWishlist] ON 
+GO
+INSERT [dbo].[CarWishlist] ([WishlistId], [UserId], [CarId], [AddedAt]) VALUES (1, 1, 1, CAST(N'2026-03-26T01:01:06.093' AS DateTime))
+GO
+SET IDENTITY_INSERT [dbo].[CarWishlist] OFF
 GO
 SET IDENTITY_INSERT [dbo].[Features] ON 
 GO
@@ -731,6 +793,68 @@ INSERT [dbo].[Features] ([FeatureId], [FeatureName], [Icon]) VALUES (15, N'Cốp
 GO
 SET IDENTITY_INSERT [dbo].[Features] OFF
 GO
+SET IDENTITY_INSERT [dbo].[Notifications] ON 
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (1, 1, NULL, N'Chào mừng bạn gia nhập! 🎉', N'Xin chào Lê Quang Vinh, chúc bạn sớm tìm được chiếc xe ưng ý tại Showroom của chúng tôi!', N'/', 0, CAST(N'2026-03-26T00:51:31.2021853' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (2, 2, NULL, N'Chào mừng bạn gia nhập! 🎉', N'Xin chào Vinh, chúc bạn sớm tìm được chiếc xe ưng ý tại Showroom của chúng tôi!', N'/', 0, CAST(N'2026-03-27T22:06:28.1272184' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (3, 3, NULL, N'Chào mừng bạn gia nhập! 🎉', N'Xin chào Lê Quang Vinh 1, chúc bạn sớm tìm được chiếc xe ưng ý tại Showroom của chúng tôi!', N'/', 0, CAST(N'2026-03-27T22:07:52.9348424' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (4, 4, NULL, N'Chào mừng bạn gia nhập! 🎉', N'Xin chào Lê Quang Vinh 2, chúc bạn sớm tìm được chiếc xe ưng ý tại Showroom của chúng tôi!', N'/', 0, CAST(N'2026-03-27T22:08:10.6445927' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (5, 5, NULL, N'Chào mừng bạn gia nhập! 🎉', N'Xin chào Lê Quang Vinh 2, chúc bạn sớm tìm được chiếc xe ưng ý tại Showroom của chúng tôi!', N'/', 0, CAST(N'2026-03-27T22:08:18.8582391' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (6, NULL, 1, N'Nhân sự mới gia nhập! 🎉', N'Chào mừng ShowroomManager1 vừa được cấp tài khoản ShowroomManager tại chi nhánh chúng ta.', N'/admin/users', 0, CAST(N'2026-03-27T22:12:26.7220925' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (7, NULL, 1, N'Nhân sự mới gia nhập! 🎉', N'Chào mừng ShowroomSales1 vừa được cấp tài khoản ShowroomSales tại chi nhánh chúng ta.', N'/admin/users', 0, CAST(N'2026-03-27T22:13:48.7313122' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (8, 1, NULL, N'Thay đổi trạng thái tài khoản ⚠️', N'Tài khoản của bạn vừa được khôi phục hoạt động bởi Admin hệ thống.', N'#', 0, CAST(N'2026-03-27T22:17:23.7468256' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (9, 8, NULL, N'Thay đổi trạng thái tài khoản ⚠️', N'Tài khoản của bạn vừa được khôi phục hoạt động bởi Admin hệ thống.', N'#', 0, CAST(N'2026-03-27T22:18:32.5360151' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (10, 8, NULL, N'Thay đổi trạng thái tài khoản ⚠️', N'Tài khoản của bạn vừa được khôi phục hoạt động bởi Admin hệ thống.', N'#', 0, CAST(N'2026-03-27T22:18:34.5268640' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (11, 8, NULL, N'Thay đổi trạng thái tài khoản ⚠️', N'Tài khoản của bạn vừa được khôi phục hoạt động bởi Admin hệ thống.', N'#', 0, CAST(N'2026-03-27T22:18:35.0352185' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (12, 8, NULL, N'Thay đổi trạng thái tài khoản ⚠️', N'Tài khoản của bạn vừa được khôi phục hoạt động bởi Admin hệ thống.', N'#', 0, CAST(N'2026-03-27T22:18:35.1958374' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (13, 8, NULL, N'Thay đổi trạng thái tài khoản ⚠️', N'Tài khoản của bạn vừa được khôi phục hoạt động bởi Admin hệ thống.', N'#', 0, CAST(N'2026-03-27T22:18:35.5148796' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (14, 8, NULL, N'Thay đổi trạng thái tài khoản ⚠️', N'Tài khoản của bạn vừa được khôi phục hoạt động bởi Admin hệ thống.', N'#', 0, CAST(N'2026-03-27T22:18:35.6672835' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (15, 8, NULL, N'Thay đổi trạng thái tài khoản ⚠️', N'Tài khoản của bạn vừa được khôi phục hoạt động bởi Admin hệ thống.', N'#', 0, CAST(N'2026-03-27T22:18:35.8285801' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (16, 8, NULL, N'Thay đổi trạng thái tài khoản ⚠️', N'Tài khoản của bạn vừa được khôi phục hoạt động bởi Admin hệ thống.', N'#', 0, CAST(N'2026-03-27T22:18:35.9754897' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (17, 8, NULL, N'Thay đổi trạng thái tài khoản ⚠️', N'Tài khoản của bạn vừa bị khóa bởi Admin hệ thống.', N'#', 0, CAST(N'2026-03-27T22:19:12.8702912' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (18, 8, NULL, N'Thay đổi trạng thái tài khoản ⚠️', N'Tài khoản của bạn vừa được khôi phục hoạt động bởi Admin hệ thống.', N'#', 0, CAST(N'2026-03-27T22:19:19.0785339' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (19, 8, NULL, N'Thay đổi trạng thái tài khoản ⚠️', N'Tài khoản của bạn vừa được khôi phục hoạt động bởi Admin hệ thống.', N'#', 0, CAST(N'2026-03-27T22:19:25.8289528' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (20, NULL, 2, N'Nhân sự mới gia nhập! 🎉', N'Chào mừng Nguyễn Văn Quản Lý vừa được cấp tài khoản ShowroomManager tại chi nhánh chúng ta.', N'/admin/users', 0, CAST(N'2026-03-27T23:37:44.0026285' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (21, NULL, 2, N'Nhân sự mới gia nhập! 🎉', N'Chào mừng Lê Văn Sales Một vừa được cấp tài khoản ShowroomSales tại chi nhánh chúng ta.', N'/admin/users', 0, CAST(N'2026-03-27T23:37:52.1379372' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (22, NULL, 2, N'Nhân sự mới gia nhập! 🎉', N'Chào mừng Trần Thị Sales Hai vừa được cấp tài khoản ShowroomSales tại chi nhánh chúng ta.', N'/admin/users', 0, CAST(N'2026-03-27T23:37:58.0477698' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (23, NULL, 2, N'Nhân sự mới gia nhập! 🎉', N'Chào mừng Phạm Văn Sales Ba vừa được cấp tài khoản ShowroomSales tại chi nhánh chúng ta.', N'/admin/users', 0, CAST(N'2026-03-27T23:38:41.0041867' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (24, NULL, 2, N'Nhân sự mới gia nhập! 🎉', N'Chào mừng Hoàng Thị Sales Bốn vừa được cấp tài khoản ShowroomSales tại chi nhánh chúng ta.', N'/admin/users', 0, CAST(N'2026-03-27T23:38:48.9716757' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (25, NULL, 2, N'Nhân sự mới gia nhập! 🎉', N'Chào mừng Đặng Văn Sales Năm vừa được cấp tài khoản ShowroomSales tại chi nhánh chúng ta.', N'/admin/users', 0, CAST(N'2026-03-27T23:38:54.6944600' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (26, 1, NULL, N'Thay đổi trạng thái tài khoản ⚠️', N'Tài khoản của bạn vừa được khôi phục hoạt động bởi Admin hệ thống.', N'#', 0, CAST(N'2026-03-28T00:02:53.5019534' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (27, NULL, 2, N'Tài khoản bị Xóa ❌', N'Admin vừa gạch tên Đặng Văn Sales Năm (ShowroomSales) khỏi hệ thống chi nhánh này.', N'/admin/users', 0, CAST(N'2026-03-28T00:11:46.0411487' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (28, 17, NULL, N'Chào mừng bạn gia nhập! 🎉', N'Xin chào Lê Quang Vinh, chúc bạn sớm tìm được chiếc xe ưng ý tại Showroom của chúng tôi!', N'/', 0, CAST(N'2026-03-28T23:55:52.6863664' AS DateTime2), N'System', NULL)
+GO
+INSERT [dbo].[Notifications] ([NotificationId], [UserId], [ShowroomId], [Title], [Content], [ActionUrl], [IsRead], [CreatedAt], [NotificationType], [RoleTarget]) VALUES (1028, NULL, 2, N'Có xe mới cần duyệt', N'Nhân viên vừa đăng mẫu TOYOTA Toyota Alphard. Sếp vào duyệt nhé!', N'/admin/cars/approve/8', 0, CAST(N'2026-04-05T13:07:08.9397208' AS DateTime2), N'CarApproval', NULL)
+GO
+SET IDENTITY_INSERT [dbo].[Notifications] OFF
+GO
 SET IDENTITY_INSERT [dbo].[Showrooms] ON 
 GO
 INSERT [dbo].[Showrooms] ([ShowroomId], [Name], [Province], [District], [StreetAddress], [Hotline]) VALUES (1, N'VinFast Thăng Long', N'Hà Nội', N'Cầu Giấy', N'Số 68, Đường Trịnh Văn Bô', N'1900 232323')
@@ -743,158 +867,202 @@ INSERT [dbo].[Showrooms] ([ShowroomId], [Name], [Province], [District], [StreetA
 GO
 SET IDENTITY_INSERT [dbo].[Showrooms] OFF
 GO
-/****** Object:  Index [IX_AIRecommendations_CarId]    Script Date: 3/20/2026 2:34:32 ******/
+SET IDENTITY_INSERT [dbo].[Users] ON 
+GO
+INSERT [dbo].[Users] ([UserId], [Username], [PasswordHash], [Email], [FullName], [Phone], [Role], [Address], [CreatedAt], [Status], [IsDeleted], [DeletedAt], [DeletedBy], [AvatarUrl], [ShowroomId]) VALUES (1, N'wwangvinh04', N'admin', N'wwangvinh04@gmail.com', N'Lê Quang Vinh', N'0965346160', N'Admin', NULL, CAST(N'2026-03-26T00:51:31.060' AS DateTime), N'Inactive', 1, CAST(N'2026-03-28T00:11:10.583' AS DateTime), 2, NULL, NULL)
+GO
+INSERT [dbo].[Users] ([UserId], [Username], [PasswordHash], [Email], [FullName], [Phone], [Role], [Address], [CreatedAt], [Status], [IsDeleted], [DeletedAt], [DeletedBy], [AvatarUrl], [ShowroomId]) VALUES (2, N'admin1', N'$2a$11$3XoEOqVO8L.ee/TFk14w3.6dS4rg0RBpe2ikwL7gke4PZOuONuH2a', N'ww', N'Vinh', N'11111', N'Admin', NULL, CAST(N'2026-03-27T22:06:27.960' AS DateTime), N'Active', 0, NULL, NULL, NULL, NULL)
+GO
+INSERT [dbo].[Users] ([UserId], [Username], [PasswordHash], [Email], [FullName], [Phone], [Role], [Address], [CreatedAt], [Status], [IsDeleted], [DeletedAt], [DeletedBy], [AvatarUrl], [ShowroomId]) VALUES (3, N'wwangvinh05', N'$2a$11$YSIyD2e.Nzyzfop9L5.BEe9x.mvqedKmB6qWPUGkZREe/TF5qk.zu', N'sad', N'Lê Quang Vinh 1', N'1231414', N'Customer', NULL, CAST(N'2026-03-27T22:07:52.927' AS DateTime), N'Active', 0, NULL, NULL, NULL, NULL)
+GO
+INSERT [dbo].[Users] ([UserId], [Username], [PasswordHash], [Email], [FullName], [Phone], [Role], [Address], [CreatedAt], [Status], [IsDeleted], [DeletedAt], [DeletedBy], [AvatarUrl], [ShowroomId]) VALUES (4, N'wwangvinh06', N'$2a$11$RJNEvbCLZ4.56aHQyxGIC.pRRLo/LvQsIoiBepSnws6CUa8jhadSG', N'saed', N'Lê Quang Vinh 2', N'1231414', N'Customer', NULL, CAST(N'2026-03-27T22:08:10.633' AS DateTime), N'Active', 0, NULL, NULL, NULL, NULL)
+GO
+INSERT [dbo].[Users] ([UserId], [Username], [PasswordHash], [Email], [FullName], [Phone], [Role], [Address], [CreatedAt], [Status], [IsDeleted], [DeletedAt], [DeletedBy], [AvatarUrl], [ShowroomId]) VALUES (5, N'wwangvinh07', N'$2a$11$D1m8pOzZzuURTgBqlEND7OKhtTT2DdbeombPY87UM9drkae5tX89.', N'safed', N'Lê Quang Vinh 2', N'1231414', N'Customer', NULL, CAST(N'2026-03-27T22:08:18.850' AS DateTime), N'Active', 0, NULL, NULL, NULL, NULL)
+GO
+INSERT [dbo].[Users] ([UserId], [Username], [PasswordHash], [Email], [FullName], [Phone], [Role], [Address], [CreatedAt], [Status], [IsDeleted], [DeletedAt], [DeletedBy], [AvatarUrl], [ShowroomId]) VALUES (6, N'ShowroomManager1', N'$2a$11$w.Y1vODMPXFM4dqnFElHNOVsQz/lPhN1gMW2WFZupiccrrEdAsN4y', N'ShowroomManager1', N'ShowroomManager1', N'0990332677', N'ShowroomManager', NULL, CAST(N'2026-03-27T22:12:26.707' AS DateTime), N'Active', 0, NULL, NULL, NULL, 1)
+GO
+INSERT [dbo].[Users] ([UserId], [Username], [PasswordHash], [Email], [FullName], [Phone], [Role], [Address], [CreatedAt], [Status], [IsDeleted], [DeletedAt], [DeletedBy], [AvatarUrl], [ShowroomId]) VALUES (8, N'ShowroomSales1', N'$2a$11$/p/fb/yj5CxfkABvn1D74OO.PCRQ45uydqNnPspSVCqFsB2nliZsq', N'string', N'ShowroomSales1', N'71092783907', N'ShowroomSales', NULL, CAST(N'2026-03-27T22:13:48.723' AS DateTime), N'Active', 0, NULL, NULL, NULL, 1)
+GO
+INSERT [dbo].[Users] ([UserId], [Username], [PasswordHash], [Email], [FullName], [Phone], [Role], [Address], [CreatedAt], [Status], [IsDeleted], [DeletedAt], [DeletedBy], [AvatarUrl], [ShowroomId]) VALUES (11, N'manager_sr2', N'$2a$11$v.Q3yQzVTR1RIYpW/v4YC.8V1B9E9TETA6LkhgFIW7vQnudq2SwVm', N'manager.sr2@oto.com', N'Nguyễn Văn Quản Lý', N'0911000001', N'ShowroomManager', NULL, CAST(N'2026-03-27T23:37:43.897' AS DateTime), N'Active', 0, NULL, NULL, NULL, 2)
+GO
+INSERT [dbo].[Users] ([UserId], [Username], [PasswordHash], [Email], [FullName], [Phone], [Role], [Address], [CreatedAt], [Status], [IsDeleted], [DeletedAt], [DeletedBy], [AvatarUrl], [ShowroomId]) VALUES (12, N'sales1_sr2', N'$2a$11$mdYgPIYcoZYWAG8NluUbSeI2nCDAwlqeyNPMwvPj5t2UMg17udpRy', N'sales1.sr2@oto.com', N'Lê Văn Sales Một', N'0911000002', N'ShowroomSales', NULL, CAST(N'2026-03-27T23:37:52.133' AS DateTime), N'Active', 0, NULL, NULL, NULL, 2)
+GO
+INSERT [dbo].[Users] ([UserId], [Username], [PasswordHash], [Email], [FullName], [Phone], [Role], [Address], [CreatedAt], [Status], [IsDeleted], [DeletedAt], [DeletedBy], [AvatarUrl], [ShowroomId]) VALUES (13, N'sales2_sr2', N'$2a$11$IsdNnNSitRR/OM85HJNXO.vKQmu42d8eDD64ToDkzrXlWwDyV.TWq', N'sales2.sr2@oto.com', N'Trần Thị Sales Hai', N'0911000003', N'ShowroomSales', NULL, CAST(N'2026-03-27T23:37:58.043' AS DateTime), N'Active', 0, NULL, NULL, NULL, 2)
+GO
+INSERT [dbo].[Users] ([UserId], [Username], [PasswordHash], [Email], [FullName], [Phone], [Role], [Address], [CreatedAt], [Status], [IsDeleted], [DeletedAt], [DeletedBy], [AvatarUrl], [ShowroomId]) VALUES (14, N'sales3_sr2', N'$2a$11$jNoMSkYy2naka5Ymjmj6/OEVMbewv/Xts57IYGFft/UJEzvBVPlX.', N'sales3.sr2@oto.com', N'Phạm Văn Sales Ba', N'0911000004', N'ShowroomSales', NULL, CAST(N'2026-03-27T23:38:40.997' AS DateTime), N'Active', 0, NULL, NULL, NULL, 2)
+GO
+INSERT [dbo].[Users] ([UserId], [Username], [PasswordHash], [Email], [FullName], [Phone], [Role], [Address], [CreatedAt], [Status], [IsDeleted], [DeletedAt], [DeletedBy], [AvatarUrl], [ShowroomId]) VALUES (15, N'sales4_sr2', N'$2a$11$arVagfOsCAJffhPDe8Jc.OpG2CGYJ.DcX5FDewONtdjubW62eBsd6', N'sales4.sr2@oto.com', N'Hoàng Thị Sales Bốn', N'0911000005', N'ShowroomSales', NULL, CAST(N'2026-03-27T23:38:48.967' AS DateTime), N'Active', 0, NULL, NULL, NULL, 2)
+GO
+INSERT [dbo].[Users] ([UserId], [Username], [PasswordHash], [Email], [FullName], [Phone], [Role], [Address], [CreatedAt], [Status], [IsDeleted], [DeletedAt], [DeletedBy], [AvatarUrl], [ShowroomId]) VALUES (16, N'sales5_sr2', N'$2a$11$49LwNy7V6wz2RMb0GA0ayOp2ghMxDqBow3/X8OFMWbaon/NIbv7VW', N'sales5.sr2@oto.com', N'Đặng Văn Sales Năm', N'0911000006', N'ShowroomSales', NULL, CAST(N'2026-03-27T23:38:54.690' AS DateTime), N'Inactive', 1, CAST(N'2026-03-28T00:11:46.030' AS DateTime), 2, NULL, 2)
+GO
+INSERT [dbo].[Users] ([UserId], [Username], [PasswordHash], [Email], [FullName], [Phone], [Role], [Address], [CreatedAt], [Status], [IsDeleted], [DeletedAt], [DeletedBy], [AvatarUrl], [ShowroomId]) VALUES (17, N'wwangvinh004', N'$2a$11$dOMP9/XW94N1DYqL7rwXdulqL9clTxSCcwY/M01n3PMhtZyvZ63KO', N'wwangvinh004@gmail.com', N'Lê Quang Vinh', N'0965346160', N'Customer', NULL, CAST(N'2026-03-28T23:55:52.570' AS DateTime), N'Active', 0, NULL, NULL, NULL, NULL)
+GO
+SET IDENTITY_INSERT [dbo].[Users] OFF
+GO
+/****** Object:  Index [IX_AIRecommendations_CarId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_AIRecommendations_CarId] ON [dbo].[AIRecommendations]
 (
 	[CarId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_AIRecommendations_UserId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_AIRecommendations_UserId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_AIRecommendations_UserId] ON [dbo].[AIRecommendations]
 (
 	[UserId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_Articles_AuthorId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_Articles_AuthorId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_Articles_AuthorId] ON [dbo].[Articles]
 (
 	[AuthorId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_Bookings_CarId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_Bookings_CarId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_Bookings_CarId] ON [dbo].[Bookings]
 (
 	[CarId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_Bookings_ShowroomId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_Bookings_ShowroomId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_Bookings_ShowroomId] ON [dbo].[Bookings]
 (
 	[ShowroomId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_Bookings_UserId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_Bookings_UserId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_Bookings_UserId] ON [dbo].[Bookings]
 (
 	[UserId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_CarFeatures_FeatureId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_CarFeatures_FeatureId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_CarFeatures_FeatureId] ON [dbo].[CarFeatures]
 (
 	[FeatureId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_CarImages_CarId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_CarImages_CarId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_CarImages_CarId] ON [dbo].[CarImages]
 (
 	[CarId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_CarInventories_CarId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_CarInventories_CarId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_CarInventories_CarId] ON [dbo].[CarInventories]
 (
 	[CarId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_CarInventories_ShowroomId_CarId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_CarInventories_ShowroomId_CarId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE UNIQUE NONCLUSTERED INDEX [IX_CarInventories_ShowroomId_CarId] ON [dbo].[CarInventories]
 (
 	[ShowroomId] ASC,
 	[CarId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_CarSpecifications_CarId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_CarSpecifications_CarId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_CarSpecifications_CarId] ON [dbo].[CarSpecifications]
 (
 	[CarId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_CarWishlist_CarId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_CarWishlist_CarId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_CarWishlist_CarId] ON [dbo].[CarWishlist]
 (
 	[CarId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_CarWishlist_UserId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_CarWishlist_UserId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_CarWishlist_UserId] ON [dbo].[CarWishlist]
 (
 	[UserId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_ChatMessages_SessionId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_ChatMessages_SessionId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_ChatMessages_SessionId] ON [dbo].[ChatMessages]
 (
 	[SessionId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_ChatSessions_AssignedTo]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_ChatSessions_AssignedTo]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_ChatSessions_AssignedTo] ON [dbo].[ChatSessions]
 (
 	[AssignedTo] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_ChatSessions_UserId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_ChatSessions_UserId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_ChatSessions_UserId] ON [dbo].[ChatSessions]
 (
 	[UserId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_Consignments_LinkedCarId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_Consignments_LinkedCarId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_Consignments_LinkedCarId] ON [dbo].[Consignments]
 (
 	[LinkedCarId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_Consignments_UserId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_Consignments_UserId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_Consignments_UserId] ON [dbo].[Consignments]
 (
 	[UserId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_ConsultationProfiles_SessionId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_ConsultationProfiles_SessionId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_ConsultationProfiles_SessionId] ON [dbo].[ConsultationProfiles]
 (
 	[SessionId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_ConsultationProfiles_UserId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_ConsultationProfiles_UserId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_ConsultationProfiles_UserId] ON [dbo].[ConsultationProfiles]
 (
 	[UserId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_OrderItems_CarId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_Notifications_ShowroomId]    Script Date: 4/5/2026 16:25:52 ******/
+CREATE NONCLUSTERED INDEX [IX_Notifications_ShowroomId] ON [dbo].[Notifications]
+(
+	[ShowroomId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_Notifications_UserId]    Script Date: 4/5/2026 16:25:52 ******/
+CREATE NONCLUSTERED INDEX [IX_Notifications_UserId] ON [dbo].[Notifications]
+(
+	[UserId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_OrderItems_CarId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_OrderItems_CarId] ON [dbo].[OrderItems]
 (
 	[CarId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_OrderItems_OrderId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_OrderItems_OrderId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_OrderItems_OrderId] ON [dbo].[OrderItems]
 (
 	[OrderId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_Orders_CarId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_Orders_CarId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_Orders_CarId] ON [dbo].[Orders]
 (
 	[CarId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_Orders_PromotionId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_Orders_PromotionId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_Orders_PromotionId] ON [dbo].[Orders]
 (
 	[PromotionId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_Orders_UserId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_Orders_UserId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_Orders_UserId] ON [dbo].[Orders]
 (
 	[UserId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_PaymentTransactions_OrderId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_PaymentTransactions_OrderId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_PaymentTransactions_OrderId] ON [dbo].[PaymentTransactions]
 (
 	[OrderId] ASC
@@ -902,7 +1070,7 @@ CREATE NONCLUSTERED INDEX [IX_PaymentTransactions_OrderId] ON [dbo].[PaymentTran
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__Promotio__A25C5AA7A444C1CD]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [UQ__Promotio__A25C5AA7A444C1CD]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE UNIQUE NONCLUSTERED INDEX [UQ__Promotio__A25C5AA7A444C1CD] ON [dbo].[Promotions]
 (
 	[Code] ASC
@@ -910,43 +1078,43 @@ CREATE UNIQUE NONCLUSTERED INDEX [UQ__Promotio__A25C5AA7A444C1CD] ON [dbo].[Prom
 WHERE ([Code] IS NOT NULL)
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_Reviews_CarId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_Reviews_CarId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_Reviews_CarId] ON [dbo].[Reviews]
 (
 	[CarId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_Reviews_UserId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_Reviews_UserId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_Reviews_UserId] ON [dbo].[Reviews]
 (
 	[UserId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_SystemAuditLogs_UserId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_SystemAuditLogs_UserId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_SystemAuditLogs_UserId] ON [dbo].[SystemAuditLogs]
 (
 	[UserId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_UserActivity_CarId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_UserActivity_CarId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_UserActivity_CarId] ON [dbo].[UserActivity]
 (
 	[CarId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_UserActivity_UserId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_UserActivity_UserId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_UserActivity_UserId] ON [dbo].[UserActivity]
 (
 	[UserId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_UserLogins_UserId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_UserLogins_UserId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_UserLogins_UserId] ON [dbo].[UserLogins]
 (
 	[UserId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_Users_ShowroomId]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [IX_Users_ShowroomId]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE NONCLUSTERED INDEX [IX_Users_ShowroomId] ON [dbo].[Users]
 (
 	[ShowroomId] ASC
@@ -954,7 +1122,7 @@ CREATE NONCLUSTERED INDEX [IX_Users_ShowroomId] ON [dbo].[Users]
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__Users__536C85E4014A9D7C]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [UQ__Users__536C85E4014A9D7C]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE UNIQUE NONCLUSTERED INDEX [UQ__Users__536C85E4014A9D7C] ON [dbo].[Users]
 (
 	[Username] ASC
@@ -964,7 +1132,7 @@ WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNOR
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UQ__Users__A9D105348B415492]    Script Date: 3/20/2026 2:34:32 ******/
+/****** Object:  Index [UQ__Users__A9D105348B415492]    Script Date: 4/5/2026 16:25:52 ******/
 CREATE UNIQUE NONCLUSTERED INDEX [UQ__Users__A9D105348B415492] ON [dbo].[Users]
 (
 	[Email] ASC
@@ -999,6 +1167,10 @@ GO
 ALTER TABLE [dbo].[ChatSessions] ADD  DEFAULT (N'AI_Handling') FOR [Status]
 GO
 ALTER TABLE [dbo].[ChatSessions] ADD  DEFAULT (getdate()) FOR [CreatedAt]
+GO
+ALTER TABLE [dbo].[ChatSessions] ADD  DEFAULT ('0001-01-01T00:00:00.0000000') FOR [LastMessageAt]
+GO
+ALTER TABLE [dbo].[Notifications] ADD  DEFAULT (N'') FOR [NotificationType]
 GO
 ALTER TABLE [dbo].[OrderItems] ADD  DEFAULT ((1)) FOR [Quantity]
 GO
@@ -1127,6 +1299,16 @@ ALTER TABLE [dbo].[ConsultationProfiles]  WITH CHECK ADD  CONSTRAINT [FK_Consult
 REFERENCES [dbo].[Users] ([UserId])
 GO
 ALTER TABLE [dbo].[ConsultationProfiles] CHECK CONSTRAINT [FK_ConsultationProfiles_Users_UserId]
+GO
+ALTER TABLE [dbo].[Notifications]  WITH CHECK ADD  CONSTRAINT [FK_Notifications_Showrooms_ShowroomId] FOREIGN KEY([ShowroomId])
+REFERENCES [dbo].[Showrooms] ([ShowroomId])
+GO
+ALTER TABLE [dbo].[Notifications] CHECK CONSTRAINT [FK_Notifications_Showrooms_ShowroomId]
+GO
+ALTER TABLE [dbo].[Notifications]  WITH CHECK ADD  CONSTRAINT [FK_Notifications_Users_UserId] FOREIGN KEY([UserId])
+REFERENCES [dbo].[Users] ([UserId])
+GO
+ALTER TABLE [dbo].[Notifications] CHECK CONSTRAINT [FK_Notifications_Users_UserId]
 GO
 ALTER TABLE [dbo].[OrderItems]  WITH CHECK ADD  CONSTRAINT [FK__OrderItem__CarId__5FB337D6] FOREIGN KEY([CarId])
 REFERENCES [dbo].[Cars] ([CarId])
