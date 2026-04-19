@@ -141,6 +141,8 @@ builder.Services.AddScoped<IConsignmentService, ConsignmentService>();
 builder.Services.AddScoped<ICarWishlistService, CarWishlistService>();
 builder.Services.AddScoped<IChatRepository, ChatRepository>();
 builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<IBannerRepository, BannerRepository>();
+builder.Services.AddScoped<IBannerService, BannerService>();
 
 builder.Services.AddSignalR();
 
@@ -158,7 +160,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowAll");
 
+app.UseStaticFiles();
+
 app.UseHttpsRedirection();
+
+app.UseRouting();
 
 app.UseStaticFiles();
 
