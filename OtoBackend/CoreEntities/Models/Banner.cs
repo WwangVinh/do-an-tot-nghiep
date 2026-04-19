@@ -11,7 +11,7 @@ public partial class Banner
 
     public string? LinkUrl { get; set; }
 
-    public int Position { get; set; }
+    public int? Position { get; set; }
 
     public bool IsActive { get; set; }
 
