@@ -56,7 +56,7 @@ namespace OtoBackend.Controllers.Admin
             string currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
             string? claimShowroomId = User.FindFirst("ShowroomId")?.Value;
             int? currentUserShowroomId = string.IsNullOrEmpty(claimShowroomId) ? null : int.Parse(claimShowroomId);
-            var carDetail = await _adminService.GetCarDetailAsync(id, currentUserRole, currentUserShowroomId);
+            var carDetail = await _adminService.GetCarDetailAsync(id,currentUserRole, currentUserShowroomId);
             if (carDetail == null) return NotFound(new { message = "Không tìm thấy xe này trong hệ thống!" });
             return Ok(carDetail);
         }
@@ -160,7 +160,7 @@ namespace OtoBackend.Controllers.Admin
             if (files == null || files.Count == 0) return BadRequest("Vui lòng chọn ít nhất 1 file ảnh 360.");
             var result = await _adminService.Upload360ImagesAsync(id, files);
             if (!result.Success) return NotFound(result.Message);
-            return Ok(new { message = $"Đã tải lên {files.Count} ảnh 360 thành công!" });
+            return Ok(new { message = $"Đã tải lên {files.Count} ảnh 360 thành công!"});
         }
 
         [HttpDelete("delete-image/{imageId}")]
@@ -241,7 +241,7 @@ namespace OtoBackend.Controllers.Admin
             if (string.IsNullOrWhiteSpace(request.Reason))
             {
                 return BadRequest(new { message = "Sếp phải nhập lý do từ chối chứ!" });
-            }
+            }  
             var result = await _adminService.RejectCarAsync(id, request.Reason);
             if (result.Success)
             {

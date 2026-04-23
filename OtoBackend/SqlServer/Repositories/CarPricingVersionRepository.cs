@@ -2,12 +2,6 @@ using CoreEntities.Models;
 using LogicBusiness.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
 using SqlServer.DBContext;
-using System.Security.Cryptography;
-
-using CoreEntities.Models;
-using LogicBusiness.Interfaces.Repositories;
-using Microsoft.EntityFrameworkCore;
-using SqlServer.DBContext;
 
 namespace SqlServer.Repositories
 {

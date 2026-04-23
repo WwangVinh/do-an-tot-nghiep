@@ -1,4 +1,4 @@
-﻿using LogicBusiness.Helpers;
+﻿using LogicBusiness.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Linq;

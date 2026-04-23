@@ -107,8 +107,8 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(optio
 // Nới giới hạn của Server Kestrel lên 300MB
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
-serverOptions.Limits.MaxRequestBodySize = 314572800;
-//});
+    serverOptions.Limits.MaxRequestBodySize = 314572800;
+});
 
 // --- THÊM KẾT NỐI DATABASE (DEPENDENCY INJECTION) VÀO ĐÂY ---
 builder.Services.AddDbContext<OtoContext>(options =>
@@ -136,8 +136,8 @@ builder.Services.AddScoped<ICarInventoryRepository, CarInventoryRepository>();
 builder.Services.AddScoped<IShowroomRepository, ShowroomRepository>();
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
-builder.Services.AddScoped<IConsignmentRepository, ConsignmentRepository>();
-builder.Services.AddScoped<ICarWishlistRepository, CarWishlistRepository>();
+builder.Services.AddScoped<IConsignmentRepository,ConsignmentRepository>();
+builder.Services.AddScoped<ICarWishlistRepository,CarWishlistRepository>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICarService, CarService>();
@@ -182,7 +182,7 @@ app.UseStaticFiles();
 
 //app.UseCors("AllowAll"); // Bật CORS Ploicy Error lên
 
-app.MapHub<LogicBusiness.Hubs.ChatHub>("/chathub");
+app.MapHub<LogicBusiness.Hubs.ChatHub >("/chathub");
 
 app.UseAuthentication();
 
