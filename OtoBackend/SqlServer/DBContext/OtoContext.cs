@@ -29,6 +29,8 @@ namespace SqlServer.DBContext
 
         public virtual DbSet<CarImage> CarImages { get; set; }
 
+        public virtual DbSet<CarPricingVersion> CarPricingVersions { get; set; }
+
         public virtual DbSet<CarSpecification> CarSpecifications { get; set; } = null!;
 
         public virtual DbSet<CarFeature> CarFeatures { get; set; } = null!;
@@ -201,6 +203,29 @@ namespace SqlServer.DBContext
                 entity.HasOne(d => d.Car).WithMany(p => p.CarImages)
                     .HasForeignKey(d => d.CarId)
                     .HasConstraintName("FK__CarImages__CarId__5CD6CB2B");
+            });
+
+            modelBuilder.Entity<CarPricingVersion>(entity =>
+            {
+                entity.HasKey(e => e.PricingVersionId);
+
+                entity.ToTable("CarPricingVersions");
+
+                entity.Property(e => e.VersionName).HasMaxLength(255);
+                entity.Property(e => e.PriceVnd).HasColumnType("decimal(18, 2)");
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+                entity.Property(e => e.CreatedAt)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.UpdatedAt)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasColumnType("datetime");
+
+                entity.HasOne(d => d.Car)
+                    .WithMany(p => p.CarPricingVersions)
+                    .HasForeignKey(d => d.CarId)
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .HasConstraintName("FK_CarPricingVersions_Cars");
             });
 
             modelBuilder.Entity<CarSpecification>(entity =>

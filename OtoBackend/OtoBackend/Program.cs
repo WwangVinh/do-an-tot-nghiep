@@ -98,6 +98,18 @@ builder.Services.AddCors(options => {
     });
 });
 
+// Nới giới hạn đọc Form Data lên 300MB
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 314572800;
+});
+
+// Nới giới hạn của Server Kestrel lên 300MB
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+serverOptions.Limits.MaxRequestBodySize = 314572800;
+//});
+
 // --- THÊM KẾT NỐI DATABASE (DEPENDENCY INJECTION) VÀO ĐÂY ---
 builder.Services.AddDbContext<OtoContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -114,6 +126,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddScoped<ICarRepository, CarRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<ICarPricingVersionRepository, CarPricingVersionRepository>();
 builder.Services.AddScoped<ICarImageRepository, CarImageRepository>();
 builder.Services.AddScoped<ICarSpecificationRepository, CarSpecificationRepository>();
 builder.Services.AddScoped<ICarFeatureRepository, CarFeatureRepository>();
@@ -122,12 +136,14 @@ builder.Services.AddScoped<ICarInventoryRepository, CarInventoryRepository>();
 builder.Services.AddScoped<IShowroomRepository, ShowroomRepository>();
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
-builder.Services.AddScoped<IConsignmentRepository,ConsignmentRepository>();
-builder.Services.AddScoped<ICarWishlistRepository,CarWishlistRepository>();
+builder.Services.AddScoped<IConsignmentRepository, ConsignmentRepository>();
+builder.Services.AddScoped<ICarWishlistRepository, CarWishlistRepository>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICarService, CarService>();
+builder.Services.AddScoped<IPricingService, PricingService>();
 builder.Services.AddScoped<ICarAdminService, CarAdminService>();
+builder.Services.AddScoped<IPricingAdminService, PricingAdminService>();
 builder.Services.AddScoped<IFeatureService, FeatureService>();
 builder.Services.AddScoped<ICarSpecificationService, CarSpecificationService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -141,8 +157,8 @@ builder.Services.AddScoped<IConsignmentService, ConsignmentService>();
 builder.Services.AddScoped<ICarWishlistService, CarWishlistService>();
 builder.Services.AddScoped<IChatRepository, ChatRepository>();
 builder.Services.AddScoped<IChatService, ChatService>();
-builder.Services.AddScoped<IBannerRepository, BannerRepository>();
-builder.Services.AddScoped<IBannerService, BannerService>();
+
+builder.Services.AddHttpClient<IAiAdvisorService, AiAdvisorService>();
 
 builder.Services.AddSignalR();
 
@@ -160,17 +176,15 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowAll");
 
-app.UseStaticFiles();
-
 app.UseHttpsRedirection();
-
-app.UseRouting();
 
 app.UseStaticFiles();
 
 //app.UseCors("AllowAll"); // Bật CORS Ploicy Error lên
 
-app.MapHub<LogicBusiness.Hubs.ChatHub >("/chathub");
+app.MapHub<LogicBusiness.Hubs.ChatHub>("/chathub");
+
+app.UseAuthentication();
 
 app.UseAuthorization();
 

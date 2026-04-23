@@ -14,9 +14,23 @@ namespace LogicBusiness.Services.Customer
         }
 
 
-        public async Task<object> GetCarsAsync(string? search, string? brand, string? color, decimal? minPrice, decimal? maxPrice, CarStatus? status, string? transmission, string? bodyStyle, string? fuelType, string? location, int page, int pageSize)
+        public async Task<object> GetCarsAsync(
+            string? search, string? brand, string? color,
+            decimal? minPrice, decimal? maxPrice, CarStatus? status,
+            string? transmission, string? bodyStyle,
+            string? fuelType, string? location,
+            CarCondition? condition, int? minYear, int? maxYear,
+            string? sort, bool inStockOnly,
+            int page, int pageSize)
         {
-            var result = await _carRepo.GetCustomerCarsAsync(search, brand, color, minPrice, maxPrice, status, transmission, bodyStyle, fuelType, location, page, pageSize);
+            var result = await _carRepo.GetCustomerCarsAsync(
+                search, brand, color,
+                minPrice, maxPrice, status,
+                transmission, bodyStyle,
+                fuelType, location,
+                condition, minYear, maxYear,
+                sort, inStockOnly,
+                page, pageSize);
 
             var cleanCars = result.Cars.Select(c => {
 
@@ -24,7 +38,7 @@ namespace LogicBusiness.Services.Customer
                 string displayLocation = "";
 
                 // Check trạng thái xe trước
-                if (c.Status.ToString() == "ComingSoon")
+                if (c.Status?.ToString() == "COMING_SOON")
                 {
                     displayLocation = "Sắp về";
                 }
@@ -78,9 +92,9 @@ namespace LogicBusiness.Services.Customer
             return new
             {
                 TotalItems = result.TotalCount,
-                CurrentPage = page,
-                PageSize = pageSize,
-                TotalPages = (int)Math.Ceiling(result.TotalCount / (double)pageSize),
+                CurrentPage = page <= 0 ? 1 : page,
+                PageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100),
+                TotalPages = (int)Math.Ceiling(result.TotalCount / (double)(pageSize <= 0 ? 10 : Math.Min(pageSize, 100))),
                 Data = cleanCars
             };
         }
@@ -121,6 +135,20 @@ namespace LogicBusiness.Services.Customer
                 Condition = car.Condition.ToString(),
                 Status = car.Status.ToString(),
 
+                // BẢNG GIÁ (các phiên bản/option giá)
+                PricingVersions = (car.CarPricingVersions ?? new List<CarPricingVersion>())
+                    .Where(v => v.IsActive)
+                    .OrderBy(v => v.SortOrder)
+                    .ThenBy(v => v.PricingVersionId)
+                    .Select(v => new
+                    {
+                        v.PricingVersionId,
+                        Name = v.VersionName,
+                        v.PriceVnd,
+                        v.SortOrder
+                    })
+                    .ToList(),
+
                 // HIỆN THÔNG SỐ
                 Specifications = car.CarSpecifications
                     .GroupBy(s => s.Category)
@@ -152,6 +180,120 @@ namespace LogicBusiness.Services.Customer
                     .Select(img => img.ImageUrl)
                     .ToList()
             };
+        }
+
+        public async Task<IEnumerable<object>> GetLatestCarsAsync(int limit)
+        {
+            var cars = await _carRepo.GetLatestCustomerCarsAsync(limit);
+
+            return cars.Select(c =>
+            {
+                int totalQty = c.CarInventories != null ? c.CarInventories.Sum(i => i.Quantity) : 0;
+                string displayLocation = "";
+
+                if (c.Status?.ToString() == "COMING_SOON")
+                {
+                    displayLocation = "Sắp về";
+                }
+                else if (totalQty == 0)
+                {
+                    displayLocation = "Hết hàng";
+                }
+                else if (c.CarInventories != null)
+                {
+                    var activeLocations = c.CarInventories
+                        .Where(inv => inv.Quantity > 0 && inv.Showroom != null && !string.IsNullOrWhiteSpace(inv.Showroom.Province))
+                        .Select(inv => inv.Showroom.Province)
+                        .Distinct()
+                        .ToList();
+
+                    if (activeLocations.Any())
+                    {
+                        displayLocation = string.Join(", ", activeLocations.Take(2));
+                        if (activeLocations.Count > 2) displayLocation += ", ...";
+                    }
+                    else
+                    {
+                        displayLocation = "Đang cập nhật vị trí";
+                    }
+                }
+
+                return new
+                {
+                    c.CarId,
+                    c.Name,
+                    c.Brand,
+                    c.Year,
+                    Condition = c.Condition.ToString(),
+                    c.Price,
+                    c.ImageUrl,
+                    Status = c.Status.ToString(),
+                    c.Mileage,
+                    c.FuelType,
+                    c.Transmission,
+                    c.BodyStyle,
+                    TotalQuantity = totalQty,
+                    Showrooms = displayLocation,
+                    c.CreatedAt
+                };
+            });
+        }
+
+        public async Task<IEnumerable<object>> GetBestSellingCarsAsync(int limit)
+        {
+            var cars = await _carRepo.GetBestSellingCustomerCarsAsync(limit);
+
+            return cars.Select(c =>
+            {
+                int totalQty = c.CarInventories != null ? c.CarInventories.Sum(i => i.Quantity) : 0;
+                string displayLocation = "";
+
+                if (c.Status?.ToString() == "COMING_SOON")
+                {
+                    displayLocation = "Sắp về";
+                }
+                else if (totalQty == 0)
+                {
+                    displayLocation = "Hết hàng";
+                }
+                else if (c.CarInventories != null)
+                {
+                    var activeLocations = c.CarInventories
+                        .Where(inv => inv.Quantity > 0 && inv.Showroom != null && !string.IsNullOrWhiteSpace(inv.Showroom.Province))
+                        .Select(inv => inv.Showroom.Province)
+                        .Distinct()
+                        .ToList();
+
+                    if (activeLocations.Any())
+                    {
+                        displayLocation = string.Join(", ", activeLocations.Take(2));
+                        if (activeLocations.Count > 2) displayLocation += ", ...";
+                    }
+                    else
+                    {
+                        displayLocation = "Đang cập nhật vị trí";
+                    }
+                }
+
+                return new
+                {
+                    c.CarId,
+                    c.Name,
+                    c.Brand,
+                    c.Year,
+                    Condition = c.Condition.ToString(),
+                    c.Price,
+                    c.ImageUrl,
+                    Status = c.Status.ToString(),
+                    c.Mileage,
+                    c.FuelType,
+                    c.Transmission,
+                    c.BodyStyle,
+                    TotalQuantity = totalQty,
+                    Showrooms = displayLocation,
+                    c.CreatedAt
+                };
+            });
         }
     }
 }

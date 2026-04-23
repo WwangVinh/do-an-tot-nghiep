@@ -15,6 +15,8 @@ namespace LogicBusiness.Interfaces.Repositories
             decimal? minPrice, decimal? maxPrice, CarStatus? status,
             string? transmission, string? bodyStyle,
             string? fuelType, string? location,
+            CarCondition? condition, int? minYear, int? maxYear,
+            string? sort, bool inStockOnly,
             int page, int pageSize);
 
         Task<(IEnumerable<Car> Cars, int TotalCount)> GetAdminCarsAsync(
@@ -38,5 +40,11 @@ namespace LogicBusiness.Interfaces.Repositories
         bool CarExists(int id);
 
         Task<IEnumerable<Car>> SearchMasterCarsAsync(string query);
+
+        Task<IEnumerable<Car>> GetLatestCustomerCarsAsync(int limit);
+
+        Task<IEnumerable<Car>> GetBestSellingCustomerCarsAsync(int limit);
+
+        Task<IEnumerable<PricingCarBaseDto>> GetCarsForPricingAsync(string? brand = null);
     }
 }

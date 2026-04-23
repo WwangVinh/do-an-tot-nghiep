@@ -77,5 +77,7 @@ public partial class Car
     public virtual ICollection<CarInventory> CarInventories { get; set; } = new List<CarInventory>();
 
     public virtual ICollection<CarFeature> CarFeatures { get; set; } = new List<CarFeature>();
+
+    public virtual ICollection<CarPricingVersion> CarPricingVersions { get; set; } = new List<CarPricingVersion>();
    
 }

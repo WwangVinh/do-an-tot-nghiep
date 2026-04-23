@@ -18,15 +18,28 @@ namespace LogicBusiness.Services.Admin
         private readonly ICarFeatureRepository _carFeatureRepo;             
         private readonly ICarSpecificationRepository _carSpecificationRepo;
         private readonly ICarInventoryRepository _inventoryRepo;
+        private readonly ICarPricingVersionRepository _pricingVersionRepo;
+        private readonly IUnitOfWork _uow;
         private readonly INotificationService _notiService;
 
-        public CarAdminService(ICarRepository carRepo, ICarImageRepository imageRepo, ICarFeatureRepository carFeatureRepo, ICarSpecificationRepository carSpecificationRepo, ICarInventoryRepository inventoryRepo, INotificationService notiService)
+        public CarAdminService(
+            ICarRepository carRepo,
+            ICarImageRepository imageRepo,
+            ICarFeatureRepository carFeatureRepo,
+            ICarSpecificationRepository carSpecificationRepo,
+            ICarInventoryRepository inventoryRepo,
+            ICarPricingVersionRepository pricingVersionRepo,
+            IUnitOfWork uow,
+            INotificationService notiService
+        )
         {
             _carRepo = carRepo;
             _imageRepo = imageRepo;
             _carFeatureRepo = carFeatureRepo;
             _carSpecificationRepo = carSpecificationRepo;
             _inventoryRepo = inventoryRepo;
+            _pricingVersionRepo = pricingVersionRepo;
+            _uow = uow;
             _notiService = notiService;
         }
 
@@ -324,6 +337,318 @@ namespace LogicBusiness.Services.Admin
 
             string finalMsg = (finalStatus == CarStatus.Available) ? "Đã lên sàn con xe mới tinh!" : "Đã tạo yêu cầu, đợi sếp gật đầu là xe lên sóng nha!";
             return (true, finalMsg, car);
+        }
+
+        // 3B. CREATE FULL: Ghi đủ Cars + CarImages + CarSpecifications + CarFeatures + CarPricingVersions + CarInventories
+        public async Task<(bool Success, string Message, Car? Data)> CreateCarFullAsync(CarCreateFullDto dto, string userRole, int? userShowroomId)
+        {
+            // Chuẩn hóa input cơ bản
+            if (!string.IsNullOrWhiteSpace(dto.Brand)) dto.Brand = dto.Brand.Trim().ToUpper();
+            if (!string.IsNullOrWhiteSpace(dto.Name)) dto.Name = dto.Name.Trim();
+
+            // Xác định showroom mục tiêu
+            int targetShowroomId = (userRole != "Admin" && userShowroomId.HasValue) ? userShowroomId.Value : dto.ShowroomId;
+
+            // Trạng thái theo phân quyền
+            CarStatus finalStatus = (userRole == "Admin" || userRole == "ShowroomManager")
+                                    ? (dto.Status ?? CarStatus.Available)
+                                    : CarStatus.PendingApproval;
+
+            // Các JSON option chung
+            var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+            // Parse specs
+            List<CarSpecificationCreateDto> specs = new();
+            if (!string.IsNullOrWhiteSpace(dto.SpecificationsJson))
+            {
+                try
+                {
+                    specs = JsonSerializer.Deserialize<List<CarSpecificationCreateDto>>(dto.SpecificationsJson, jsonOptions) ?? new();
+                }
+                catch
+                {
+                    return (false, "SpecificationsJson không đúng định dạng JSON.", null);
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(dto.Specifications))
+            {
+                var specLines = dto.Specifications.Split(';', StringSplitOptions.RemoveEmptyEntries);
+                specs = specLines
+                    .Select(line => line.Split('|'))
+                    .Where(p => p.Length == 3)
+                    .Select(p => new CarSpecificationCreateDto
+                    {
+                        Category = p[0].Trim(),
+                        SpecName = p[1].Trim(),
+                        SpecValue = p[2].Trim()
+                    })
+                    .ToList();
+            }
+
+            // Parse pricing versions
+            List<CarPricingVersionCreateDto> pricingVersions = new();
+            if (!string.IsNullOrWhiteSpace(dto.PricingVersionsJson))
+            {
+                try
+                {
+                    pricingVersions = JsonSerializer.Deserialize<List<CarPricingVersionCreateDto>>(dto.PricingVersionsJson, jsonOptions) ?? new();
+                }
+                catch
+                {
+                    return (false, "PricingVersionsJson không đúng định dạng JSON.", null);
+                }
+            }
+
+            // Parse inventories
+            List<CarInventoryCreateDto> inventories = new();
+            if (!string.IsNullOrWhiteSpace(dto.InventoriesJson))
+            {
+                try
+                {
+                    inventories = JsonSerializer.Deserialize<List<CarInventoryCreateDto>>(dto.InventoriesJson, jsonOptions) ?? new();
+                }
+                catch
+                {
+                    return (false, "InventoriesJson không đúng định dạng JSON.", null);
+                }
+            }
+
+            // Parse gallery metas
+            List<CarImageMetaDto> galleryMetas = new();
+            if (!string.IsNullOrWhiteSpace(dto.GalleryMetasJson))
+            {
+                try
+                {
+                    galleryMetas = JsonSerializer.Deserialize<List<CarImageMetaDto>>(dto.GalleryMetasJson, jsonOptions) ?? new();
+                }
+                catch
+                {
+                    return (false, "GalleryMetasJson không đúng định dạng JSON.", null);
+                }
+            }
+
+            // Validate: ảnh phụ bắt buộc có Title + Description
+            if (dto.GalleryFiles != null && dto.GalleryFiles.Any())
+            {
+                if (galleryMetas.Count != dto.GalleryFiles.Count)
+                {
+                    return (false, "GalleryMetasJson phải có số phần tử đúng bằng số file trong GalleryFiles.", null);
+                }
+
+                for (int i = 0; i < galleryMetas.Count; i++)
+                {
+                    var meta = galleryMetas[i];
+                    if (meta == null || string.IsNullOrWhiteSpace(meta.Title) || string.IsNullOrWhiteSpace(meta.Description))
+                    {
+                        return (false, $"Ảnh phụ #{i + 1} thiếu Title hoặc Description.", null);
+                    }
+                }
+            }
+
+            // Chặn trùng listing (giống CreateCarAsync)
+            if (await _carRepo.CheckCarListingExistAsync(dto.Name, dto.Brand, dto.Year, dto.Color ?? "", (int)dto.Condition, (decimal)(dto.Mileage ?? 0)))
+                return (false, "Tin đăng này y hệt một cái khác đã có, ní kiểm tra lại coi!", null);
+
+            Car? createdCar = null;
+            try
+            {
+                await _uow.RunInTransactionAsync(async () =>
+                {
+                    // 1) Cars
+                    var car = new Car
+                    {
+                        Name = dto.Name,
+                        Brand = dto.Brand,
+                        Year = dto.Year,
+                        Model = dto.Model,
+                        Color = dto.Color,
+                        Condition = dto.Condition,
+                        Price = dto.Price, // sẽ set lại bằng min pricing nếu có
+                        FuelType = dto.FuelType,
+                        Mileage = (decimal)(dto.Mileage ?? 0),
+                        Description = dto.Description,
+                        Transmission = dto.Transmission,
+                        BodyStyle = dto.BodyStyle,
+                        CreatedAt = DateTime.Now,
+                        UpdatedAt = DateTime.Now,
+                        Status = finalStatus,
+                        IsDeleted = false
+                    };
+
+                    if (dto.ImageFile != null)
+                    {
+                        string subFolder = $"Cars/{car.Brand}";
+                        string targetName = $"{car.Brand}_{car.Name}";
+                        car.ImageUrl = await FileHelper.UploadFileAsync(dto.ImageFile, subFolder, targetName);
+                    }
+                    else
+                    {
+                        car.ImageUrl = "/uploads/Cars/default-car.png";
+                    }
+
+                    await _carRepo.AddCarAsync(car); // có CarId
+                    createdCar = car;
+
+                    // 2) CarInventories
+                    if (inventories.Any())
+                    {
+                        if (userRole != "Admin" && userShowroomId.HasValue && inventories.Any(i => i.ShowroomId != userShowroomId.Value))
+                            throw new InvalidOperationException("Không được tạo tồn kho cho showroom khác chi nhánh của mình.");
+
+                        foreach (var inv in inventories.Where(i => i.ShowroomId > 0))
+                        {
+                            await _inventoryRepo.AddInventoryAsync(new CarInventory
+                            {
+                                CarId = car.CarId,
+                                ShowroomId = inv.ShowroomId,
+                                Quantity = inv.Quantity,
+                                DisplayStatus = string.IsNullOrWhiteSpace(inv.DisplayStatus)
+                                    ? ((finalStatus == CarStatus.Available) ? "OnDisplay" : "Pending")
+                                    : inv.DisplayStatus.Trim(),
+                                UpdatedAt = DateTime.Now
+                            });
+                        }
+                    }
+                    else if (targetShowroomId > 0)
+                    {
+                        await _inventoryRepo.AddInventoryAsync(new CarInventory
+                        {
+                            CarId = car.CarId,
+                            ShowroomId = targetShowroomId,
+                            Quantity = dto.Quantity,
+                            DisplayStatus = (finalStatus == CarStatus.Available) ? "OnDisplay" : "Pending",
+                            UpdatedAt = DateTime.Now
+                        });
+                    }
+
+                    // 3) CarFeatures
+                    if (!string.IsNullOrWhiteSpace(dto.FeatureIds))
+                    {
+                        var fIds = dto.FeatureIds
+                            .Split(',')
+                            .Select(id => id.Trim())
+                            .Where(id => int.TryParse(id, out _))
+                            .Select(int.Parse)
+                            .Distinct()
+                            .ToList();
+
+                        if (fIds.Any())
+                        {
+                            var carFeatures = fIds.Select(fId => new CarFeature { CarId = car.CarId, FeatureId = fId });
+                            await _carFeatureRepo.AddRangeAsync(carFeatures);
+                        }
+                    }
+
+                    // 4) CarSpecifications
+                    if (specs.Any())
+                    {
+                        var entities = specs
+                            .Where(s => !string.IsNullOrWhiteSpace(s.Category) && !string.IsNullOrWhiteSpace(s.SpecName) && !string.IsNullOrWhiteSpace(s.SpecValue))
+                            .Select(s => new CarSpecification
+                            {
+                                CarId = car.CarId,
+                                Category = s.Category.Trim(),
+                                SpecName = s.SpecName.Trim(),
+                                SpecValue = s.SpecValue.Trim()
+                            })
+                            .ToList();
+
+                        if (entities.Any()) await _carSpecificationRepo.AddRangeAsync(entities);
+                    }
+
+                    // 5) CarPricingVersions
+                    if (pricingVersions.Any())
+                    {
+                        var normalized = pricingVersions
+                            .Where(p => !string.IsNullOrWhiteSpace(p.VersionName))
+                            .Select((p, idx) => new CarPricingVersionCreateDto
+                            {
+                                VersionName = p.VersionName.Trim(),
+                                PriceVnd = p.PriceVnd,
+                                SortOrder = p.SortOrder == 0 ? (idx + 1) : p.SortOrder,
+                                IsActive = p.IsActive
+                            })
+                            .ToList();
+
+                        foreach (var pv in normalized)
+                        {
+                            await _pricingVersionRepo.AddAsync(new CarPricingVersion
+                            {
+                                CarId = car.CarId,
+                                VersionName = pv.VersionName,
+                                PriceVnd = pv.PriceVnd,
+                                SortOrder = pv.SortOrder,
+                                IsActive = pv.IsActive,
+                                CreatedAt = DateTime.Now,
+                                UpdatedAt = DateTime.Now
+                            });
+                        }
+
+                        var activePrices = normalized.Where(x => x.IsActive).Select(x => x.PriceVnd).ToList();
+                        var minPrice = activePrices.Any() ? activePrices.Min() : normalized.Min(x => x.PriceVnd);
+                        car.Price = minPrice;
+                        car.UpdatedAt = DateTime.Now;
+                        await _carRepo.UpdateAsync(car);
+                    }
+
+                    // 6) CarImages (gallery)
+                    if (dto.GalleryFiles != null && dto.GalleryFiles.Any())
+                    {
+                        string subFolder = $"Cars/{car.Brand}";
+                        string targetName = $"{car.Brand}_{car.Name}";
+
+                        for (int i = 0; i < dto.GalleryFiles.Count; i++)
+                        {
+                            var file = dto.GalleryFiles[i];
+                            if (file == null || file.Length == 0) continue;
+
+                            var meta = (i < galleryMetas.Count) ? galleryMetas[i] : null;
+                            if (meta == null || string.IsNullOrWhiteSpace(meta.Title) || string.IsNullOrWhiteSpace(meta.Description))
+                                throw new InvalidOperationException($"Ảnh phụ #{i + 1} thiếu Title hoặc Description.");
+
+                            string imagePath = await FileHelper.UploadFileAsync(file, subFolder, targetName);
+                            string fileHash = FileHelper.GetFileHash(file);
+
+                            await _imageRepo.AddCarImageAsync(new CarImage
+                            {
+                                CarId = car.CarId,
+                                ImageUrl = imagePath,
+                                Is360Degree = false,
+                                IsMainImage = meta?.IsMainImage ?? false,
+                                ImageType = string.IsNullOrWhiteSpace(meta?.ImageType) ? null : meta!.ImageType!.Trim(),
+                                Title = meta.Title.Trim(),
+                                Description = meta.Description.Trim(),
+                                FileHash = string.IsNullOrWhiteSpace(fileHash) ? null : fileHash,
+                                CreatedAt = DateTime.Now
+                            });
+                        }
+                    }
+
+                    // 7) Notification
+                    if (finalStatus == CarStatus.PendingApproval)
+                    {
+                        await _notiService.CreateNotificationAsync(
+                             userId: null,
+                             showroomId: targetShowroomId,
+                             roleTarget: "ShowroomManager",
+                             title: "Có xe mới cần duyệt",
+                             content: $"Nhân viên vừa đăng mẫu {car.Brand} {car.Name}. Sếp vào duyệt nhé!",
+                             actionUrl: $"/admin/cars/approve/{car.CarId}",
+                             type: "CarApproval"
+                         );
+                    }
+                });
+
+                string msg = (finalStatus == CarStatus.Available)
+                    ? "Đã tạo xe (full) và lên sàn thành công!"
+                    : "Đã tạo xe (full). Đang chờ duyệt để lên sàn!";
+
+                return (true, msg, createdCar);
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Lỗi hệ thống: {ex.Message}", null);
+            }
         }
 
 

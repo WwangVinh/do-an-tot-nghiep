@@ -9,6 +9,7 @@ namespace LogicBusiness.Interfaces.Admin
         Task<object> GetCarsAsync(string? search, string? brand, string? color, decimal? minPrice, decimal? maxPrice, CarStatus? status, string? transmission, string? bodyStyle, string? fuelType, string? location, bool? isDeleted, int page, int pageSize, int? userShowroomId = null);
         Task<object?> GetCarDetailAsync(int id, string userRole, int? userShowroomId);
         Task<(bool Success, string Message, Car? Data)> CreateCarAsync(CarCreateDto dto, string userRole, int? userShowroomId);
+        Task<(bool Success, string Message, Car? Data)> CreateCarFullAsync(CarCreateFullDto dto, string userRole, int? userShowroomId);
         Task<(bool Success, string Message, Car? Car)> UpdateCarAsync(int id, CarUpdateDto dto, string userRole, int? userShowroomId);
         Task<(bool Success, string Message)> ApproveCarAsync(int carId, string userRole, int? userShowroomId);
         Task<(bool Success, string Message, object? Data)> UploadGalleryImagesAsync(int carId, List<IFormFile> files, List<string>? titles, List<string>? descriptions, string imageType);

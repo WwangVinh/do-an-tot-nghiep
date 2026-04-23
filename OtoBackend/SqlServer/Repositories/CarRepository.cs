@@ -63,7 +63,14 @@ namespace SqlServer.Repositories
             // Chốt đơn: Sắp xếp xe mới nhất lên đầu và lấy dữ liệu
             return await query.OrderByDescending(c => c.CreatedAt).ToListAsync();
         }
-        public async Task<(IEnumerable<Car> Cars, int TotalCount)> GetCustomerCarsAsync(string? search, string? brand, string? color, decimal? minPrice, decimal? maxPrice, CarStatus? status, string? transmission, string? bodyStyle, string? fuelType, string? location, int page, int pageSize)
+        public async Task<(IEnumerable<Car> Cars, int TotalCount)> GetCustomerCarsAsync(
+            string? search, string? brand, string? color,
+            decimal? minPrice, decimal? maxPrice, CarStatus? status,
+            string? transmission, string? bodyStyle,
+            string? fuelType, string? location,
+            CarCondition? condition, int? minYear, int? maxYear,
+            string? sort, bool inStockOnly,
+            int page, int pageSize)
         {
             // Bắt đầu với danh sách toàn bộ xe
             var query = _context.Cars
@@ -77,6 +84,21 @@ namespace SqlServer.Repositories
             if (status.HasValue)
             {
                 query = query.Where(c => c.Status == status.Value);
+            }
+
+            if (condition.HasValue)
+            {
+                query = query.Where(c => c.Condition == condition.Value);
+            }
+
+            if (minYear.HasValue)
+            {
+                query = query.Where(c => c.Year != null && c.Year.Value >= minYear.Value);
+            }
+
+            if (maxYear.HasValue)
+            {
+                query = query.Where(c => c.Year != null && c.Year.Value <= maxYear.Value);
             }
 
             // LỌC THEO TỪ KHÓA (Tìm một phần của Tên xe)
@@ -137,15 +159,29 @@ namespace SqlServer.Repositories
                 ));
             }
 
-            // CHỈ HIỆN XE CÒN HÀNG (Quantity > 0)
-            query = query.Where(c => c.CarInventories.Any() && c.CarInventories.Sum(i => i.Quantity) > 0);
+            if (inStockOnly)
+            {
+                // CHỈ HIỆN XE CÒN HÀNG (Quantity > 0)
+                query = query.Where(c => c.CarInventories.Any() && c.CarInventories.Sum(i => i.Quantity) > 0);
+            }
 
             int totalCount = await query.CountAsync();
 
+            query = (sort ?? "").Trim().ToLower() switch
+            {
+                "price_asc" => query.OrderBy(c => c.Price),
+                "price_desc" => query.OrderByDescending(c => c.Price),
+                "year_asc" => query.OrderBy(c => c.Year),
+                "year_desc" => query.OrderByDescending(c => c.Year),
+                _ => query.OrderByDescending(c => c.CreatedAt)
+            };
+
+            var safePage = page <= 0 ? 1 : page;
+            var safePageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
+
             var cars = await query
-                .OrderByDescending(c => c.CreatedAt) 
-                .Skip((page - 1) * pageSize) 
-                .Take(pageSize)
+                .Skip((safePage - 1) * safePageSize)
+                .Take(safePageSize)
                 .ToListAsync();
 
             return (cars, totalCount);
@@ -159,6 +195,7 @@ namespace SqlServer.Repositories
                 .Include(c => c.CarSpecifications) 
                 .Include(c => c.CarFeatures)
                     .ThenInclude(cf => cf.Feature)
+                .Include(c => c.CarPricingVersions)
                 .Include(c => c.CarInventories)
                     .ThenInclude(inv => inv.Showroom) 
                 .FirstOrDefaultAsync(c => c.CarId == id && c.IsDeleted == false && c.Status != CarStatus.Draft);
@@ -173,6 +210,7 @@ namespace SqlServer.Repositories
                 .Include(c => c.CarSpecifications)
                 .Include(c => c.CarFeatures)
                     .ThenInclude(cf => cf.Feature)
+                .Include(c => c.CarPricingVersions)
                 .Include(c => c.CarInventories)
                     .ThenInclude(inv => inv.Showroom)
         
@@ -324,6 +362,80 @@ namespace SqlServer.Repositories
                 .Where(c => c.Condition == CarCondition.New &&
                             c.IsDeleted == false &&
                             (c.Name.Contains(query) || c.Brand.Contains(query)))
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Car>> GetLatestCustomerCarsAsync(int limit)
+        {
+            int take = limit <= 0 ? 6 : Math.Min(limit, 50);
+
+            return await _context.Cars
+                .Include(c => c.CarInventories)
+                    .ThenInclude(i => i.Showroom)
+                .Where(c => c.IsDeleted == false && c.Status != CarStatus.Draft)
+                .OrderByDescending(c => c.CreatedAt)
+                .Take(take)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Car>> GetBestSellingCustomerCarsAsync(int limit)
+        {
+            int take = limit <= 0 ? 6 : Math.Min(limit, 50);
+
+            // Count "sold" by summing OrderItems.Quantity on paid orders
+            // NOTE: if your business rule differs, adjust PaymentStatus values here.
+            var bestSellingCarIds = await _context.OrderItems
+                .Where(oi => oi.CarId != null && oi.Quantity != null)
+                .Join(
+                    _context.Orders,
+                    oi => oi.OrderId,
+                    o => o.OrderId,
+                    (oi, o) => new { oi.CarId, oi.Quantity, o.PaymentStatus }
+                )
+                .Where(x => x.PaymentStatus == "Paid" || x.PaymentStatus == "Completed" || x.PaymentStatus == "Success")
+                .GroupBy(x => x.CarId!.Value)
+                .Select(g => new { CarId = g.Key, SoldQty = g.Sum(x => x.Quantity ?? 0) })
+                .OrderByDescending(x => x.SoldQty)
+                .ThenByDescending(x => x.CarId)
+                .Take(take)
+                .ToListAsync();
+
+            var ids = bestSellingCarIds.Select(x => x.CarId).ToList();
+            if (!ids.Any()) return Array.Empty<Car>();
+
+            var cars = await _context.Cars
+                .Include(c => c.CarInventories)
+                    .ThenInclude(i => i.Showroom)
+                .Where(c => ids.Contains(c.CarId) && c.IsDeleted == false && c.Status != CarStatus.Draft)
+                .ToListAsync();
+
+            // Preserve ranking order by sold qty
+            var rank = bestSellingCarIds.Select((x, idx) => new { x.CarId, idx }).ToDictionary(x => x.CarId, x => x.idx);
+            return cars.OrderBy(c => rank.TryGetValue(c.CarId, out var idx) ? idx : int.MaxValue).ToList();
+        }
+
+        public async Task<IEnumerable<PricingCarBaseDto>> GetCarsForPricingAsync(string? brand = null)
+        {
+            var query = _context.Cars
+                .AsNoTracking()
+                .Where(c => c.IsDeleted == false);
+
+            if (!string.IsNullOrWhiteSpace(brand))
+            {
+                var normalized = brand.Trim().ToUpper();
+                query = query.Where(c => (c.Brand ?? string.Empty).ToUpper() == normalized);
+            }
+
+            return await query
+                .OrderBy(c => c.Name)
+                .Select(c => new PricingCarBaseDto
+                {
+                    CarId = c.CarId,
+                    Name = c.Name,
+                    Brand = c.Brand,
+                    ImageUrl = c.ImageUrl,
+                    IsDeleted = c.IsDeleted
+                })
                 .ToListAsync();
         }
     }

@@ -56,7 +56,7 @@ namespace OtoBackend.Controllers.Admin
             string currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
             string? claimShowroomId = User.FindFirst("ShowroomId")?.Value;
             int? currentUserShowroomId = string.IsNullOrEmpty(claimShowroomId) ? null : int.Parse(claimShowroomId);
-            var carDetail = await _adminService.GetCarDetailAsync(id,currentUserRole, currentUserShowroomId);
+            var carDetail = await _adminService.GetCarDetailAsync(id, currentUserRole, currentUserShowroomId);
             if (carDetail == null) return NotFound(new { message = "Không tìm thấy xe này trong hệ thống!" });
             return Ok(carDetail);
         }
@@ -69,6 +69,27 @@ namespace OtoBackend.Controllers.Admin
             string? claimShowroomId = User.FindFirst("ShowroomId")?.Value;
             int? currentUserShowroomId = string.IsNullOrEmpty(claimShowroomId) ? null : int.Parse(claimShowroomId);
             var result = await _adminService.CreateCarAsync(dto, currentUserRole, currentUserShowroomId);
+
+            if (result.Success)
+            {
+                return Ok(new { message = result.Message, data = result.Data });
+            }
+
+            return BadRequest(new { message = result.Message });
+        }
+
+        // CREATE FULL: ghi đủ Cars + CarImages + CarSpecifications + CarFeatures + CarPricingVersions + CarInventories
+        [HttpPost("full")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> CreateCarFull([FromForm] CarCreateFullDto dto)
+        {
+            string currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            string? claimShowroomId = User.FindFirst("ShowroomId")?.Value;
+            int? currentUserShowroomId = string.IsNullOrEmpty(claimShowroomId) ? null : int.Parse(claimShowroomId);
+
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var result = await _adminService.CreateCarFullAsync(dto, currentUserRole, currentUserShowroomId);
 
             if (result.Success)
             {
@@ -120,6 +141,8 @@ namespace OtoBackend.Controllers.Admin
 
         [HttpPut("images/{imageId}/details")]
         [Consumes("multipart/form-data", "application/x-www-form-urlencoded")]
+        [RequestSizeLimit(314572800)] // Cho phép Request lên tới 300 MB
+        [RequestFormLimits(MultipartBodyLengthLimit = 314572800)]
         public async Task<IActionResult> UpdateImageDetails(int imageId, [FromForm] UpdateImageDetailsDto dto)
         {
             var success = await _adminService.UpdateImageDetailsAsync(imageId, dto.Title, dto.Description);
@@ -137,7 +160,7 @@ namespace OtoBackend.Controllers.Admin
             if (files == null || files.Count == 0) return BadRequest("Vui lòng chọn ít nhất 1 file ảnh 360.");
             var result = await _adminService.Upload360ImagesAsync(id, files);
             if (!result.Success) return NotFound(result.Message);
-            return Ok(new { message = $"Đã tải lên {files.Count} ảnh 360 thành công!"});
+            return Ok(new { message = $"Đã tải lên {files.Count} ảnh 360 thành công!" });
         }
 
         [HttpDelete("delete-image/{imageId}")]
@@ -218,7 +241,7 @@ namespace OtoBackend.Controllers.Admin
             if (string.IsNullOrWhiteSpace(request.Reason))
             {
                 return BadRequest(new { message = "Sếp phải nhập lý do từ chối chứ!" });
-            }  
+            }
             var result = await _adminService.RejectCarAsync(id, request.Reason);
             if (result.Success)
             {

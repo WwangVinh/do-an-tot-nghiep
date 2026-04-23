@@ -36,6 +36,22 @@ namespace OtoBackend.Controllers.Customer
             return BadRequest(new { message = result.Message });
         }
 
+        // 1b. ĐẶT LỊCH HẸN (KHÔNG CẦN ĐĂNG NHẬP)
+        [AllowAnonymous]
+        [HttpPost("public-create")]
+        public async Task<IActionResult> PublicCreate([FromBody] BookingCreateDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            // Khách vãng lai: không gắn UserId
+            dto.UserId = null;
+
+            var result = await _bookingService.CreateBookingAsync(dto);
+            if (result.Success) return Ok(new { message = result.Message });
+
+            return BadRequest(new { message = result.Message });
+        }
+
         // 2. XEM LỊCH CỦA TÔI
         [HttpGet("my-bookings")]
         public async Task<IActionResult> GetMyHistory()

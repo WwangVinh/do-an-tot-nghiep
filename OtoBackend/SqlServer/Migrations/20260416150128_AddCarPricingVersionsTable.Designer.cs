@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SqlServer.DBContext;
 
@@ -11,9 +12,11 @@ using SqlServer.DBContext;
 namespace SqlServer.Migrations
 {
     [DbContext(typeof(OtoContext))]
-    partial class OtoContextModelSnapshot : ModelSnapshot
+    [Migration("20260416150128_AddCarPricingVersionsTable")]
+    partial class AddCarPricingVersionsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

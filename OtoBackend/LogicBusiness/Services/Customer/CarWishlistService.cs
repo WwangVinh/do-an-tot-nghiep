@@ -1,5 +1,5 @@
 ﻿using CoreEntities.Models;
-using LogicBusiness.DTOs;
+using LogicBusiness.Helpers;
 using LogicBusiness.Interfaces.Customer;
 using LogicBusiness.Interfaces.Repositories;
 using System.Collections.Generic;

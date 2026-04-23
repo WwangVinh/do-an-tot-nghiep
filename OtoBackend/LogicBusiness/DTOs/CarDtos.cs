@@ -57,6 +57,103 @@ namespace LogicBusiness.DTOs
 
     }
 
+    // ==========================================================
+    // DTO: TẠO XE "FULL" (ghi đủ Cars + Images + Specs + Features + Pricing + Inventories)
+    // Gửi qua multipart/form-data, các list phức tạp được gửi dạng JSON string.
+    // ==========================================================
+    public class CarCreateFullDto
+    {
+        // --- Thông tin chính của xe (Cars) ---
+        [Required(ErrorMessage = "Tên xe không được để trống!")]
+        [StringLength(255, ErrorMessage = "Tên xe quá dài, tối đa 255 ký tự thôi!")]
+        public string Name { get; set; } = null!;
+
+        [Required(ErrorMessage = "Vui lòng nhập tên hãng xe!")]
+        public string Brand { get; set; } = null!;
+
+        [ValidYearAttribute]
+        public int Year { get; set; }
+
+        public string? Model { get; set; }
+        public string? Color { get; set; }
+        public string? FuelType { get; set; }
+        public double? Mileage { get; set; }
+        public string? Description { get; set; }
+        public string? Transmission { get; set; }
+        public string? BodyStyle { get; set; }
+        public CarCondition Condition { get; set; }
+
+        // Status sẽ bị service điều chỉnh theo phân quyền
+        public CarStatus? Status { get; set; }
+
+        // Ảnh chính (Cars.ImageUrl)
+        public IFormFile? ImageFile { get; set; }
+
+        // Giá thấp nhất: nếu có PricingVersions -> service sẽ tự lấy min để set Cars.Price
+        public decimal? Price { get; set; }
+
+        // --- Features (CarFeatures) ---
+        // comma-separated: "1,2,3"
+        public string? FeatureIds { get; set; }
+
+        // --- Specs (CarSpecifications) ---
+        // JSON array: [{ "category":"Động cơ","specName":"Mã lực","specValue":"300 HP" }, ...]
+        public string? SpecificationsJson { get; set; }
+
+        // Backward compatible (chuỗi kiểu cũ): "Động cơ|Mã lực|300 HP;..."
+        public string? Specifications { get; set; }
+
+        // --- Pricing (CarPricingVersions) ---
+        // JSON array: [{ "versionName":"Base","priceVnd":900000000,"sortOrder":1,"isActive":true }, ...]
+        public string? PricingVersionsJson { get; set; }
+
+        // --- Inventories (CarInventories) ---
+        // JSON array: [{ "showroomId": 1, "quantity": 3, "displayStatus":"OnDisplay" }, ...]
+        public string? InventoriesJson { get; set; }
+
+        // Nếu không gửi InventoriesJson, dùng 1 showroom + quantity này
+        public int ShowroomId { get; set; }
+        public int Quantity { get; set; }
+
+        // --- Gallery Images (CarImages) ---
+        // Nhiều file ảnh phụ (nội/ngoại thất...)
+        public List<IFormFile>? GalleryFiles { get; set; }
+
+        // JSON array meta khớp index với GalleryFiles:
+        // [{ "title":"Nội thất","description":"Ghế da","imageType":"Interior" }, ...]
+        public string? GalleryMetasJson { get; set; }
+    }
+
+    public class CarImageMetaDto
+    {
+        public string? Title { get; set; }
+        public string? Description { get; set; }
+        public string? ImageType { get; set; }
+        public bool? IsMainImage { get; set; }
+    }
+
+    public class CarSpecificationCreateDto
+    {
+        public string Category { get; set; } = null!;
+        public string SpecName { get; set; } = null!;
+        public string SpecValue { get; set; } = null!;
+    }
+
+    public class CarPricingVersionCreateDto
+    {
+        public string VersionName { get; set; } = null!;
+        public decimal PriceVnd { get; set; }
+        public int SortOrder { get; set; } = 0;
+        public bool IsActive { get; set; } = true;
+    }
+
+    public class CarInventoryCreateDto
+    {
+        public int ShowroomId { get; set; }
+        public int Quantity { get; set; }
+        public string? DisplayStatus { get; set; }
+    }
+
     /// DTO bổ trợ để cấu trúc hóa dữ liệu Thông số kỹ thuật (Specifications) theo nhóm.
     /// Thường dùng để parse từ chuỗi String sang Object để hiển thị lên giao diện.
     public class SpecCategoryDto
