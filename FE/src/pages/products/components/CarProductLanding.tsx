@@ -20,10 +20,12 @@ function SectionHeading({
   tag,
   title,
   intro,
+  introClassName,
 }: {
   tag: string
   title: string
   intro: string
+  introClassName?: string
 }) {
   return (
     <div className="grid gap-6 lg:grid-cols-[auto_1fr] lg:gap-10">
@@ -37,7 +39,69 @@ function SectionHeading({
         <h2 className="text-2xl font-bold tracking-tight sm:text-3xl" style={{ color: NAVY }}>
           {title}
         </h2>
-        <p className="max-w-3xl text-[15px] leading-relaxed text-slate-700 sm:text-base">{intro}</p>
+        <p
+          className={[
+            'whitespace-pre-line text-[15px] leading-relaxed text-slate-700 sm:text-base',
+            introClassName ?? 'max-w-3xl',
+          ].join(' ')}
+        >
+          {intro}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function OverviewGalleryBlock({
+  slides,
+  fallbackSingleSrc,
+  fallbackAlt,
+}: {
+  slides: { src: string; alt: string; title?: string | null; description?: string | null }[]
+  fallbackSingleSrc?: string
+  fallbackAlt: string
+}) {
+  const carouselSlides =
+    slides.length > 0
+      ? slides
+      : fallbackSingleSrc
+        ? [{ src: fallbackSingleSrc, alt: fallbackAlt }]
+        : []
+
+  const [activeIndex, setActiveIndex] = useState(0)
+
+  useEffect(() => {
+    setActiveIndex(0)
+  }, [carouselSlides])
+
+  const activeSlide = carouselSlides[activeIndex]
+  const activeDesc = (activeSlide?.description ?? '').trim()
+
+  return (
+    <div className="mt-8 grid gap-8 lg:grid-cols-12 lg:items-start">
+      <div className="lg:col-span-7">
+        {carouselSlides.length > 0 ? (
+          <div className="overflow-hidden rounded-lg bg-white shadow-md ring-1 ring-black/5">
+            <BannerCarousel
+              slides={carouselSlides}
+              intervalMs={5000}
+              activeIndex={activeIndex}
+              onActiveIndexChange={setActiveIndex}
+              hideDots={carouselSlides.length > 1}
+            />
+          </div>
+        ) : (
+          <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+            Chưa có hình ảnh cho mục này.
+          </p>
+        )}
+      </div>
+      <div className="lg:col-span-5">
+        {activeDesc ? (
+          <div className="whitespace-pre-line text-[15px] leading-relaxed text-slate-700 sm:text-base">{activeDesc}</div>
+        ) : (
+          <p className="text-[15px] text-slate-400 sm:text-base">—</p>
+        )}
       </div>
     </div>
   )
@@ -63,16 +127,18 @@ const FALLBACK_HEX_SWATCHES = [
   { id: 'brown', label: 'Nâu', hex: '#92400e' },
 ] as const
 
-function GallerySplitBlock({
+function DetailGallerySplitBlock({
   slides,
-  bodyText,
   fallbackSingleSrc,
   fallbackAlt,
+  title,
+  tag,
 }: {
-  slides: { src: string; alt: string }[]
-  bodyText: string
+  slides: { src: string; alt: string; title?: string | null; description?: string | null }[]
   fallbackSingleSrc?: string
   fallbackAlt: string
+  title: string
+  tag: string
 }) {
   const carouselSlides =
     slides.length > 0
@@ -81,45 +147,44 @@ function GallerySplitBlock({
         ? [{ src: fallbackSingleSrc, alt: fallbackAlt }]
         : []
 
-  const bodyLines = useMemo(() => {
-    const t = bodyText.trim()
-    if (!t) return []
-    return t
-      .split(/\r?\n+/)
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0)
-  }, [bodyText])
+  const [activeIndex, setActiveIndex] = useState(0)
+
+  useEffect(() => {
+    setActiveIndex(0)
+  }, [carouselSlides])
+
+  const activeSlide = carouselSlides[activeIndex]
+  const activeTitle = (activeSlide?.title ?? '').trim()
+  const activeDesc = (activeSlide?.description ?? '').trim()
 
   return (
-    <div className="mt-8 grid gap-8 lg:grid-cols-12 lg:items-start">
-      <div className="lg:col-span-7">
-        {carouselSlides.length > 0 ? (
-          <div className="overflow-hidden rounded-lg bg-white shadow-md ring-1 ring-black/5">
-            <BannerCarousel slides={carouselSlides} intervalMs={5000} />
-          </div>
-        ) : (
-          <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-            Chưa có hình ảnh cho mục này.
-          </p>
-        )}
-      </div>
-      <div className="lg:col-span-5">
-        {bodyLines.length === 0 ? (
-          <p className="text-[15px] text-slate-400 sm:text-base">—</p>
-        ) : (
-          <ul className="m-0 list-none space-y-3 p-0">
-            {bodyLines.map((line, idx) => (
-              <li key={idx} className="flex gap-3 text-[15px] leading-relaxed text-slate-700 sm:text-base">
-                <span
-                  className="mt-[0.55rem] inline-block h-2 w-2 shrink-0 rounded-full ring-2 ring-slate-200/80"
-                  style={{ backgroundColor: NAVY }}
-                  aria-hidden
-                />
-                <span className="min-w-0 flex-1">{line}</span>
-              </li>
-            ))}
-          </ul>
-        )}
+    <div className="space-y-8">
+      <SectionHeading tag={tag} title={title} intro={activeTitle || '—'} />
+      <div className="grid gap-8 lg:grid-cols-12 lg:items-start">
+        <div className="lg:col-span-7">
+          {carouselSlides.length > 0 ? (
+            <div className="overflow-hidden rounded-lg bg-white shadow-md ring-1 ring-black/5">
+              <BannerCarousel
+                slides={carouselSlides}
+                intervalMs={5000}
+                activeIndex={activeIndex}
+                onActiveIndexChange={setActiveIndex}
+                hideDots={carouselSlides.length > 1}
+              />
+            </div>
+          ) : (
+            <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+              Chưa có hình ảnh cho mục này.
+            </p>
+          )}
+        </div>
+        <div className="lg:col-span-5">
+          {activeDesc ? (
+            <div className="whitespace-pre-line text-[15px] leading-relaxed text-slate-700 sm:text-base">{activeDesc}</div>
+          ) : (
+            <p className="text-[15px] text-slate-400 sm:text-base">—</p>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -131,6 +196,7 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
   const trialPhoneFieldId = useId()
   const [trialFullName, setTrialFullName] = useState('')
   const [trialPhone, setTrialPhone] = useState('')
+  const stickyHeaderOffsetClass = 'top-[80px]'
 
   const onBrochure = useCallback(() => {
     toast.success('Brochure sẽ được gửi qua email khi có kết nối hệ thống.')
@@ -438,8 +504,9 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
                       toast.error('Số điện thoại phải gồm đúng 10 chữ số.')
                       return
                     }
+                    const carIdFromUrl = window.location.pathname.split('/').pop() ?? ''
                     navigate('/lai-thu', {
-                      state: { trialPrefill: { fullName: full, phone } },
+                      state: { trialPrefill: { fullName: full, phone, carId: carIdFromUrl } },
                     })
                   }}
                 >
@@ -491,7 +558,7 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
 
       {/* Sticky sub-nav */}
       <nav
-        className="sticky top-[105px] z-40 border-b border-white/10 shadow-sm"
+        className={`sticky ${stickyHeaderOffsetClass} z-40 border-b border-white/10 shadow-sm`}
         style={{ backgroundColor: NAVY }}
         aria-label={`Mục lục ${name}`}
       >
@@ -589,17 +656,22 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
                 tag="01"
                 title={`Tổng quan ${name}`}
                 intro={content.overviewSplit.intro || content.overviewIntro}
+                introClassName="max-w-none"
               />
-              <GallerySplitBlock
+              <OverviewGalleryBlock
                 slides={content.overviewSplit.slides}
-                bodyText={content.overviewSplit.bodyText}
                 fallbackSingleSrc={imageSrc}
                 fallbackAlt={`${name} — tổng quan`}
               />
             </>
           ) : (
             <>
-              <SectionHeading tag="01" title={`Tổng quan ${name}`} intro={content.overviewIntro} />
+              <SectionHeading
+                tag="01"
+                title={`Tổng quan ${name}`}
+                intro={content.overviewIntro}
+                introClassName="max-w-none"
+              />
             </>
           )}
         </div>
@@ -609,19 +681,13 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
       <section id="car-ngoai-that" className="scroll-mt-28 border-b border-slate-100 bg-white">
         <div className="mx-auto max-w-screen-2xl space-y-10 px-5 py-14 sm:px-6 lg:px-8 lg:py-16">
           {content.exteriorSplit ? (
-            <>
-              <SectionHeading
-                tag="02"
-                title="Ngoại thất"
-                intro={content.exteriorSplit.intro || content.exteriorIntro}
-              />
-              <GallerySplitBlock
-                slides={content.exteriorSplit.slides}
-                bodyText={content.exteriorSplit.bodyText}
-                fallbackSingleSrc={imageSrc}
-                fallbackAlt={`${name} — ngoại thất`}
-              />
-            </>
+            <DetailGallerySplitBlock
+              tag="02"
+              title="Ngoại thất"
+              slides={content.exteriorSplit.slides}
+              fallbackSingleSrc={imageSrc}
+              fallbackAlt={`${name} — ngoại thất`}
+            />
           ) : (
             <>
               <SectionHeading tag="02" title="Ngoại thất" intro={content.exteriorIntro} />
@@ -652,19 +718,13 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
       <section id="car-noi-that" className="scroll-mt-28 border-b border-slate-100 bg-slate-50/80">
         <div className="mx-auto max-w-screen-2xl space-y-10 px-5 py-14 sm:px-6 lg:px-8 lg:py-16">
           {content.interiorSplit ? (
-            <>
-              <SectionHeading
-                tag="03"
-                title="Nội thất"
-                intro={content.interiorSplit.intro || content.interiorIntro}
-              />
-              <GallerySplitBlock
-                slides={content.interiorSplit.slides}
-                bodyText={content.interiorSplit.bodyText}
-                fallbackSingleSrc={imageSrc}
-                fallbackAlt={`${name} — nội thất`}
-              />
-            </>
+            <DetailGallerySplitBlock
+              tag="03"
+              title="Nội thất"
+              slides={content.interiorSplit.slides}
+              fallbackSingleSrc={imageSrc}
+              fallbackAlt={`${name} — nội thất`}
+            />
           ) : (
             <>
               <SectionHeading tag="03" title="Nội thất" intro={content.interiorIntro} />
@@ -695,19 +755,13 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
       <section id="car-an-toan" className="scroll-mt-28 border-b border-slate-100 bg-white">
         <div className="mx-auto max-w-screen-2xl space-y-10 px-5 py-14 sm:px-6 lg:px-8 lg:py-16">
           {content.safetySplit ? (
-            <>
-              <SectionHeading
-                tag="04"
-                title="An toàn"
-                intro={content.safetySplit.intro || content.safetyIntro}
-              />
-              <GallerySplitBlock
-                slides={content.safetySplit.slides}
-                bodyText={content.safetySplit.bodyText}
-                fallbackSingleSrc={imageSrc}
-                fallbackAlt={`${name} — an toàn`}
-              />
-            </>
+            <DetailGallerySplitBlock
+              tag="04"
+              title="An toàn"
+              slides={content.safetySplit.slides}
+              fallbackSingleSrc={imageSrc}
+              fallbackAlt={`${name} — an toàn`}
+            />
           ) : (
             <>
               <SectionHeading tag="04" title="An toàn" intro={content.safetyIntro} />
@@ -724,19 +778,13 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
       <section id="car-van-hanh" className="scroll-mt-28 border-b border-slate-100 bg-slate-50/80">
         <div className="mx-auto max-w-screen-2xl space-y-10 px-5 py-14 sm:px-6 lg:px-8 lg:py-16">
           {content.performanceSplit ? (
-            <>
-              <SectionHeading
-                tag="05"
-                title="Vận hành"
-                intro={content.performanceSplit.intro || content.performanceIntro}
-              />
-              <GallerySplitBlock
-                slides={content.performanceSplit.slides}
-                bodyText={content.performanceSplit.bodyText}
-                fallbackSingleSrc={imageSrc}
-                fallbackAlt={`${name} — vận hành`}
-              />
-            </>
+            <DetailGallerySplitBlock
+              tag="05"
+              title="Vận hành"
+              slides={content.performanceSplit.slides}
+              fallbackSingleSrc={imageSrc}
+              fallbackAlt={`${name} — vận hành`}
+            />
           ) : (
             <>
               <SectionHeading tag="05" title="Vận hành" intro={content.performanceIntro} />
@@ -756,19 +804,64 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
             title={content.specsTitle ?? 'Thông số kỹ thuật'}
             intro="Bảng thông số tham khảo theo catalogue; chi tiết chính xác theo phiên bản và thời điểm giao xe."
           />
-          <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-100/90">
-            <dl className="divide-y divide-slate-200/90">
-              {content.specsRows.map((row) => (
-                <div
-                  key={row.label}
-                  className="grid gap-1 px-4 py-3.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] sm:gap-6 sm:px-6"
-                >
-                  <dt className="text-sm font-semibold text-slate-800">{row.label}</dt>
-                  <dd className="text-sm text-slate-700">{row.value}</dd>
-                </div>
-              ))}
-            </dl>
-            <p className="border-t border-slate-200/90 px-4 py-3 text-xs text-slate-500 sm:px-6">
+          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+            {/* <div className="hidden sm:grid sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1.1fr)] sm:gap-6 sm:bg-slate-100/90 sm:px-6 sm:py-3">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-700">Danh mục</div>
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-700">Thông số</div>
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-700">Giá trị</div>
+            </div> */}
+
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-slate-100/90">
+                  <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-700 w-[22%]">Danh mục</th>
+                  <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-700 w-[38%]">Thông số</th>
+                  <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-700">Giá trị</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200/90">
+                {(() => {
+                  const rows: React.ReactNode[] = []
+                  let i = 0
+                  while (i < content.specsRows.length) {
+                    const category = (content.specsRows[i].category ?? '').trim()
+                    // đếm số row cùng category liên tiếp
+                    let count = 1
+                    while (
+                      i + count < content.specsRows.length &&
+                      (content.specsRows[i + count].category ?? '').trim() === category
+                    ) count++
+
+                    for (let j = 0; j < count; j++) {
+                      const row = content.specsRows[i + j]
+                      const isFirst = j === 0
+                      const isLast = j === count - 1
+                      rows.push(
+                        <tr
+                          key={`${category}-${row.label}-${i + j}`}
+                          className={isLast && i + count < content.specsRows.length ? '' : ''}
+                        >
+                          {isFirst ? (
+                            <td
+                              rowSpan={count}
+                              className="px-6 py-3 text-sm font-semibold text-slate-700 bg-slate-50 border-r border-slate-200 align-top"
+                            >
+                              {category || '—'}
+                            </td>
+                          ) : null}
+                          <td className="px-6 py-3 text-sm font-semibold text-slate-800">{row.label}</td>
+                          <td className="px-6 py-3 text-sm text-slate-700">{row.value}</td>
+                        </tr>
+                      )
+                    }
+                    i += count
+                  }
+                  return rows
+                })()}
+              </tbody>
+            </table>
+
+            <p className="border-t border-slate-200/90 bg-slate-50 px-4 py-3 text-xs text-slate-500 sm:px-6">
               Thông số tham khảo; số liệu chính thức theo catalogue và hợp đồng mua bán tại thời điểm giao xe.
             </p>
           </div>

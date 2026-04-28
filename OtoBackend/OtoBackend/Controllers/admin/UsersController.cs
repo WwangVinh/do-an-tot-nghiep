@@ -10,8 +10,7 @@ namespace OtoBackend.Controllers.Admin
 {
     [Route("api/admin/[controller]")]
     [ApiController]
-    // 👇 Nới lỏng cửa cho cả Manager vào, Service sẽ tự phân xử bên trong
-    [Authorize(Roles = "Admin, ShowroomManager")]
+    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Manager}")]
     public class UsersController : ControllerBase
     {
         private readonly IUserService _userService;
@@ -72,6 +71,21 @@ namespace OtoBackend.Controllers.Admin
 
             var result = await _userService.CreateStaffAccountAsync(request, currentUserRole, currentUserShowroomId);
 
+            if (!result.Success) return BadRequest(new { message = result.Message });
+            return Ok(new { message = result.Message });
+        }
+
+        // 4. CẬP NHẬT THÔNG TIN NHÂN SỰ (Admin/Manager)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateStaffAccount(int id, [FromBody] UserUpdateRequestDto request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            string currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+            string? claimShowroomId = User.FindFirst("ShowroomId")?.Value;
+            int? currentUserShowroomId = string.IsNullOrEmpty(claimShowroomId) ? null : int.Parse(claimShowroomId);
+
+            var result = await _userService.UpdateStaffAccountAsync(id, request, currentUserRole, currentUserShowroomId);
             if (!result.Success) return BadRequest(new { message = result.Message });
             return Ok(new { message = result.Message });
         }

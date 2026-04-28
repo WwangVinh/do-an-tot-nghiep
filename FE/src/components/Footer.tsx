@@ -48,11 +48,11 @@ function telHref(hotline: string): string {
 
 export function Footer({
   className,
-  brandTitle = 'Tên công ty',
+  brandTitle = 'CMC AUTOMOTIVE',
   address = 'Trụ sở: Địa chỉ trụ sở chính',
   phone = 'Hotline: 0333 436 743',
-  email = 'tencongty@gmail.com',
-  website = 'https://tencongty.vn',
+  email = 'cmcautomotive@gmail.com',
+  website = 'https://cmcautomotive.vn',
   supportLinks = defaultSupportLinks,
   copyrightText = `Copyright© ${new Date().getFullYear()} - Tên công ty`,
   poweredByText = 'Powered by Readdy',
@@ -77,7 +77,7 @@ export function Footer({
     let cancelled = false
     setShowroomsLoad('loading')
     http
-      .get<ShowroomListItem[]>('/api/showrooms')
+      .get<ShowroomListItem[]>('/api/Showrooms')
       .then((res) => {
         if (!cancelled) {
           setShowrooms(Array.isArray(res.data) ? res.data : [])

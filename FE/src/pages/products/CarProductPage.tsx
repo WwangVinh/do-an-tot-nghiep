@@ -60,6 +60,7 @@ function formatVnd(price: number | null | undefined) {
   return new Intl.NumberFormat('vi-VN').format(price as number) + ' ₫'
 }
 
+
 function toAbsoluteUrl(path: string) {
   const raw = (path ?? '').trim()
   return raw ? new URL(raw, env.VITE_API_BASE_URL).toString() : ''
@@ -80,14 +81,16 @@ function combinedImageDescriptions(images: { description?: string | null }[]) {
 }
 
 function toSlides(
-  images: { title?: string | null; imageUrl?: string }[],
+  images: { title?: string | null; description?: string | null; imageUrl?: string }[],
   fallbackName: string,
 ): CarProductGallerySlide[] {
   return images
     .map((img) => {
       const src = toAbsoluteUrl(img.imageUrl ?? '')
-      const alt = (img.title ?? '').trim() || fallbackName
-      return { src, alt }
+      const title = (img.title ?? '').replace(/\r\n/g, '\n').trim()
+      const description = (img.description ?? '').replace(/\r\n/g, '\n').trim()
+      const alt = title || fallbackName
+      return { src, alt, title: title || null, description: description || null }
     })
     .filter((s) => s.src.length > 0)
 }
@@ -108,8 +111,13 @@ function buildSectionSplit(
 function CarApiLandingPage({ carId }: { carId: number }) {
   const api = useMemo(() => {
     return axios.create({
-      baseURL: new URL('/api/', env.VITE_API_BASE_URL).toString(),
+      // Nối trực tiếp link ngrok với tiền tố /api
+      baseURL: `${env.VITE_API_BASE_URL}/api`,
       timeout: 20_000,
+      headers: {
+        'ngrok-skip-browser-warning': 'true',
+        'Content-Type': 'application/json'
+      }
     })
   }, [])
 
@@ -145,8 +153,13 @@ function CarApiLandingPage({ carId }: { carId: number }) {
 
         const specsRows =
           (payload.specifications ?? [])
-            .flatMap((g) => g.items ?? [])
-            .map((i) => ({ label: i.specName ?? '', value: i.specValue ?? '' }))
+            .flatMap((g) =>
+              (g.items ?? []).map((i) => ({
+                category: g.category ?? '',
+                label: i.specName ?? '',
+                value: i.specValue ?? '',
+              })),
+            )
             .filter((r) => (r.label || r.value) && r.label.trim() !== '')
 
         const carName = payload.name ?? ''
@@ -155,7 +168,14 @@ function CarApiLandingPage({ carId }: { carId: number }) {
           .flatMap((g) => g.images ?? [])
           .map((img) => {
             const src = toAbsoluteUrl(img.imageUrl ?? '')
-            return { src, alt: img.title?.trim() || carName }
+            const title = (img.title ?? '').replace(/\r\n/g, '\n').trim()
+            const description = (img.description ?? '').replace(/\r\n/g, '\n').trim()
+            return {
+              src,
+              alt: title || carName,
+              title: title || null,
+              description: description || null,
+            }
           })
           .filter((i) => i.src.length > 0)
 

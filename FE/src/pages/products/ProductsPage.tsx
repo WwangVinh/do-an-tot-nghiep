@@ -110,6 +110,7 @@ export function ProductsPage() {
   }, [])
 
   const [filters, setFilters] = useState<ProductFilterState>({
+    searchText: '',
     fuelType: '',
     condition: '',
     brand: '',
@@ -200,6 +201,8 @@ export function ProductsPage() {
       // Backend chưa có param model riêng: dùng search theo model/name
       if (debouncedFilters.model) params.search = debouncedFilters.model
 
+      if (debouncedFilters.searchText) params.search = debouncedFilters.searchText
+
       try {
         const res = await api.get<PagedCarsResponse>('Cars', { signal: controller.signal, params })
         const payload = res.data
@@ -277,6 +280,7 @@ export function ProductsPage() {
           setFilters(normalized)
         }}
         options={filterOptions}
+        carNames={optionSeed.map((c) => c.name).filter(Boolean)}
         resultCount={displayItems.length}
         totalCount={totalItems}
       />

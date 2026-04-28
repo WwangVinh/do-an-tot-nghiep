@@ -38,7 +38,7 @@ function SectionHeading({
         <h2 className="text-2xl font-bold tracking-tight sm:text-3xl" style={{ color: NAVY }}>
           {title}
         </h2>
-        <p className="max-w-3xl text-[15px] leading-relaxed text-slate-700 sm:text-base">{intro}</p>
+        <p className="max-w-3xl whitespace-pre-line text-[15px] leading-relaxed text-slate-700 sm:text-base">{intro}</p>
       </div>
     </div>
   )
@@ -72,6 +72,7 @@ export function GenericCarProductLanding({ name, imageSrc, priceText }: CarProdu
   const onBrochure = useCallback(() => {
     toast.success('Brochure sẽ được gửi qua email khi có kết nối hệ thống.')
   }, [])
+  const stickyHeaderOffsetClass = 'top-[80px]'
 
   return (
     <div className="w-full bg-white text-slate-900">
@@ -152,7 +153,7 @@ export function GenericCarProductLanding({ name, imageSrc, priceText }: CarProdu
       </section>
 
       <nav
-        className="sticky top-0 z-40 border-b border-white/10 shadow-sm"
+        className={`sticky ${stickyHeaderOffsetClass} z-40 border-b border-white/10 shadow-sm`}
         style={{ backgroundColor: NAVY }}
         aria-label={`Mục lục ${name}`}
       >

@@ -9,7 +9,9 @@ namespace LogicBusiness.Interfaces.Repositories
         Task<CarPricingVersion?> GetByIdAsync(int id);
         Task<bool> CarExistsAsync(int carId);
         Task AddAsync(CarPricingVersion entity);
+        Task AddRangeAsync(IEnumerable<CarPricingVersion> entities);
         Task UpdateAsync(CarPricingVersion entity);
         Task DeleteAsync(CarPricingVersion entity);
+        Task DeleteByCarIdAsync(int carId);
     }
 }

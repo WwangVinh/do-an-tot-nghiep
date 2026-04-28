@@ -1,12 +1,13 @@
 using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Admin;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace OtoBackend.Controllers.Admin
 {
     [Route("api/admin/[controller]")]
     [ApiController]
-    public class PricingVersionsController : ControllerBase
+    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Manager},{AppRoles.Sales},{AppRoles.ShowroomSales},{AppRoles.Technician}")]
     {
         private readonly IPricingAdminService _pricingAdminService;
 

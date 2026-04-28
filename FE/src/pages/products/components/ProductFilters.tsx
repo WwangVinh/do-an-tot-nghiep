@@ -8,6 +8,7 @@ export type BodyType = 'sedan' | 'suv' | 'hatchback' | 'pickup' | 'mpv'
 export type SortKey = 'price_desc' | 'price_asc' | 'year_desc' | 'year_asc'
 
 export type ProductFilterState = {
+  searchText: string 
   fuelType: FuelType | ''
   condition: CarCondition | ''
   brand: string
@@ -36,6 +37,7 @@ export type ProductFiltersProps = {
   options: ProductFilterOptions
   resultCount: number
   totalCount: number
+  carNames?: string[] 
   /** Tiêu đề trang — nằm trên nền gradient, phía trên card trắng */
   headingTitle?: string
   headingDescription?: string
@@ -402,10 +404,24 @@ export function ProductFilters({
   options,
   resultCount,
   totalCount,
+  carNames = [],
   headingTitle,
   headingDescription,
 }: ProductFiltersProps) {
   const [showAll, setShowAll] = useState(false)
+
+  const [searchInput, setSearchInput] = useState(value.searchText)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+
+  const [activeIndex, setActiveIndex] = useState(-1)
+
+  const suggestions = useMemo(() => {
+    const q = searchInput.trim().toLowerCase()
+    if (!q || q.length < 1) return []
+    return carNames
+      .filter((n) => n.toLowerCase().includes(q))
+      .slice(0, 8)
+  }, [carNames, searchInput])
 
   const brands = useMemo(() => uniqSortedStrings(options.brands), [options.brands])
   const models = useMemo(() => uniqSortedStrings(options.models), [options.models])
@@ -427,6 +443,7 @@ export function ProductFilters({
 
   const clear = () => {
     onChange({
+      searchText: '', 
       fuelType: '',
       condition: '',
       brand: '',
@@ -517,6 +534,82 @@ export function ProductFilters({
                 <span className="hidden sm:inline">sản phẩm</span>
               </div>
             </div>
+
+            {/* ── Tìm kiếm theo tên xe ── */}
+            <div className="mt-4">
+              <div className="relative flex gap-2">
+                <div className="relative flex-1">
+                  <svg
+                    className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                    viewBox="0 0 24 24" fill="none" aria-hidden
+                  >
+                    <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+                    <path d="M16.5 16.5l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Tìm theo tên xe... (Enter để tìm)"
+                    value={searchInput}
+                    onChange={(e) => {
+                      setSearchInput(e.target.value)
+                      setShowSuggestions(true)
+                      if (e.target.value === '') set({ searchText: '' })
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        set({ searchText: searchInput })
+                        setShowSuggestions(false)
+                      }
+                      if (e.key === 'Escape') setShowSuggestions(false)
+                    }}
+                    onFocus={() => { if (searchInput) setShowSuggestions(true) }}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                    className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none transition focus-visible:border-rose-300 focus-visible:ring-2 focus-visible:ring-rose-400/40"
+                  />
+
+                  {/* Dropdown gợi ý */}
+                  {showSuggestions && suggestions.length > 0 && (
+                    <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+                      {suggestions.map((name, idx) => (
+                          <button
+                            key={name}
+                            type="button"
+                            onMouseDown={() => {
+                              setSearchInput(name)
+                              set({ searchText: name })
+                              setShowSuggestions(false)
+                              setActiveIndex(-1)
+                            }}
+                            onMouseEnter={() => setActiveIndex(idx)}
+                            className={[
+                              'flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm',
+                              idx === activeIndex ? 'bg-rose-50 text-rose-600' : 'text-slate-700 hover:bg-slate-50',
+                            ].join(' ')}
+                          >
+                          <svg className="h-3.5 w-3.5 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none">
+                            <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+                            <path d="M16.5 16.5l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                          </svg>
+                          <span className="truncate">{name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    set({ searchText: searchInput })
+                    setShowSuggestions(false)
+                  }}
+                  className="inline-flex h-10 items-center justify-center rounded-lg bg-rose-500 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
+                >
+                  Tìm
+                </button>
+              </div>
+            </div>
+
 
             {/* Nhãn cùng hàng với control — gọn chiều cao; xl: một dải + cụm phải cố định */}
             <div className="mt-4 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between xl:gap-6">

@@ -21,9 +21,26 @@ type LatestCarDto = {
   imageUrl: string | null
 }
 
+type BannerDto = {
+  bannerId: number
+  imageUrl: string
+  linkUrl?: string | null
+  position: number
+  isActive: boolean
+  bannerName: string
+  startDate?: string | null
+  endDate?: string | null
+}
+
 export function HomePage() {
   const [latestCars, setLatestCars] = useState<CarListItem[]>([])
   const [bestSellerCars, setBestSellerCars] = useState<CarListItem[]>([])
+  const [bannerSlides, setBannerSlides] = useState(() => [
+    { src: banner1, alt: 'Banner 1' },
+    { src: banner2, alt: 'Banner 2' },
+    { src: banner3, alt: 'Banner 3' },
+    { src: banner4, alt: 'Banner 4' },
+  ])
   const bestSellerDisplayCars = bestSellerCars.length ? bestSellerCars : latestCars
 
   useEffect(() => {
@@ -35,9 +52,10 @@ export function HomePage() {
 
     async function load() {
       try {
-        const [latestRes, bestRes] = await Promise.all([
+        const [latestRes, bestRes, bannersRes] = await Promise.all([
           api.get<{ data: LatestCarDto[] }>('Cars/latest', { params: { limit: 6 } }),
           api.get<{ data: LatestCarDto[] }>('Cars/best-sellers', { params: { limit: 6 } }),
+          api.get<{ data: BannerDto[] }>('Banners', { params: { isActive: true } }),
         ])
 
         const mapDtoToItem = (c: LatestCarDto): CarListItem => {
@@ -53,6 +71,24 @@ export function HomePage() {
         if (!cancelled) {
           setLatestCars(latestItems)
           setBestSellerCars(bestItems)
+
+          const banners = bannersRes.data?.data ?? []
+          const nextSlides =
+            banners
+              .slice()
+              .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+              .map((b) => {
+                const raw = (b.imageUrl ?? '').trim()
+                const src = raw ? new URL(raw, env.VITE_API_BASE_URL).toString() : ''
+                return {
+                  src,
+                  alt: (b.bannerName ?? 'Banner').trim() || 'Banner',
+                  href: (b.linkUrl ?? '').trim() || undefined,
+                }
+              })
+              .filter((s) => Boolean(s.src)) ?? []
+
+          if (nextSlides.length) setBannerSlides(nextSlides)
         }
       } catch {
         if (!cancelled) {
@@ -74,12 +110,7 @@ export function HomePage() {
         <BannerCarousel
           className="m-0"
           intervalMs={2500}
-          slides={[
-            { src: banner1, alt: 'Banner 1' },
-            { src: banner2, alt: 'Banner 2' },
-            { src: banner3, alt: 'Banner 3' },
-            { src: banner4, alt: 'Banner 4' },
-          ]}
+          slides={bannerSlides}
         />
 
         <div className="absolute inset-x-0 bottom-3 z-10 px-0">

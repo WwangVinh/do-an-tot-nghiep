@@ -1,11 +1,13 @@
-﻿using LogicBusiness.Interfaces.Admin;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using LogicBusiness.DTOs;
+using LogicBusiness.Interfaces.Admin;
+using Microsoft.AspNetCore.Authorization;
 
 namespace OtoBackend.Controllers.admin
 {
     [Route("api/admin/[controller]")]
     [ApiController]
+    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Manager}")]
     public class CarInventoriesController : ControllerBase
     {
         private readonly ICarInventoryService _inventoryService;

@@ -1,4 +1,4 @@
-﻿using CoreEntities.Models;
+using CoreEntities.Models;
 using Microsoft.AspNetCore.Http;
 
 namespace LogicBusiness.Interfaces.Repositories
@@ -13,6 +13,7 @@ namespace LogicBusiness.Interfaces.Repositories
         Task<CarImage> GetCarImageByIdAsync(int imageId);
         Task DeleteCarImageAsync(int imageId);
         Task<bool> DeleteAll360ImagesByCarIdAsync(int carId);
+        Task DeleteAllGalleryImagesByCarIdAsync(int carId);
         Task DeleteAllImagesByCarIdAsync(int carId);
     }
 }

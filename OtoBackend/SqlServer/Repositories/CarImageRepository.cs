@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
 using System.IO;
 using CoreEntities.Models;
@@ -113,6 +113,16 @@ namespace SqlServer.Repositories
             if (images.Any())
             {
                 _context.CarImages.RemoveRange(images); // Xóa sạch sành sanh
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task DeleteAllGalleryImagesByCarIdAsync(int carId)
+        {
+            var images = await _context.CarImages.Where(img => img.CarId == carId && img.Is360Degree == false).ToListAsync();
+            if (images.Any())
+            {
+                _context.CarImages.RemoveRange(images);
                 await _context.SaveChangesAsync();
             }
         }

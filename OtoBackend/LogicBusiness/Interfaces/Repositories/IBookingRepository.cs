@@ -25,5 +25,6 @@ namespace LogicBusiness.Interfaces.Repositories
             DateTime? fromDate, DateTime? toDate, int? targetShowroomId);
 
         Task<IEnumerable<Booking>> GetByUserIdAsync(int userId);
+        Task<bool> HasBookedCarAsync(string phone, int carId);
     }
 }

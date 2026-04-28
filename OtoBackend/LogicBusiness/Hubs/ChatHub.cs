@@ -1,5 +1,4 @@
 ﻿using LogicBusiness.DTOs;
-using LogicBusiness.Interfaces.Customer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,6 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
+using LogicBusiness.Interfaces.Customer;
 
 namespace LogicBusiness.Hubs
 {

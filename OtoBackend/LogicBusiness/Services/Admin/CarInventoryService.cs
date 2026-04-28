@@ -1,6 +1,7 @@
 ﻿using CoreEntities.Models;
 using LogicBusiness.Interfaces.Admin;
 using LogicBusiness.Interfaces.Repositories;
+using LogicBusiness.Interfaces.Shared;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -14,12 +15,15 @@ namespace LogicBusiness.Services.Admin
     public class CarInventoryService : ICarInventoryService
     {
         private readonly ICarInventoryRepository _inventoryRepo;
+        private readonly INotificationService _notiService; // 👈 Thêm súng bắn thông báo
+        private readonly ICarRepository _carRepo;
 
 
-        public CarInventoryService(ICarInventoryRepository inventoryRepo)
+        public CarInventoryService(ICarInventoryRepository inventoryRepo, INotificationService notiService, ICarRepository carRepo)
         {
             _inventoryRepo = inventoryRepo;
-
+            _notiService = notiService;
+            _carRepo = carRepo;
         }
         public async Task<(bool Success, string Message)> UpdateStockAsync(int carId, int showroomId, int newQuantity, string displayStatus)
         {
@@ -31,20 +35,22 @@ namespace LogicBusiness.Services.Admin
                 return (false, "Trạng thái không hợp lệ! Vui lòng nhập đúng chữ: Available, OnDisplay, hoặc Out of stock.");
             }
 
-            var inventory = await _inventoryRepo.GetInventoryAsync(carId, showroomId);
+            // Lấy tên xe để thông báo cho đẹp (Nếu ní đã inject ICarRepository)
+            var car = await _carRepo.GetByIdAsync(carId);
+            string carName = car != null ? $"{car.Brand} {car.Name}" : $"ID {carId}";
 
-            // Xử lý logic tự động: Nếu gõ số lượng = 0 thì ép kiểu về Out of stock luôn, Admin chọn gì cũng mặc kệ
+            var inventory = await _inventoryRepo.GetInventoryAsync(carId, showroomId);
             string finalStatus = newQuantity == 0 ? "Out of stock" : displayStatus;
 
             if (inventory == null)
             {
-                // Tạo mới
+                // TẠO MỚI KHO
                 var newInv = new CarInventory
                 {
                     CarId = carId,
                     ShowroomId = showroomId,
                     Quantity = newQuantity,
-                    DisplayStatus = finalStatus, // 👈 Lấy trạng thái Admin truyền vào
+                    DisplayStatus = finalStatus,
                     UpdatedAt = DateTime.Now
                 };
                 await _inventoryRepo.AddInventoryAsync(newInv);
@@ -52,12 +58,44 @@ namespace LogicBusiness.Services.Admin
             }
             else
             {
-                // Cập nhật
+                // CẬP NHẬT KHO
+                int oldQuantity = inventory.Quantity; // Lưu lại số lượng cũ để so sánh
+
                 inventory.Quantity = newQuantity;
-                inventory.DisplayStatus = finalStatus; // 👈 Lấy trạng thái Admin truyền vào
+                inventory.DisplayStatus = finalStatus;
                 inventory.UpdatedAt = DateTime.Now;
 
                 await _inventoryRepo.UpdateInventoryAsync(inventory);
+
+                // 👇 LOGIC BẮN THÔNG BÁO Ở ĐÂY 👇
+
+                // Kịch bản 1: Vừa hết sạch hàng
+                if (oldQuantity > 0 && newQuantity == 0)
+                {
+                    await _notiService.CreateNotificationAsync(
+                        userId: null,
+                        showroomId: showroomId, // Chỉ báo cho chi nhánh bị hết hàng
+                        roleTarget: "Manager,Sales,ShowroomSales",
+                        title: "Cảnh báo: Xe đã hết hàng! 🚨",
+                        content: $"Mẫu {carName} tại chi nhánh hiện đã hết hàng. Anh em Sales tạm ngưng nhận cọc nhé!",
+                        actionUrl: $"/admin/inventory/detail/{carId}", // Trỏ về trang quản lý kho
+                        type: "Inventory"
+                    );
+                }
+                // Kịch bản 2: Vừa có hàng trở lại (Từ 0 lên một số dương)
+                else if (oldQuantity == 0 && newQuantity > 0)
+                {
+                    await _notiService.CreateNotificationAsync(
+                        userId: null,
+                        showroomId: showroomId,
+                        roleTarget: "Manager,Sales,ShowroomSales",
+                        title: "Tin vui: Đã có xe sẵn kho! 📦",
+                        content: $"Mẫu {carName} vừa được bổ sung {newQuantity} chiếc. Anh em gọi khách chốt đơn lẹ nào!",
+                        actionUrl: $"/admin/cars/detail/{carId}",
+                        type: "Inventory"
+                    );
+                }
+
                 return (true, "Cập nhật tồn kho thành công!");
             }
         }

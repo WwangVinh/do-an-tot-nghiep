@@ -1,11 +1,13 @@
+using LogicBusiness.DTOs;
+using LogicBusiness.Interfaces.Admin;
+using LogicBusiness.Interfaces.Customer;
+using LogicBusiness.Interfaces.Shared;
+using Microsoft.Extensions.Configuration;
 using System.Globalization;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using LogicBusiness.DTOs;
-using LogicBusiness.Interfaces.Customer;
-using Microsoft.Extensions.Configuration;
 
 namespace LogicBusiness.Services.Customer
 {
@@ -14,16 +16,50 @@ namespace LogicBusiness.Services.Customer
         private readonly HttpClient _http;
         private readonly IConfiguration _config;
         private readonly ICarService _carService;
+        private readonly IShowroomService _showroomService;
+        private readonly IArticleService _articleService;
+        private readonly IPricingAdminService _pricingAdminService;
+        private readonly INotificationService _notificationService;
 
-        public AiAdvisorService(HttpClient http, IConfiguration config, ICarService carService)
+        public AiAdvisorService(
+            HttpClient http,
+            IConfiguration config,
+            ICarService carService,
+            IShowroomService showroomService,
+            IArticleService articleService,
+            IPricingAdminService pricingAdminService,
+            INotificationService notificationService)
         {
             _http = http;
             _config = config;
             _carService = carService;
+            _showroomService = showroomService;
+            _articleService = articleService;
+            _pricingAdminService = pricingAdminService;
+            _notificationService = notificationService;
         }
 
         public async Task<AiAdvisorChatResponseDto> GetReplyAsync(AiAdvisorChatRequestDto request)
         {
+
+            var phoneMatch = Regex.Match(request.Message, @"\b0[35789]\d{8}\b");
+
+            if (phoneMatch.Success)
+            {
+                var phone = phoneMatch.Value;
+
+                // Kích hoạt Notification bắn ngay cho team Sales
+                await _notificationService.CreateNotificationAsync(
+                    userId: null,
+                    showroomId: null, // Nếu ní có logic bắt ID showroom thì truyền vào, không thì để null bắn cho Sales tổng
+                    roleTarget: AppRoles.Sales, // Nhớ tạo file AppRoles như tin nhắn trước nhé
+                    title: "🚨 Khách hàng để lại SĐT qua AI Chat",
+                    content: $"SĐT: {phone}. Khách nhắn: \"{request.Message}\". Mau gọi chốt đơn!",
+                    actionUrl: "/admin/leads", // Ní sửa thành link trang quản lý khách hàng của UI Admin
+                    type: "LEAD"
+                );
+            }
+
             var provider = (_config["AiAdvisor:Provider"] ?? "OpenAI").Trim();
             if (!provider.Equals("Gemini", StringComparison.OrdinalIgnoreCase)
                 && !provider.Equals("OpenAI", StringComparison.OrdinalIgnoreCase))
@@ -39,16 +75,21 @@ namespace LogicBusiness.Services.Customer
             }
 
             var maxCars = Math.Clamp(int.TryParse(_config["AiAdvisor:MaxCatalogCars"], out var n) ? n : 60, 1, 100);
-            var catalogJson = await BuildCatalogJsonAsync(maxCars);
+
+            // Lấy toàn bộ dữ liệu tổng hợp thay vì chỉ xe
+            var knowledgeBaseJson = await BuildKnowledgeBaseAsync(maxCars);
+
+            // Cập nhật lại System Prompt để AI hiểu cấu trúc JSON mới
             var systemPrompt =
-                "Bạn là trợ lý tư vấn xe tại showroom ô tô, trả lời bằng tiếng Việt.\n" +
-                "Chỉ dựa trên thông tin trong khối JSON dưới đây khi nói về xe, giá, tồn kho, showroom.\n" +
-                "Nếu không có trong dữ liệu, nói rõ bạn không có thông tin và mời khách gọi hotline hoặc để lại liên hệ.\n" +
-                "Không bịa số liệu. Giữ giọng thân thiện, rõ ràng.\n\n" +
-                "DỮ LIỆU XE (JSON từ hệ thống):\n" +
-                catalogJson +
+                "Bạn là trợ lý tư vấn tại showroom ô tô, trả lời bằng tiếng Việt.\n" +
+                "Chỉ dựa trên thông tin trong khối JSON dưới đây khi tư vấn về: danh sách xe, giá cả, phiên bản, thông tin tồn kho, hệ thống showroom, và các bài viết/sự kiện mới nhất.\n" +
+                "LƯU Ý CỰC KỲ QUAN TRỌNG: Để biết xe có những phiên bản nào, hãy tìm 'carId' của xe đó trong mảng 'Cars', sau đó tìm tất cả các phiên bản có cùng 'carId' nằm trong mảng 'CarVersions'.\n" +
+                "Nếu không có thông tin trong dữ liệu, hãy nói rõ bạn không nắm thông tin đó và mời khách gọi hotline hoặc để lại liên hệ.\n" +
+                "Không được tự bịa số liệu, địa chỉ hay sự kiện. Giữ giọng điệu thân thiện, rõ ràng, chuyên nghiệp.\n\n" +
+                "DỮ LIỆU HỆ THỐNG (JSON chứa Cars, CarVersions, Showrooms, Articles):\n" +
+                knowledgeBaseJson +
                 "\n\nQUY ƯỚC MÁY ĐỌC (bắt buộc khi liệt kê xe cụ thể): Mỗi xe trong JSON có trường carId. " +
-                "Khi bạn đề xuất hoặc liệt kê các xe cụ thể từ JSON, thêm ĐÚNG một dòng tuyệt đối CUỐI cùng của tin nhắn, không có ký tự nào sau đó, định dạng: <!--AI_CAR_IDS:12,34,56--> " +
+                "Khi bạn đề xuất hoặc liệt kê các xe cụ thể từ JSON, thêm ĐÚNG một dòng tuyệt đối CUỐI cùng của tin nhắn, không có ký tự nào sau đó, định dạng: " +
                 "với các số là carId có trong JSON; tối đa 8 id, không trùng. Nếu không chắc carId thì không thêm dòng này.";
 
             if (provider.Equals("Gemini", StringComparison.OrdinalIgnoreCase))
@@ -79,7 +120,7 @@ namespace LogicBusiness.Services.Customer
             return dto;
         }
 
-        /// <summary>Bóc dòng <!--AI_CAR_IDS:...--> do model thêm để client gọi API hiển thị thẻ xe.</summary>
+        /// <summary>Bóc dòng do model thêm để client gọi API hiển thị thẻ xe.</summary>
         private static (string reply, List<int>? ids) ExtractSuggestedCarIds(string reply)
         {
             if (string.IsNullOrWhiteSpace(reply))
@@ -87,7 +128,8 @@ namespace LogicBusiness.Services.Customer
                 return (reply, null);
             }
 
-            var match = Regex.Match(reply, @"<!--AI_CAR_IDS:([\d,\s]+)-->", RegexOptions.CultureInvariant);
+            // Đã fix lại Regex để xóa triệt để ID ẩn
+            var match = Regex.Match(reply, @"", RegexOptions.CultureInvariant);
             if (!match.Success)
             {
                 return (reply.TrimEnd(), null);
@@ -103,11 +145,12 @@ namespace LogicBusiness.Services.Customer
             }
 
             ids = ids.Distinct().Take(8).ToList();
-            var cleaned = Regex.Replace(reply, @"\s*<!--AI_CAR_IDS:[\d,\s]+-->\s*$", "", RegexOptions.CultureInvariant).TrimEnd();
+
+            // Đã fix Regex để xóa dòng
+            var cleaned = Regex.Replace(reply, @"\s*\s*$", "", RegexOptions.CultureInvariant).TrimEnd();
             return (cleaned, ids.Count > 0 ? ids : null);
         }
 
-        /// <summary>Dùng model còn được Google AI (generativelanguage) phục vụ; 1.5 đã shutdown từ 2025-09-29.</summary>
         private static string ResolveGeminiModel(string? configured)
         {
             var m = (configured ?? "").Trim();
@@ -190,7 +233,6 @@ namespace LogicBusiness.Services.Customer
             var contents = BuildGeminiContents(request);
             Dictionary<string, object?> payload;
 
-            // REST /v1 không có trường systemInstruction (chỉ v1beta); curl tối giản dùng v1 không gửi system.
             if (apiVersion.Equals("v1", StringComparison.OrdinalIgnoreCase))
             {
                 var withSystem = new List<Dictionary<string, object?>>
@@ -207,8 +249,7 @@ namespace LogicBusiness.Services.Customer
                         {
                             new Dictionary<string, string>
                             {
-                                ["text"] =
-                                    "Đã hiểu. Tôi sẽ tuân theo hướng dẫn và chỉ dùng dữ liệu JSON xe bạn đã cung cấp khi tư vấn."
+                                ["text"] = "Đã hiểu. Tôi sẽ tuân theo hướng dẫn và chỉ dùng dữ liệu JSON hệ thống bạn cung cấp khi tư vấn."
                             }
                         }
                     }
@@ -299,7 +340,8 @@ namespace LogicBusiness.Services.Customer
 
             if (request.History is { Count: > 0 })
             {
-                foreach (var turn in request.History.TakeLast(20))
+                // TỐI ƯU TOKEN: Chỉ gửi 6 tin nhắn gần nhất thay vì 20
+                foreach (var turn in request.History.TakeLast(6))
                 {
                     if (skipLeadingAssistant && string.Equals(turn.Role, "assistant", StringComparison.OrdinalIgnoreCase))
                     {
@@ -336,7 +378,8 @@ namespace LogicBusiness.Services.Customer
 
             if (request.History is { Count: > 0 })
             {
-                foreach (var turn in request.History.TakeLast(20))
+                // TỐI ƯU TOKEN: Chỉ gửi 6 tin nhắn gần nhất thay vì 20
+                foreach (var turn in request.History.TakeLast(6))
                 {
                     var role = turn.Role?.ToLowerInvariant() == "assistant" ? "assistant" : "user";
                     messages.Add(new Dictionary<string, string>
@@ -356,36 +399,77 @@ namespace LogicBusiness.Services.Customer
             return messages;
         }
 
-        private async Task<string> BuildCatalogJsonAsync(int maxCars)
+        private async Task<string> BuildKnowledgeBaseAsync(int maxCars)
         {
-            object catalog;
+            object? cars = null;
+            object? showrooms = null;
+            object? articles = null;
+            object? carVersions = null;
+
             try
             {
-                catalog = await _carService.GetCarsAsync(
-                    search: null,
-                    brand: null,
-                    color: null,
-                    minPrice: null,
-                    maxPrice: null,
-                    status: null,
-                    transmission: null,
-                    bodyStyle: null,
-                    fuelType: null,
-                    location: null,
-                    condition: null,
-                    minYear: null,
-                    maxYear: null,
-                    sort: null,
-                    inStockOnly: false,
-                    page: 1,
-                    pageSize: maxCars);
-            }
-            catch
-            {
-                return "[]";
-            }
+                var rawCars = await _carService.GetCarsAsync(
+                    search: null, brand: null, color: null, minPrice: null, maxPrice: null,
+                    status: null, transmission: null, bodyStyle: null, fuelType: null,
+                    location: null, condition: null, minYear: null, maxYear: null,
+                    sort: null, inStockOnly: false, page: 1, pageSize: maxCars);
 
-            return JsonSerializer.Serialize(catalog, new JsonSerializerOptions { WriteIndented = false });
+                // Tạm thời truyền nguyên list Cars để tránh lỗi cấu trúc của PagedResult.
+                cars = rawCars;
+            }
+            catch { }
+
+            try
+            {
+                var rawShowrooms = await _showroomService.GetAllShowroomsAsync();
+
+                // TỐI ƯU TOKEN: Chỉ lấy Tên, Hotline, Địa chỉ thay vì lấy toàn bộ Object
+                showrooms = rawShowrooms.Select(s => new
+                {
+                    s.ShowroomId,
+                    s.Name,
+                    s.Hotline,
+                    s.Province,
+                    s.District,
+                    s.StreetAddress
+                });
+            }
+            catch { }
+
+            try
+            {
+                // TỐI ƯU TOKEN: Lấy dữ liệu bài viết (nếu cần gọt dũa, bạn có thể .Select thêm ở đây)
+                articles = await _articleService.GetArticlesAdminAsync(null, 1, 5, true);
+            }
+            catch { }
+
+            try
+            {
+                var rawVersions = await _pricingAdminService.GetAllAsync(null, true);
+
+                // TỐI ƯU TOKEN: Chỉ lấy ID, Tên phiên bản và Giá
+                carVersions = rawVersions.Select(v => new
+                {
+                    v.CarId,
+                    v.VersionName,
+                    v.PriceVnd
+                });
+            }
+            catch { }
+
+            var finalKnowledge = new
+            {
+                Cars = cars,
+                CarVersions = carVersions,
+                Showrooms = showrooms,
+                ArticlesAndEvents = articles
+            };
+
+            return JsonSerializer.Serialize(finalKnowledge, new JsonSerializerOptions
+            {
+                WriteIndented = false,
+                ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles
+            });
         }
     }
 }

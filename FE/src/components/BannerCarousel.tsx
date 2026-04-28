@@ -5,6 +5,10 @@ export type BannerSlide = {
   src: string
   alt: string
   href?: string
+  /** Caption title (optional) */
+  title?: string | null
+  /** Caption description (optional) */
+  description?: string | null
 }
 
 export type BannerCarouselProps = {

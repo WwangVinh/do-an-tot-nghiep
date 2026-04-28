@@ -10,9 +10,14 @@ import vf7Img from '../../assets/images/cars/vinfast-vf7-rtqsur7.webp'
 import vf8Img from '../../assets/images/cars/vinfast-vf8-98yirhq.webp'
 import vf9Img from '../../assets/images/cars/vinfast-vf9-24xfrhp.webp'
 
-export type CarProductSpecRow = { label: string; value: string }
+export type CarProductSpecRow = { category?: string; label: string; value: string }
 
-export type CarProductGallerySlide = { src: string; alt: string }
+export type CarProductGallerySlide = {
+  src: string
+  alt: string
+  title?: string | null
+  description?: string | null
+}
 
 export type CarProductPricingRow = { name: string; priceText: string }
 

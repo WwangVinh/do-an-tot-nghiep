@@ -34,29 +34,41 @@ export function BannerQuickActions({ items = defaultItems, className }: BannerQu
             <div
               className={[
                 'pointer-events-auto',
-                'group flex flex-col items-center justify-center gap-2',
+                'group flex flex-col items-center justify-center gap-3',
                 'rounded-xl px-2 py-3',
-                'transition duration-200 ease-out',
-                'hover:bg-white/10',
-                'focus-within:bg-white/10',
+                'transition duration-300 ease-out',
               ].join(' ')}
             >
+              {/* === ICON: LIQUID GLASS === */}
               <div
                 className={[
                   'grid h-16 w-16 place-items-center rounded-full',
-                  'bg-white/90 text-rose-600',
-                  'shadow-sm ring-1 ring-black/5',
-                  'transition duration-200 ease-out',
-                  'group-hover:-translate-y-0.5 group-hover:shadow-md',
-                  'group-hover:bg-rose-500 group-hover:text-white',
-                  'group-focus-visible:-translate-y-0.5 group-focus-visible:shadow-md',
-                  'group-focus-visible:bg-rose-500 group-focus-visible:text-white',
+                  'bg-white/10 backdrop-blur-md text-white',
+                  'border border-white/20',
+                  'shadow-[inset_0_1px_1px_rgba(255,255,255,0.4),0_8px_16px_-4px_rgba(0,0,0,0.2)]',
+                  'transition-all duration-300 ease-out',
+                  'group-hover:-translate-y-1 group-hover:scale-105',
+                  'group-hover:bg-white/25 group-hover:border-white/40',
+                  'group-hover:text-rose-400', // Đổi icon sang màu đỏ nhẹ khi hover
                 ].join(' ')}
               >
                 <item.Icon className="h-7 w-7 transition-colors duration-200" aria-hidden="true" />
               </div>
-              <div className="text-center text-base font-semibold text-slate-800">
-                {item.label}
+
+              {/* === LABEL: LIQUID GLASS === */}
+              <div className="text-center">
+                <span className="
+                  inline-block rounded-full
+                  bg-white/10 backdrop-blur-lg
+                  px-4 py-1
+                  text-[10px] sm:text-xs font-bold text-white
+                  border border-white/20
+                  shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]
+                  transition-all duration-300
+                  group-hover:bg-white/20 group-hover:border-white/40
+                ">
+                  {item.label}
+                </span>
               </div>
             </div>
           )
@@ -77,4 +89,3 @@ export function BannerQuickActions({ items = defaultItems, className }: BannerQu
     </div>
   )
 }
-

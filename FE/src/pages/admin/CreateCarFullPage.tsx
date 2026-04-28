@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 
 import { http } from '../../services/http/http'
 
@@ -61,12 +61,7 @@ export function CreateCarFullPage() {
 
   const [price, setPrice] = useState('') // optional: nếu có pricing versions thì backend sẽ override Cars.Price = min
 
-  const [featureIds, setFeatureIds] = useState<string[]>([]) 
-  const [isFeatureOpen, setIsFeatureOpen] = useState(false)
-  const [isCreatingFeature, setIsCreatingFeature] = useState(false)
-  const [newFeatureName, setNewFeatureName] = useState('')
-  const [newFeatureIcon, setNewFeatureIcon] = useState<File | null>(null)
-  const [isSubmittingFeature, setIsSubmittingFeature] = useState(false)
+  const [featureIds, setFeatureIds] = useState('')
 
   const [mainImage, setMainImage] = useState<File | null>(null)
   const [gallery, setGallery] = useState<Record<GalleryType, GalleryGroupState>>(() => ({
@@ -85,71 +80,13 @@ export function CreateCarFullPage() {
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<{ ok: boolean; message: string; data?: unknown } | null>(null)
   const [galleryErrors, setGalleryErrors] = useState<GalleryErrorsByType>({})
-  // 1. Tự động nhập Giá: Lấy bản rẻ nhất
-  useEffect(() => {
-    if (pricing.length > 0) {
-      const validPrices = pricing
-        .map((p) => Number(p.priceVnd))
-        .filter((p) => !isNaN(p) && p > 0)
-      
-      if (validPrices.length > 0) {
-        setPrice(Math.min(...validPrices).toString())
-      }
-    }
-  }, [pricing])
-
-  // 2. Tự động nhập Màu: Ghép tên màu từ ảnh
-  useEffect(() => {
-    const colorGroup = gallery['Color']
-    if (colorGroup && colorGroup.files.length > 0) {
-      const colorNames = colorGroup.metas
-        .map((m) => m.title?.trim())
-        .filter(Boolean) // Bỏ qua mấy ô chưa gõ chữ
-      
-      const uniqueColors = Array.from(new Set(colorNames)) // Lọc trùng lặp
-      setColor(uniqueColors.join(', '))
-    }
-  }, [gallery])
-
-// 1. State lưu danh sách tính năng thật từ Backend
-  const [availableFeatures, setAvailableFeatures] = useState<{id: string, name: string}[]>([])
-
-  // 2. Gọi API lấy tính năng khi vừa mở trang
-  useEffect(() => {
-    async function loadFeatures() {
-      try {
-        // NÍ LƯU Ý: Đổi cái đường dẫn này thành đúng cái API lấy danh sách Feature của ní nhé!
-        // Ví dụ: '/api/features' hoặc '/api/admin/features'
-        const res = await http.get('/api/admin/features') 
-        
-        // Lấy mảng data ra (tuỳ cấu trúc BE của ní trả về, thường là res.data hoặc res.data.data)
-        const rawData = res.data?.data || res.data || []
-        
-        // Map lại dữ liệu: ép id về chuỗi cho dễ xử lý, và lấy đúng trường tên tính năng
-        const mapped = rawData.map((item: any) => ({
-          id: String(item.id || item.Id || item.featureId), // Thêm Id viết hoa và featureId
-          name: item.name || item.featureName || item.FeatureName || item.title 
-        }))
-        
-        setAvailableFeatures(mapped)
-      } catch (err) {
-        console.error('Không tải được danh sách tính năng từ BE:', err)
-      }
-    }
-    
-    loadFeatures()
-  }, []) // Mảng rỗng [] nghĩa là chỉ gọi 1 lần lúc mới mở trang
 
   const flattenedGallery = useMemo(() => {
     const files: File[] = []
     const metas: GalleryMetaRow[] = []
     for (const g of GALLERY_GROUPS) {
       const st = gallery[g.type]
-
-      if (!st || !st.files) continue
-
       for (let i = 0; i < st.files.length; i++) {
-        if (!st.files[i]) continue
         files.push(st.files[i])
         const m = st.metas[i] ?? { title: '', description: '', imageType: g.type, isMainImage: false }
         metas.push({ ...m, imageType: g.type })
@@ -159,20 +96,12 @@ export function CreateCarFullPage() {
   }, [gallery])
 
   const galleryMetasJson = useMemo(() => {
-    const payload = flattenedGallery.metas.map((m) => {
-      // Logic gán tạm: Nếu là nhóm Color và Description đang trống, tự động gán thành 'Màu xe'
-      let finalDescription = m.description?.trim() || null;
-      if (m.imageType === 'Color' && !finalDescription) {
-        finalDescription = 'Màu xe';
-      }
-
-      return {
-        title: m.title?.trim() || null,
-        description: finalDescription,
-        imageType: m.imageType || null,
-        isMainImage: m.isMainImage || false,
-      };
-    })
+    const payload = flattenedGallery.metas.map((m) => ({
+      title: m.title || null,
+      description: m.description || null,
+      imageType: m.imageType || null,
+      isMainImage: m.isMainImage || false,
+    }))
     return JSON.stringify(payload)
   }, [flattenedGallery.metas])
 
@@ -237,18 +166,6 @@ export function CreateCarFullPage() {
     })
   }
 
-// Hàm này dùng để xoá 1 file ảnh khỏi danh sách đã chọn
-  function removeGalleryFile(type: GalleryType, idxToRemove: number) {
-    setGallery((prev) => {
-      const g = prev[type]
-      // Lọc bỏ file và meta ở đúng cái vị trí idxToRemove
-      const nextFiles = g.files.filter((_, i) => i !== idxToRemove)
-      const nextMetas = g.metas.filter((_, i) => i !== idxToRemove)
-      
-      return { ...prev, [type]: { files: nextFiles, metas: nextMetas } }
-    })
-  }
-
   function setMainImageFor(type: GalleryType, idx: number, isMain: boolean) {
     setGallery((prev) => {
       const next: Record<GalleryType, GalleryGroupState> = { ...prev }
@@ -271,49 +188,6 @@ export function CreateCarFullPage() {
     })
   }
 
-  // Hàm tạo tính năng nhanh ngay tại trang
-  async function handleCreateFeature() {
-    if (!newFeatureName.trim()) return
-    setIsSubmittingFeature(true)
-    try {
-      const fd = new FormData()
-      fd.append('FeatureName', newFeatureName)
-      if (newFeatureIcon) {
-        fd.append('Icon', newFeatureIcon)
-      }
-
-      const headers: Record<string, string> = {}
-      if (token.trim()) headers.Authorization = token.trim().startsWith('Bearer ') ? token.trim() : `Bearer ${token.trim()}`
-
-      // Gọi API POST tạo tính năng mới (dựa theo Swagger của ní)
-      await http.post('/api/admin/Features', fd, { headers })
-
-      // Tạo xong thì gọi API GET lấy lại danh sách mới nhất
-      const listRes = await http.get('/api/admin/Features')
-      const rawData = listRes.data?.data || listRes.data || []
-      const mapped = rawData.map((item: any) => ({
-          id: String(item.id || item.Id || item.featureId), // Thêm Id viết hoa và featureId
-          name: item.name || item.featureName || item.FeatureName || item.title 
-        }))
-      setAvailableFeatures(mapped)
-
-      // Tìm cái tính năng vừa tạo để tự động TÍCH CHỌN cho user luôn
-      const created = mapped.find((x: any) => x.name.toLowerCase() === newFeatureName.trim().toLowerCase())
-      if (created && !featureIds.includes(created.id)) {
-        setFeatureIds((prev) => [...prev, created.id])
-      }
-
-      // Đóng form, dọn dẹp biến
-      setNewFeatureName('')
-      setNewFeatureIcon(null)
-      setIsCreatingFeature(false)
-    } catch (err: any) {
-      alert('Lỗi khi tạo tính năng: ' + (err.response?.data?.message || err.message))
-    } finally {
-      setIsSubmittingFeature(false)
-    }
-  }
-
   async function onSubmit() {
     setSubmitting(true)
     setResult(null)
@@ -332,8 +206,7 @@ export function CreateCarFullPage() {
           const errs: Record<number, string> = {}
           for (let i = 0; i < st.files.length; i++) {
             const meta = st.metas[i]
-            // Nếu là nhóm Color thì cho qua (false), nhóm khác thì mới kiểm tra trống hay không
-            const missingDesc = gg.type === 'Color' ? false : !meta?.description?.trim()
+            const missingDesc = !meta?.description?.trim()
             const missingTitle = gg.requireTitle ? !meta?.title?.trim() : false
             if (missingTitle && missingDesc) errs[i] = 'Bắt buộc nhập Title và Description'
             else if (missingTitle) errs[i] = 'Bắt buộc nhập Title'
@@ -343,10 +216,7 @@ export function CreateCarFullPage() {
         }
         if (Object.keys(errsByType).length > 0) {
           setGalleryErrors(errsByType)
-          setResult({ ok: false, message: 'Ảnh phụ thiếu meta bắt buộc. Vui lòng nhập đủ (các ô bị đỏ).' })
-          // Cuộn xuống cuối để thấy lỗi
-          window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
-          setSubmitting(false)
+          setResult({ ok: false, message: 'Ảnh phụ thiếu meta bắt buộc. Vui lòng nhập đủ.' })
           return
         }
       }
@@ -371,7 +241,7 @@ export function CreateCarFullPage() {
       fd.append('Quantity', quantity)
       fd.append('InventoriesJson', inventoriesJson)
 
-      if (featureIds.length > 0) fd.append('FeatureIds', featureIds.join(','))
+      if (featureIds.trim()) fd.append('FeatureIds', featureIds)
 
       fd.append('SpecificationsJson', specificationsJson)
       fd.append('PricingVersionsJson', pricingVersionsJson)
@@ -386,29 +256,13 @@ export function CreateCarFullPage() {
 
       const res = await http.post('/api/admin/cars/full', fd, { headers })
       setResult({ ok: true, message: res.data?.message ?? 'OK', data: res.data?.data })
-  } catch (e: any) {
-      // LOGIC MỚI: Dịch lỗi của .NET (mảng errors) thành chuỗi để hiện lên màn hình
-      let errorMessage = 'Tạo xe thất bại'
-      
-      if (e?.response?.data) {
-        const data = e.response.data
-        if (data.errors && typeof data.errors === 'object') {
-          // Lấy tất cả lỗi validation gộp lại
-          errorMessage = Object.values(data.errors).flat().join(' | ')
-        } else if (data.message) {
-          errorMessage = data.message
-        } else if (data.title) {
-          errorMessage = data.title
-        } else if (typeof data === 'string') {
-          errorMessage = data
-        }
-      } else if (e?.message) {
-        errorMessage = e.message
-      }
-
-      setResult({ ok: false, message: errorMessage })
-      // Cuộn xuống cuối để thấy lỗi
-      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+    } catch (e: any) {
+      const message =
+        e?.response?.data?.message ??
+        (typeof e?.response?.data === 'string' ? e.response.data : null) ??
+        e?.message ??
+        'Tạo xe thất bại'
+      setResult({ ok: false, message })
     } finally {
       setSubmitting(false)
     }
@@ -418,9 +272,6 @@ export function CreateCarFullPage() {
     <div className="mx-auto w-full max-w-5xl px-4 py-8">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-zinc-50">Thêm xe mới</h1>
-        <p className="mt-1 text-sm text-zinc-300">
-          Trang này gọi API <code className="rounded bg-neutral-100 px-1">POST /api/admin/cars/full</code> (multipart/form-data).
-        </p>
       </div>
 
       <div className="mb-6 rounded-lg border bg-white p-4 text-zinc-900">
@@ -479,9 +330,8 @@ export function CreateCarFullPage() {
               <label className="text-sm font-medium text-zinc-700">Màu</label>
               <input
                 value={color}
-                readOnly
-                placeholder="Tự động lấy từ ảnh Màu xe"
-                className="mt-1 w-full rounded-md border bg-neutral-100 px-3 py-2 text-sm text-zinc-500 cursor-not-allowed focus:outline-none"
+                onChange={(e) => setColor(e.target.value)}
+                className="mt-1 w-full rounded-md border bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400"
               />
             </div>
             <div>
@@ -603,108 +453,13 @@ export function CreateCarFullPage() {
               />
             </div>
             <div>
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-zinc-700">Tính năng (FeatureIds)</label>
-                {/* NÚT TẠO NHANH */}
-                {!isCreatingFeature && (
-                  <button
-                    type="button"
-                    onClick={() => setIsCreatingFeature(true)}
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline"
-                  >
-                    + Tạo tính năng mới
-                  </button>
-                )}
-              </div>
-
-              {isCreatingFeature ? (
-                /* GIAO DIỆN FORM TẠO NHANH */
-                <div className="mt-1 rounded-md border border-blue-200 bg-blue-50 p-3 shadow-sm animate-in fade-in zoom-in duration-200">
-                  <div className="text-xs font-bold text-blue-800 mb-2">Tạo Tính Năng Nhanh</div>
-                  <div className="space-y-2">
-                    <div>
-                      <input
-                        value={newFeatureName}
-                        onChange={(e) => setNewFeatureName(e.target.value)}
-                        placeholder="Nhập tên tính năng (VD: Cửa hít, HUD...)"
-                        className="w-full rounded border border-zinc-300 px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500"
-                        autoFocus
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-zinc-600 font-medium">Icon (tuỳ chọn):</label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => setNewFeatureIcon(e.target.files?.[0] || null)}
-                        className="mt-1 w-full text-[10px] text-zinc-700 file:mr-2 file:rounded file:border-0 file:bg-blue-100 file:px-2 file:py-1 file:text-blue-700 file:text-[10px] file:font-semibold"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={handleCreateFeature}
-                        disabled={isSubmittingFeature || !newFeatureName.trim()}
-                        className="rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                      >
-                        {isSubmittingFeature ? 'Đang lưu...' : 'Lưu & Chọn'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsCreatingFeature(false)
-                          setNewFeatureName('')
-                          setNewFeatureIcon(null)
-                        }}
-                        className="rounded border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-neutral-50"
-                      >
-                        Huỷ
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                /* GIAO DIỆN MENU XỔ XUỐNG BÌNH THƯỜNG */
-                <div className="relative mt-1">
-                  <div
-                    className="w-full rounded-md border bg-white px-3 py-2 text-sm text-zinc-900 cursor-pointer flex justify-between items-center select-none"
-                    onClick={() => setIsFeatureOpen(!isFeatureOpen)}
-                  >
-                    <span className="truncate pr-4 text-zinc-600">
-                      {featureIds.length > 0
-                        ? featureIds.map(id => availableFeatures.find(f => f.id === id)?.name || id).join(', ')
-                        : 'Bấm để xổ ra chọn tính năng...'}
-                    </span>
-                    <span className="text-xs text-zinc-400">{isFeatureOpen ? '▲' : '▼'}</span>
-                  </div>
-
-                  {isFeatureOpen && (
-                    <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg max-h-48 overflow-auto py-1">
-                      {availableFeatures.length > 0 ? (
-                        availableFeatures.map(f => (
-                          <label key={f.id} className="flex items-center gap-3 px-3 py-2 hover:bg-neutral-50 cursor-pointer text-sm text-zinc-800">
-                            <input
-                              type="checkbox"
-                              checked={featureIds.includes(f.id)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setFeatureIds(prev => [...prev, f.id])
-                                } else {
-                                  setFeatureIds(prev => prev.filter(id => id !== f.id))
-                                }
-                              }}
-                              className="w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            {f.name}
-                          </label>
-                        ))
-                      ) : (
-                        <div className="px-3 py-2 text-sm text-zinc-500 italic">Đang tải tính năng từ server...</div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
+              <label className="text-sm font-medium text-zinc-700">FeatureIds (comma-separated)</label>
+              <input
+                value={featureIds}
+                onChange={(e) => setFeatureIds(e.target.value)}
+                placeholder="VD: 1,2,3"
+                className="mt-1 w-full rounded-md border bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400"
+              />
             </div>
           </div>
         </section>
@@ -799,85 +554,43 @@ export function CreateCarFullPage() {
 
         <section className="rounded-lg border bg-white p-4 text-zinc-900">
           <h2 className="text-base font-semibold">Thông số (CarSpecifications)</h2>
-          
           <div className="mt-3 space-y-2">
-            {specs.map((s, idx) => {
-              // Kiểm tra xem dòng này có cùng Category với dòng ngay trên nó không
-              const isSameCategoryAsPrev = idx > 0 && s.category === specs[idx - 1].category && s.category.trim() !== '';
-
-              return (
-                <div key={idx} className="flex flex-col">
-                  <div className="grid grid-cols-1 gap-2 md:grid-cols-12">
-                    {/* Ô Category: Chỉ hiện nếu là dòng đầu tiên của nhóm */}
-                    <div className="md:col-span-3">
-                      {!isSameCategoryAsPrev ? (
-                        <input
-                          value={s.category}
-                          onChange={(e) => setSpecs((p) => p.map((x, i) => (i === idx ? { ...x, category: e.target.value } : x)))}
-                          placeholder="Category (VD: Động cơ)"
-                          className="w-full rounded-md border bg-neutral-50 px-3 py-2 text-sm font-medium text-zinc-800"
-                        />
-                      ) : null}
-                    </div>
-
-                    {/* Cửa sổ 1: SpecName */}
-                    <input
-                      value={s.specName}
-                      onChange={(e) => setSpecs((p) => p.map((x, i) => (i === idx ? { ...x, specName: e.target.value } : x)))}
-                      placeholder="Tên thông số"
-                      className="md:col-span-4 rounded-md border px-3 py-2 text-sm"
-                    />
-
-                    {/* Cửa sổ 2: SpecValue */}
-                    <input
-                      value={s.specValue}
-                      onChange={(e) => setSpecs((p) => p.map((x, i) => (i === idx ? { ...x, specValue: e.target.value } : x)))}
-                      placeholder="Giá trị"
-                      className="md:col-span-4 rounded-md border px-3 py-2 text-sm"
-                    />
-
-                    {/* Nút Xoá */}
-                    <button
-                      type="button"
-                      onClick={() => setSpecs((p) => p.filter((_, i) => i !== idx))}
-                      className="md:col-span-1 rounded-md border px-2 py-2 text-sm text-red-500 hover:bg-red-50"
-                      aria-label="Remove spec"
-                    >
-                      X
-                    </button>
-                  </div>
-
-                  {/* Nút "Thêm dòng cùng nhóm": Bo góc, chỉ hiện ở dòng CUỐI CÙNG của nhóm */}
-                  {(idx === specs.length - 1 || specs[idx + 1].category !== s.category) && s.category.trim() !== '' && (
-                    <div className="grid grid-cols-1 md:grid-cols-12 mt-2 mb-4">
-                      <div className="md:col-span-3"></div>
-                      <div className="md:col-span-9 pl-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSpecs((prev) => {
-                              const next = [...prev]
-                              next.splice(idx + 1, 0, { category: s.category, specName: '', specValue: '' })
-                              return next
-                            })
-                          }}
-                          className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100"
-                        >
-                          + Thêm dòng cùng nhóm "{s.category}"
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+            {specs.map((s, idx) => (
+              <div key={idx} className="grid grid-cols-1 gap-2 md:grid-cols-12">
+                <input
+                  value={s.category}
+                  onChange={(e) => setSpecs((p) => p.map((x, i) => (i === idx ? { ...x, category: e.target.value } : x)))}
+                  placeholder="Category"
+                  className="md:col-span-3 rounded-md border px-3 py-2 text-sm"
+                />
+                <input
+                  value={s.specName}
+                  onChange={(e) => setSpecs((p) => p.map((x, i) => (i === idx ? { ...x, specName: e.target.value } : x)))}
+                  placeholder="SpecName"
+                  className="md:col-span-4 rounded-md border px-3 py-2 text-sm"
+                />
+                <input
+                  value={s.specValue}
+                  onChange={(e) => setSpecs((p) => p.map((x, i) => (i === idx ? { ...x, specValue: e.target.value } : x)))}
+                  placeholder="SpecValue"
+                  className="md:col-span-4 rounded-md border px-3 py-2 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setSpecs((p) => p.filter((_, i) => i !== idx))}
+                  className="md:col-span-1 rounded-md border px-2 py-2 text-sm hover:bg-neutral-50"
+                  aria-label="Remove spec"
+                >
+                  X
+                </button>
+              </div>
+            ))}
           </div>
 
-          {/* Nút thêm nhóm mới */}
           <button
             type="button"
             onClick={() => setSpecs((p) => [...p, { category: '', specName: '', specValue: '' }])}
-            className="mt-2 rounded-md border border-neutral-300 bg-white px-4 py-2 text-sm font-medium hover:bg-neutral-50"
+            className="mt-3 rounded-md border px-3 py-1.5 text-sm hover:bg-neutral-50"
           >
             + Thêm thông số
           </button>
@@ -943,7 +656,6 @@ export function CreateCarFullPage() {
 
           <div className="mt-2 text-xs text-neutral-500">
             Meta sẽ map theo thứ tự file trong từng nhóm, và khi submit sẽ ghép theo thứ tự nhóm: {GALLERY_GROUPS.map((g) => g.type).join(' → ')}.
-            Riêng nhóm "Khác" chỉ cần thêm ảnh, hệ thống tự động gán tiêu đề & mô tả.
           </div>
 
           <div className="mt-4 space-y-6">
@@ -960,145 +672,76 @@ export function CreateCarFullPage() {
                     {group.hint ? <div className="text-xs text-zinc-500">{group.hint}</div> : null}
                   </div>
 
-                  {/* NÚT THÊM Ô MỚI THAY VÌ CHỌN NHIỀU FILE CÙNG LÚC */}
-                  <div className="mt-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setGallery((prev) => ({
-                          ...prev,
-                          [group.type]: {
-                            files: [...prev[group.type].files, null as any], // Thêm 1 slot trống
-                            metas: [
-                              ...prev[group.type].metas,
-                              // ĐÃ SỬA: Nếu là nhóm 'Other' thì tự gán chữ 'Khác', ngược lại thì để trống như cũ
-                              { 
-                                title: group.type === 'Other' ? 'Khác' : '', 
-                                description: group.type === 'Other' ? 'Khác' : '', 
-                                imageType: group.type, 
-                                isMainImage: false 
-                              }
-                            ],
-                          },
-                        }))
-                      }}
-                      className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-neutral-50"
-                    >
-                      + Thêm 1 ô ảnh
-                    </button>
+                  <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="text-sm font-medium text-zinc-700">Chọn ảnh</label>
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files ?? [])
+                          syncGalleryMetasByType(group.type, files)
+                        }}
+                        className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+                      />
+                      <div className="mt-1 text-xs text-neutral-500">Meta ảnh sẽ map theo thứ tự file đã chọn trong nhóm này.</div>
+                    </div>
                   </div>
 
                   {st.files.length > 0 ? (
                     <div className="mt-4 space-y-3">
                       {st.files.map((f, idx) => (
                         <div key={idx} className="rounded-md border p-3">
-                          
-                          {/* DÒNG TÊN FILE VÀ NÚT XOÁ (Giữ nguyên cấu trúc cũ) */}
-                          <div className="flex items-center justify-between mb-2 pb-1 border-b border-neutral-100">
-                            <div className="text-sm font-medium text-blue-700 truncate pr-2">
-                              {f ? (
-                                f.name
-                              ) : (
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0]
-                                    if (file) {
-                                      setGallery((prev) => {
-                                        const nextFiles = [...prev[group.type].files]
-                                        nextFiles[idx] = file
-                                        return { ...prev, [group.type]: { ...prev[group.type], files: nextFiles } }
-                                      })
-                                    }
-                                  }}
-                                  className="w-full text-xs text-zinc-900"
-                                />
-                              )}
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => removeGalleryFile(group.type, idx)}
-                              className="shrink-0 rounded border border-red-200 bg-red-50 px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-100"
-                            >
-                              Xoá ô này
-                            </button>
-                          </div>
-
-                          {/* LƯỚI NHẬP LIỆU Y CHANG BẢN GỐC CỦA NÍ */}
+                          <div className="text-sm font-medium">{f.name}</div>
                           <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-12">
-                            
-                            {/* NẾU LÀ NHÓM "KHÁC" (Other) -> ẨN Ô NHẬP, CHỈ HIỆN THÔNG BÁO TỰ ĐỘNG */}
-                            {group.type === 'Other' ? (
-                              <div className="md:col-span-11 rounded-md border bg-neutral-100 px-3 py-2 text-sm text-zinc-500 flex items-center italic">
-                                Tự động lưu Tiêu đề & Mô tả là "Khác"
-                              </div>
-                            ) : (
-                              /* GIAO DIỆN GỐC CHO CÁC NHÓM CÒN LẠI (Tổng quan, Nội thất, Màu xe...) */
-                              <>
-                                {/* Ô Title: Phóng to ra nếu là Color */}
-                                <input
-                                  value={st.metas[idx]?.title ?? ''}
-                                  onChange={(e) => setMetaFor(group.type, idx, { title: e.target.value })}
-                                  placeholder={group.defaultTitlePlaceholder ?? 'Title (tuỳ chọn)'}
-                                  className={
-                                    (errs[idx] ? 'border-red-400 ' : '') +
-                                    (group.type === 'Color' ? 'md:col-span-7 ' : 'md:col-span-3 ') +
-                                    'rounded-md border bg-white px-3 py-2 text-sm text-zinc-900'
-                                  }
-                                />
+                            <input
+                              value={st.metas[idx]?.title ?? ''}
+                              onChange={(e) => setMetaFor(group.type, idx, { title: e.target.value })}
+                              placeholder={group.defaultTitlePlaceholder ?? 'Title (tuỳ chọn)'}
+                              className={
+                                (errs[idx] ? 'border-red-400 ' : '') +
+                                'md:col-span-3 rounded-md border bg-white px-3 py-2 text-sm text-zinc-900'
+                              }
+                            />
 
-                                {/* Ô Image Type */}
-                                <div className={
-                                    (group.type === 'Color' ? 'md:col-span-4 ' : 'md:col-span-3 ') +
-                                    "rounded-md border bg-neutral-50 px-3 py-2 text-sm text-zinc-700 flex items-center"
-                                }>
-                                  {group.type}
-                                </div>
+                            <div className="md:col-span-3 rounded-md border bg-neutral-50 px-3 py-2 text-sm text-zinc-700">
+                              {group.type}
+                            </div>
 
-                                {/* Ô Description: Đã ẩn nếu là Color */}
-                                {group.type !== 'Color' && (
-                                  <textarea
-                                    value={st.metas[idx]?.description ?? ''}
-                                    onChange={(e) => setMetaFor(group.type, idx, { description: e.target.value })}
-                                    placeholder="Description (hỗ trợ xuống dòng)"
-                                    className={
-                                      (errs[idx] ? 'border-red-400 ' : '') +
-                                      'md:col-span-5 min-h-20 rounded-md border bg-white px-3 py-2 text-sm text-zinc-900'
-                                    }
-                                  />
-                                )}
-                              </>
-                            )}
+                            <textarea
+                              value={st.metas[idx]?.description ?? ''}
+                              onChange={(e) => setMetaFor(group.type, idx, { description: e.target.value })}
+                              placeholder="Description (hỗ trợ xuống dòng)"
+                              className={
+                                (errs[idx] ? 'border-red-400 ' : '') +
+                                'md:col-span-5 min-h-20 rounded-md border bg-white px-3 py-2 text-sm text-zinc-900'
+                              }
+                            />
 
-                            {/* Checkbox Main Image (Luôn hiện cho mọi nhóm) */}
-                            <label className="md:col-span-1 flex items-center justify-center rounded-md border px-2 py-2 text-sm text-zinc-800 cursor-pointer hover:bg-neutral-50 transition-colors">
+                            <label className="md:col-span-1 flex items-center justify-center rounded-md border px-2 py-2 text-sm text-zinc-800">
                               <input
                                 type="checkbox"
                                 checked={st.metas[idx]?.isMainImage ?? false}
                                 onChange={(e) => setMainImageFor(group.type, idx, e.target.checked)}
-                                title="Là ảnh chính"
-                                className="mr-1"
+                                title="IsMainImage"
                               />
-                              <span className="text-xs md:hidden">Main</span>
                             </label>
                           </div>
 
                           {errs[idx] ? <div className="mt-2 text-xs text-red-600">{errs[idx]}</div> : null}
-                          {group.type !== 'Other' && <div className="mt-1 text-xs text-neutral-500">Tick ô cuối nếu đây là ảnh “main” trong bảng CarImages.</div>}
+                          <div className="mt-1 text-xs text-neutral-500">Tick ô cuối nếu đây là ảnh “main” trong bảng CarImages.</div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="mt-3 text-xs text-zinc-500">Chưa có ô ảnh nào. Bấm "+ Thêm 1 ô ảnh" để bắt đầu.</div>
+                    <div className="mt-3 text-xs text-zinc-500">Chưa chọn ảnh cho nhóm này.</div>
                   )}
                 </div>
               )
             })}
           </div>
         </section>
-
-        
 
         <div className="flex items-center gap-3">
           <button

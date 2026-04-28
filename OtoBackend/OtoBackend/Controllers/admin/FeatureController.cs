@@ -3,11 +3,13 @@ using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Admin;
 using LogicBusiness.Utilities;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace OtoBackend.Controllers.Admin
 {
     [Route("api/admin/[controller]")]
     [ApiController]
+    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Manager},{AppRoles.Content},{AppRoles.Technician}")]
     public class FeaturesController : ControllerBase
     {
         private readonly IFeatureService _featureService;

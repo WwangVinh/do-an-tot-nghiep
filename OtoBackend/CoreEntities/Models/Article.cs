@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LogicBusiness.DTOs;
+using System;
 using System.Collections.Generic;
 
 namespace CoreEntities.Models;
@@ -20,4 +21,6 @@ public partial class Article
     public bool IsPublished { get; set; }
 
     public virtual User Author { get; set; } = null!;
+
+    public virtual ICollection<ArticleCar> ArticleCars { get; set; } = new List<ArticleCar>();
 }

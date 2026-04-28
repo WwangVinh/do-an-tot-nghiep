@@ -1,9 +1,4 @@
-﻿using LogicBusiness.Interfaces;
-using LogicBusiness.Interfaces.Admin;
-using LogicBusiness.Interfaces.Customer;
-using LogicBusiness.Interfaces.Repositories;
-using LogicBusiness.Interfaces.Shared;
-using LogicBusiness.Repositories;
+﻿using LogicBusiness.Repositories;
 using LogicBusiness.Services.Admin;
 using LogicBusiness.Services.Customer;
 using LogicBusiness.Services.Shared;
@@ -15,6 +10,10 @@ using SqlServer.DBContext;
 using SqlServer.Repositories;
 using System.Text;
 using Microsoft.AspNetCore.SignalR;
+using LogicBusiness.Interfaces.Admin;
+using LogicBusiness.Interfaces.Customer;
+using LogicBusiness.Interfaces.Repositories;
+using LogicBusiness.Interfaces.Shared;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -91,23 +90,11 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddCors(options => {
     options.AddDefaultPolicy(policy => {
-        policy.WithOrigins("http://localhost:5173") // URL React của ní
+        policy.WithOrigins("http://localhost:7033") // URL React của ní
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials(); // Bắt buộc cho SignalR
     });
-});
-
-// Nới giới hạn đọc Form Data lên 300MB
-builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
-{
-    options.MultipartBodyLengthLimit = 314572800;
-});
-
-// Nới giới hạn của Server Kestrel lên 300MB
-builder.WebHost.ConfigureKestrel(serverOptions =>
-{
-    serverOptions.Limits.MaxRequestBodySize = 314572800;
 });
 
 // --- THÊM KẾT NỐI DATABASE (DEPENDENCY INJECTION) VÀO ĐÂY ---
@@ -135,9 +122,18 @@ builder.Services.AddScoped<IFeatureRepository, FeatureRepository>();
 builder.Services.AddScoped<ICarInventoryRepository, CarInventoryRepository>();
 builder.Services.AddScoped<IShowroomRepository, ShowroomRepository>();
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IConsignmentRepository,ConsignmentRepository>();
 builder.Services.AddScoped<ICarWishlistRepository,CarWishlistRepository>();
+builder.Services.AddScoped<IBannerRepository, BannerRepository>();
+builder.Services.AddScoped<IDashboardRepository, DashboardRepository>();
+builder.Services.AddScoped<IPromotionRepository, PromotionRepository>();
+builder.Services.AddScoped<ISystemSettingRepository, SystemSettingRepository>();
+builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
+builder.Services.AddScoped<IArticleRepository, ArticleRepository>();
+
+
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICarService, CarService>();
@@ -152,11 +148,19 @@ builder.Services.AddScoped<IShowroomService, ShowroomService>();
 builder.Services.AddScoped<ICarInventoryService, CarInventoryService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IBookingAdminService, BookingAdminService>();
+builder.Services.AddScoped<IOrderAdminService, OrderAdminService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IConsignmentService, ConsignmentService>();
 builder.Services.AddScoped<ICarWishlistService, CarWishlistService>();
 builder.Services.AddScoped<IChatRepository, ChatRepository>();
 builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<IBannerAdminService, BannerAdminService>();
+builder.Services.AddScoped<IDashboardAdminService, DashboardAdminService>();
+builder.Services.AddScoped<IPromotionAdminService, PromotionAdminService>();
+builder.Services.AddScoped<ISystemSettingAdminService, SystemSettingAdminService>();
+builder.Services.AddScoped<IReviewService, ReviewService>();
+builder.Services.AddScoped<IArticleService, ArticleService>();
 
 builder.Services.AddHttpClient<IAiAdvisorService, AiAdvisorService>();
 
@@ -164,6 +168,38 @@ builder.Services.AddSignalR();
 
 
 var app = builder.Build();
+
+// DB init strategy:
+// - Development: EnsureCreated() to bootstrap schema from the current model
+//   (repo doesn't include a full baseline migration).
+// - Production: Migrate() to apply incremental schema updates.
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<OtoContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DbMigrations");
+
+    if (app.Environment.IsDevelopment())
+    {
+        db.Database.EnsureCreated();
+    }
+    else
+    {
+        const int maxAttempts = 10;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                db.Database.Migrate();
+                break;
+            }
+            catch (Exception ex) when (attempt < maxAttempts)
+            {
+                logger.LogWarning(ex, "Database migration attempt {Attempt}/{MaxAttempts} failed. Retrying...", attempt, maxAttempts);
+                Thread.Sleep(TimeSpan.FromSeconds(3));
+            }
+        }
+    }
+}
 
 
 
@@ -173,6 +209,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+app.UseRouting();
 
 app.UseCors("AllowAll");
 
@@ -180,12 +217,9 @@ app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 
-//app.UseCors("AllowAll"); // Bật CORS Ploicy Error lên
-
 app.MapHub<LogicBusiness.Hubs.ChatHub >("/chathub");
 
 app.UseAuthentication();
-
 app.UseAuthorization();
 
 app.MapControllers();

@@ -1,4 +1,4 @@
-﻿using CoreEntities.Models;
+using CoreEntities.Models;
 using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Admin;
 using LogicBusiness.Services.Admin;
@@ -11,7 +11,7 @@ namespace OtoBackend.Controllers.Admin
 {
     [Route("api/admin/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin, ShowroomManager, ShowroomSales")]
+    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Manager},{AppRoles.ShowroomSales},{AppRoles.Sales},{AppRoles.Technician}")]
     public class CarsController : ControllerBase
     {
         private readonly ICarAdminService _adminService;
@@ -99,6 +99,27 @@ namespace OtoBackend.Controllers.Admin
             return BadRequest(new { message = result.Message });
         }
 
+        // UPDATE FULL: cập nhật đủ Cars + Images + Specs + Features + Pricing + Inventories
+        [HttpPut("full/{id}")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UpdateCarFull([FromRoute] int id, [FromForm] CarCreateFullDto dto)
+        {
+            string currentUserRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+            string? claimShowroomId = User.FindFirst("ShowroomId")?.Value;
+            int? currentUserShowroomId = string.IsNullOrEmpty(claimShowroomId) ? null : int.Parse(claimShowroomId);
+
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var result = await _adminService.UpdateCarFullAsync(id, dto, currentUserRole, currentUserShowroomId);
+
+            if (result.Success)
+            {
+                return Ok(new { message = result.Message, data = result.Data });
+            }
+
+            return BadRequest(new { message = result.Message });
+        }
+
 
         [HttpPut("{id}")]
         public async Task<IActionResult> PutCar(int id, [FromForm] CarUpdateDto dto)
@@ -141,8 +162,6 @@ namespace OtoBackend.Controllers.Admin
 
         [HttpPut("images/{imageId}/details")]
         [Consumes("multipart/form-data", "application/x-www-form-urlencoded")]
-        [RequestSizeLimit(314572800)] // Cho phép Request lên tới 300 MB
-        [RequestFormLimits(MultipartBodyLengthLimit = 314572800)]
         public async Task<IActionResult> UpdateImageDetails(int imageId, [FromForm] UpdateImageDetailsDto dto)
         {
             var success = await _adminService.UpdateImageDetailsAsync(imageId, dto.Title, dto.Description);
@@ -189,7 +208,7 @@ namespace OtoBackend.Controllers.Admin
         }
 
         [HttpDelete("{id}/hard-delete")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = AppRoles.Admin)]
         public async Task<IActionResult> HardDeleteCar(int id)
         {
             string currentUserRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
@@ -218,7 +237,7 @@ namespace OtoBackend.Controllers.Admin
 
         /// SẾP DUYỆT XE: Cho phép xe hiển thị lên Web
         [HttpPut("{id}/approve")]
-        [Authorize(Roles = "Admin, ShowroomManager")]
+        [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Manager}")]
         public async Task<IActionResult> ApproveCar(int id)
         {
 
@@ -235,7 +254,7 @@ namespace OtoBackend.Controllers.Admin
 
         /// SẾP TỪ CHỐI XE: Trả về cho nhân viên sửa lại kèm lý do
         [HttpPut("{id}/reject")]
-        [Authorize(Roles = "Admin, ShowroomManager")]
+        [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Manager}")]
         public async Task<IActionResult> RejectCar(int id, [FromBody] RejectRequestDto request)
         {
             if (string.IsNullOrWhiteSpace(request.Reason))
@@ -252,7 +271,7 @@ namespace OtoBackend.Controllers.Admin
 
         /// SẾP ĐỔI TRẠNG THÁI NHANH: Thích xe thành Coming Soon hay Nháp đều được
         [HttpPut("{id}/change-status")]
-        [Authorize(Roles = "Admin, ShowroomManager")]
+        [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Manager}")]
         public async Task<IActionResult> ChangeCarStatus(int id, [FromBody] ChangeStatusRequestDto request)
         {
             var result = await _adminService.ChangeCarStatusAsync(id, request.NewStatus);

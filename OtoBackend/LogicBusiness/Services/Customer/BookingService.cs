@@ -3,9 +3,11 @@ using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Customer;
 using LogicBusiness.Interfaces.Repositories;
 using LogicBusiness.Interfaces.Shared;
+using LogicBusiness.Services.Shared;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -67,16 +69,17 @@ namespace LogicBusiness.Services.Customer
 
             await _bookingRepo.AddAsync(booking);
 
+            // Bắn thông báo: Người làm là currentUserId (int), người nhận là các Role liên quan
             string formattedDate = dto.BookingDate.ToString("dd/MM/yyyy");
             await _notiService.CreateNotificationAsync(
-                userId: null,
-                roleTarget: null,
-                showroomId: dto.ShowroomId,
-                title: "Có lịch hẹn xem xe mới! 📅",
-                content: $"Khách hàng {dto.CustomerName} ({dto.Phone}) vừa đặt lịch xem mẫu {car.Brand} {car.Name} vào lúc {dto.BookingTime} ngày {formattedDate}.",
-                actionUrl: "/admin/bookings", // Link để Sales click vào xem danh sách lịch hẹn
-                type: "Booking"
-            );
+                 userId: null,
+                 roleTarget: "Manager,ShowroomSales", // Chỉ quản lý và sale tại cơ sở đó nhận tin
+                 showroomId: dto.ShowroomId,
+                 title: "Có lịch hẹn xem xe mới! 📅",
+                 content: $"Khách hàng {dto.CustomerName} ({dto.Phone}) vừa đặt lịch xem mẫu {car.Brand} {car.Name} vào lúc {dto.BookingTime} ngày {formattedDate}.",
+                 actionUrl: "/admin/bookings",
+                 type: "Booking"
+             );
 
             return (true, "Đặt lịch hẹn lái thử thành công! Sale bên em sẽ liên hệ để đón ní nhé.");
         }
@@ -112,7 +115,7 @@ namespace LogicBusiness.Services.Customer
 
             await _notiService.CreateNotificationAsync(
                 userId: null,
-                roleTarget: null,
+                roleTarget: "Manager,ShowroomSales", // Tương tự, chỉ báo cho Sale và Quản lý
                 showroomId: booking.ShowroomId,
                 title: "Khách tự hủy lịch hẹn ❌",
                 content: $"Khách hàng {booking.CustomerName} đã tự hủy lịch xem xe trên web. Anh em cập nhật lại lịch trình nhé!",

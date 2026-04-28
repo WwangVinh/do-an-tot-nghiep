@@ -43,8 +43,8 @@ function Logo() {
       </svg>
 
       <div className="leading-tight">
-        <div className="text-xs font-medium tracking-[0.35em] text-slate-500">
-          Tên công ty
+        <div className="text-xl font-bold tracking-widest text-slate-900">
+          CMC AUTOMOTIVE
         </div>
       </div>
     </NavLink>

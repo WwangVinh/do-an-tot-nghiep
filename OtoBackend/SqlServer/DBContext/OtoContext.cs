@@ -1,7 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using CoreEntities.Models;
+using LogicBusiness.DTOs;
 using Microsoft.EntityFrameworkCore;
-using CoreEntities.Models;
+using System;
+using System.Collections.Generic;
 
 namespace SqlServer.DBContext
 {
@@ -20,6 +21,7 @@ namespace SqlServer.DBContext
         public virtual DbSet<Airecommendation> Airecommendations { get; set; }
 
         public virtual DbSet<Article> Articles { get; set; }
+        public virtual DbSet<ArticleCar> ArticleCars { get; set; }
 
         public virtual DbSet<Banner> Banners { get; set; }
 
@@ -46,6 +48,10 @@ namespace SqlServer.DBContext
         public virtual DbSet<LocationTaxis> LocationTaxes { get; set; }
 
         public virtual DbSet<Order> Orders { get; set; }
+
+        public virtual DbSet<Accessory> Accessories { get; set; }
+
+        public virtual DbSet<SystemSetting> SystemSettings { get; set; }
 
         public virtual DbSet<OrderItem> OrderItems { get; set; }
 
@@ -107,6 +113,26 @@ namespace SqlServer.DBContext
                     .HasForeignKey(d => d.AuthorId)
                     .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("FK__Articles__Author__41EDCAC5");
+            });
+            modelBuilder.Entity<ArticleCar>(entity =>
+            {
+                // 1. Định nghĩa khóa chính kép (Composite Key)
+                entity.HasKey(ac => new { ac.ArticleId, ac.CarId });
+
+                // 2. Map tên bảng (nếu ní muốn tên bảng trong DB là ArticleCars)
+                entity.ToTable("ArticleCars");
+
+                // 3. Cấu hình mối quan hệ với bảng Articles
+                entity.HasOne(ac => ac.Article)
+                    .WithMany(a => a.ArticleCars)
+                    .HasForeignKey(ac => ac.ArticleId)
+                    .OnDelete(DeleteBehavior.Cascade); // Xóa bài viết thì xóa luôn liên kết xe
+
+                // 4. Cấu hình mối quan hệ với bảng Cars
+                entity.HasOne(ac => ac.Car)
+                    .WithMany(c => c.ArticleCars)
+                    .HasForeignKey(ac => ac.CarId)
+                    .OnDelete(DeleteBehavior.Cascade); // Xóa xe thì xóa luôn liên kết trong bài viết
             });
 
             modelBuilder.Entity<Banner>(entity =>
@@ -337,22 +363,27 @@ namespace SqlServer.DBContext
                 entity.Property(e => e.OrderDate)
                     .HasDefaultValueSql("(getdate())")
                     .HasColumnType("datetime");
+
                 entity.Property(e => e.PaymentMethod).HasMaxLength(50);
                 entity.Property(e => e.ShippingAddress).HasMaxLength(500);
                 entity.Property(e => e.Status).HasMaxLength(50);
                 entity.Property(e => e.TotalAmount).HasColumnType("decimal(18, 2)");
 
+                // Config cho Xe
                 entity.HasOne(d => d.Car).WithMany(p => p.Orders)
                     .HasForeignKey(d => d.CarId)
                     .HasConstraintName("FK__Orders__CarId__619B8048");
 
+                // Config cho Khuyến mãi
                 entity.HasOne(d => d.Promotion).WithMany(p => p.Orders)
                     .HasForeignKey(d => d.PromotionId)
                     .HasConstraintName("FK__Orders__Promotio__29221CFB");
 
-                entity.HasOne(d => d.User).WithMany(p => p.Orders)
-                    .HasForeignKey(d => d.UserId)
-                    .HasConstraintName("FK__Orders__UserId__628FA481");
+                // 👉 CHỖ QUAN TRỌNG NHẤT: Ép nó khớp với danh sách Orders bên User
+                entity.HasOne(d => d.Staff)
+                    .WithMany(p => p.Orders) // Phải có p.Orders ở đây nè ní!
+                    .HasForeignKey(d => d.StaffId)
+                    .HasConstraintName("FK_Orders_Staff");
             });
 
             modelBuilder.Entity<OrderItem>(entity =>
@@ -362,6 +393,9 @@ namespace SqlServer.DBContext
                 entity.Property(e => e.Price).HasColumnType("decimal(18, 2)");
                 entity.Property(e => e.Quantity).HasDefaultValue(1);
 
+                // 👉 Thêm cấu hình cho cột phân loại mục hàng
+                entity.Property(e => e.ItemType).HasMaxLength(50);
+
                 entity.HasOne(d => d.Car).WithMany(p => p.OrderItems)
                     .HasForeignKey(d => d.CarId)
                     .HasConstraintName("FK__OrderItem__CarId__5FB337D6");
@@ -369,6 +403,11 @@ namespace SqlServer.DBContext
                 entity.HasOne(d => d.Order).WithMany(p => p.OrderItems)
                     .HasForeignKey(d => d.OrderId)
                     .HasConstraintName("FK__OrderItem__Order__60A75C0F");
+
+                // 👉 Thêm cấu hình liên kết tới bảng Phụ kiện
+                entity.HasOne(d => d.Accessory).WithMany(p => p.OrderItems)
+                    .HasForeignKey(d => d.AccessoryId)
+                    .HasConstraintName("FK_OrderItems_Accessories");
             });
 
             modelBuilder.Entity<PaymentTransaction>(entity =>
@@ -403,20 +442,32 @@ namespace SqlServer.DBContext
 
             modelBuilder.Entity<Review>(entity =>
             {
+                // Giữ nguyên khóa chính
                 entity.HasKey(e => e.ReviewId).HasName("PK__Reviews__74BC79CE36435DC2");
 
-                entity.Property(e => e.Comment).HasMaxLength(1000);
+                // Thiết lập các thuộc tính mới
                 entity.Property(e => e.CreatedAt)
                     .HasDefaultValueSql("(getdate())")
                     .HasColumnType("datetime");
 
+                entity.Property(e => e.FullName).HasMaxLength(255);
+                entity.Property(e => e.Phone).HasMaxLength(20);
+                entity.Property(e => e.OrderCode).HasMaxLength(50);
+
+                // Mặc định là chưa duyệt
+                entity.Property(e => e.IsApproved).HasDefaultValue(false);
+
+                // Liên kết với bảng xe (Giữ nguyên)
                 entity.HasOne(d => d.Car).WithMany(p => p.Reviews)
                     .HasForeignKey(d => d.CarId)
                     .HasConstraintName("FK__Reviews__CarId__6477ECF3");
 
+                // ⛔ XÓA BỎ HOẶC COMMENT ĐOẠN LIÊN KẾT VỚI USER DƯỚI ĐÂY:
+                /*
                 entity.HasOne(d => d.User).WithMany(p => p.Reviews)
                     .HasForeignKey(d => d.UserId)
                     .HasConstraintName("FK__Reviews__UserId__656C112C");
+                */
             });
 
             modelBuilder.Entity<Showroom>(entity =>

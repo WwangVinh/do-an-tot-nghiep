@@ -1,6 +1,5 @@
 ﻿using CoreEntities.Models;
 using LogicBusiness.DTOs;
-using LogicBusiness.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using SqlServer.DBContext;
 using System;

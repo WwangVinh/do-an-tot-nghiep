@@ -4,7 +4,6 @@ using LogicBusiness.Interfaces.Admin;
 using LogicBusiness.Interfaces.Repositories;
 using LogicBusiness.Interfaces.Shared;
 
-
 namespace LogicBusiness.Services.Admin
 {
     public class ShowroomService : IShowroomService
@@ -104,6 +103,17 @@ namespace LogicBusiness.Services.Admin
             showroom.Hotline = dto.Hotline?.Trim();
 
             await _showroomRepo.UpdateAsync(showroom);
+
+            await _notiService.CreateNotificationAsync(
+                userId: null,
+                showroomId: id, // Target thông báo cho những người thuộc chi nhánh này
+                roleTarget: $"{AppRoles.Manager},{AppRoles.Sales},{AppRoles.ShowroomSales}",
+                title: "Cập nhật thông tin chi nhánh 🏢",
+                content: $"Chi nhánh {showroom.Name} vừa thay đổi thông tin địa chỉ hoặc hotline. Anh em chú ý cập nhật để báo khách nhé!",
+                actionUrl: "/admin/showrooms",
+                type: "System"
+            );
+
             return (true, "Cập nhật địa chỉ showroom thành công!");
         }
 
@@ -113,7 +123,21 @@ namespace LogicBusiness.Services.Admin
             var showroom = await _showroomRepo.GetByIdAsync(id);
             if (showroom == null) return (false, "Không tìm thấy cơ sở!");
 
+            string showroomName = showroom.Name; // 👈 Lưu lại tên trước khi xóa để đưa vào thông báo
+
             await _showroomRepo.DeleteAsync(showroom);
+
+            // 👈 Bắn thông báo đóng cửa chi nhánh
+            await _notiService.CreateNotificationAsync(
+                userId: null,
+                showroomId: null, // Gửi chung cho toàn mạng lưới
+                roleTarget: $"{AppRoles.Admin},{AppRoles.Manager}", // Sếp lớn cần biết
+                title: "Đóng cửa chi nhánh 🚫",
+                content: $"Chi nhánh {showroomName} đã chính thức đóng cửa và gỡ khỏi hệ thống.",
+                actionUrl: "/admin/showrooms",
+                type: "SystemAlert" // Dùng type cảnh báo
+            );
+
             return (true, "Xóa cơ sở thành công!");
         }
 

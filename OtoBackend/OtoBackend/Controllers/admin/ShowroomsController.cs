@@ -7,7 +7,7 @@ namespace OtoBackend.Controllers.admin
 {
     [Route("api/admin/showrooms")] // Đã đổi thành số nhiều /showrooms
     [ApiController]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Marketing}")]
     public class ShowroomsController : ControllerBase // Đã thêm 's' vào tên Class
     {
         private readonly IShowroomService _showroomService;

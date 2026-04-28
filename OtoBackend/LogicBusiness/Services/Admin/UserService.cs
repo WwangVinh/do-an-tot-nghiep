@@ -18,13 +18,17 @@ namespace LogicBusiness.Services.Admin
         private readonly IShowroomRepository _showroomRepository;
         private readonly INotificationService _notiService;
 
+        private readonly List<string> _staffRoles = new List<string>
+        {
+            "Sales", "Technician", "Content", "Marketing", "ShowroomSales"
+        };
+
         public UserService(IUserRepository userRepository, IShowroomRepository showroomRepository, INotificationService notiService)
         {
             _userRepository = userRepository;
             _showroomRepository = showroomRepository;
             _notiService = notiService;
         }
-
         public async Task<IEnumerable<UserResponseDto>> GetAllUsersAsync()
         {
             var users = await _userRepository.GetAllActiveUsersAsync();
@@ -76,28 +80,31 @@ namespace LogicBusiness.Services.Admin
             };
         }
 
-        // TẠO TÀI KHOẢN NHÂN VIÊN (Bản có Phân quyền)
+        // 1. TẠO TÀI KHOẢN (Logic phân cấp Manager vs Admin)
         public async Task<(bool Success, string Message)> CreateStaffAccountAsync(StaffAccountRequestDto request, string currentUserRole, int? currentUserShowroomId)
         {
-            // 👇 BÍ KÍP PHÂN QUYỀN Ở ĐÂY 👇
-            if (currentUserRole == "ShowroomManager")
-            {
-                // Quản lý không được phép tạo 1 Quản lý khác
-                if (request.Role != "ShowroomSales")
-                    return (false, "Sếp chỉ được phép tạo tài khoản cho Nhân viên (Sales) thôi ạ!");
+            string safeRole = currentUserRole?.Trim();
 
-                // Quản lý không được đưa nhân viên sang chi nhánh khác
+            // 👇 LOGIC PHÂN QUYỀN "AO NHÀ" 👇
+            if (safeRole == "ShowroomManager" || safeRole == "SalesManager")
+            {
+                // Manager chỉ được tạo nhân viên cấp dưới (Sale, Kỹ thuật, Content, Marketing)
+                if (!_staffRoles.Contains(request.Role))
+                    return (false, "Sếp chỉ được phép tạo tài khoản cho nhân viên cấp dưới (Sale/Kỹ thuật/Content/Marketing)!");
+
+                // Manager không được "lấn sân" sang showroom khác
                 if (request.ShowroomId != currentUserShowroomId)
-                    return (false, "Sếp chỉ được phép bổ nhiệm nhân viên vào Showroom của mình!");
+                    return (false, "Sếp chỉ được phép bổ nhiệm nhân viên vào Showroom mình đang quản lý!");
             }
-            else if (currentUserRole != "Admin")
+            else if (safeRole != "Admin")
             {
-                return (false, "Bạn không có quyền thực hiện chức năng này!");
+                return (false, "Ní không có thẻ ngành (quyền) để thực hiện chức năng này!");
             }
 
-            var validRoles = new List<string> { "ShowroomManager", "ShowroomSales" };
-            if (!validRoles.Contains(request.Role))
-                return (false, "Quyền (Role) không hợp lệ.");
+            // Kiểm tra Role có nằm trong danh mục hệ thống cho phép không
+            var allValidRoles = new List<string>(_staffRoles) { "ShowroomManager", "SalesManager", "Admin" };
+            if (!allValidRoles.Contains(request.Role))
+                return (false, "Chức vụ (Role) này hệ thống chưa hỗ trợ ní ơi!");
 
             var existingUser = await _userRepository.GetUserByUsernameAsync(request.Username);
             if (existingUser != null)
@@ -105,7 +112,7 @@ namespace LogicBusiness.Services.Admin
 
             var showroom = await _showroomRepository.GetByIdAsync(request.ShowroomId);
             if (showroom == null)
-                return (false, "Showroom không tồn tại trong hệ thống!");
+                return (false, "Showroom này không tồn tại trên bản đồ hệ thống!");
 
             string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
@@ -123,166 +130,207 @@ namespace LogicBusiness.Services.Admin
             };
 
             await _userRepository.AddUserAsync(newUser);
+
             await _notiService.CreateNotificationAsync(
                 userId: null,
                 roleTarget: null,
-                showroomId: request.ShowroomId, // Báo cho cả lò chi nhánh đó biết
+                showroomId: request.ShowroomId,
                 title: "Nhân sự mới gia nhập! 🎉",
-                content: $"Chào mừng {request.FullName} vừa được cấp tài khoản {request.Role} tại chi nhánh chúng ta.",
-                actionUrl: "/admin/users", // Trỏ về trang quản lý nhân sự
+                content: $"Chào mừng {request.FullName} ({request.Role}) vừa gia nhập đại gia đình chi nhánh chúng ta.",
+                actionUrl: "/admin/users",
                 type: "System"
             );
-            return (true, $"Tạo tài khoản {request.Role} cho {request.FullName} tại {showroom.Name} thành công!");
+
+            return (true, $"Tạo tài khoản {request.Role} thành công cho {request.FullName}!");
         }
 
-        // KHÓA HOẶC XÓA TÀI KHOẢN (Bản nâng cấp chống lỗi hoa/thường)
         public async Task<(bool Success, string Message)> HandleUserStatusAsync(int targetUserId, string action, int currentUserId, string currentUserRole, int? currentUserShowroomId)
         {
             var user = await _userRepository.GetUserByIdAsync(targetUserId);
-            if (user == null || user.IsDeleted) return (false, "Không tìm thấy người dùng hoặc đã bị xóa!");
+            if (user == null || user.IsDeleted)
+                return (false, "Không tìm thấy người dùng hoặc tài khoản đã bị xóa!");
 
-            // Không ai được tự khóa/xóa chính mình
-            if (user.UserId == currentUserId) return (false, "Đừng tự hủy ní ơi, không tự khóa tài khoản mình được đâu!");
+            // Chặn tự hủy: Không ai được tự khóa/xóa chính mình
+            if (user.UserId == currentUserId)
+                return (false, "Đừng tự hủy ní ơi, không tự khóa tài khoản mình được đâu!");
 
-            // 👇 1. CHUẨN HÓA CHUỖI: Bắt Frontend gửi gì cũng chuyển về chữ thường hết để dễ so sánh
             string safeAction = action?.Trim().ToLower() ?? "";
             string safeRole = currentUserRole?.Trim().ToLower() ?? "";
 
-            // 👇 QUẢN LÝ (MANAGER) RA TAY
-            if (safeRole == "showroommanager")
+            // ---------------------------------------------------------
+            // 1. LOGIC CHO QUẢN LÝ (ShowroomManager / SalesManager)
+            // ---------------------------------------------------------
+            if (safeRole == "showroommanager" || safeRole == "salesmanager")
             {
-                if (user.Role == "Admin" || user.Role == "ShowroomManager")
+                // Kiểm tra quyền hạn: Manager không được đụng vào Admin hoặc các Manager khác
+                if (user.Role == "Admin" || user.Role == "ShowroomManager" || user.Role == "SalesManager")
                     return (false, "Sếp không có quyền thao tác lên cấp trên hoặc đồng cấp!");
 
-                if (user.ShowroomId != currentUserShowroomId)
+                // Kiểm tra phạm vi: Chỉ được quản lý nhân viên trong đúng Showroom của mình
+                if (!currentUserShowroomId.HasValue || user.ShowroomId != currentUserShowroomId.Value)
                     return (false, "Nhân viên này thuộc chi nhánh khác, sếp không quản lý được!");
 
-                if (safeAction == "delete")
-                    return (false, "Sếp chỉ được quyền Khóa (Vô hiệu hóa) nhân viên, Xóa là việc của Admin!");
+                // Giới hạn hành động: Manager chỉ được Khóa/Mở, không được Xóa (Xóa là việc của Admin)
+                if (safeAction == "delete" || safeAction == "hard_delete")
+                    return (false, "Sếp chỉ có quyền Khóa/Mở khóa nhân viên. Việc xóa tài khoản hãy để Admin ra tay!");
 
-                // Manager chỉ được Khóa / Mở khóa
-                if (safeAction == "deactivate" || safeAction == "inactive" || safeAction == "lock")
-                {
+                // Thực hiện thay đổi trạng thái
+                if (new[] { "deactivate", "inactive", "lock" }.Contains(safeAction))
                     user.Status = "Inactive";
-                }
-                else if (safeAction == "activate" || safeAction == "active" || safeAction == "unlock")
-                {
+                else if (new[] { "activate", "active", "unlock" }.Contains(safeAction))
                     user.Status = "Active";
-                }
                 else
-                {
-                    return (false, $"Hành động '{action}' từ hệ thống không hợp lệ!");
-                }
-
-                await _userRepository.UpdateUserAsync(user);
-
-                string actionText = user.Status == "Inactive" ? "bị đình chỉ hoạt động" : "được mở khóa lại";
-                await _notiService.CreateNotificationAsync(
-                    userId: targetUserId,
-                    showroomId: null,
-                    roleTarget: null,
-                    title: "Thay đổi trạng thái tài khoản ⚠️",
-                    content: $"Tài khoản của bạn vừa {actionText} bởi Quản lý. Liên hệ sếp nếu có thắc mắc.",
-                    actionUrl: "#",
-                    type: "System"
-                );
-                return (true, $"Đã {(user.Status == "Inactive" ? "khóa" : "mở khóa")} nhân viên thành công!");
+                    return (false, $"Hành động '{action}' không hợp lệ cho cấp Quản lý!");
             }
 
-            // 👇 ADMIN RA TAY (Đấng tối cao)
+            // ---------------------------------------------------------
+            // 2. LOGIC CHO ADMIN (Đấng tối cao)
+            // ---------------------------------------------------------
             else if (safeRole == "admin")
             {
+                // XÓA MỀM (Soft Delete)
                 if (safeAction == "delete")
                 {
-                    user.IsDeleted = true; // Admin chém phát là Xóa mềm luôn
+                    user.IsDeleted = true;
                     user.DeletedAt = DateTime.Now;
                     user.DeletedBy = currentUserId;
                     user.Status = "Inactive";
-                    await _userRepository.UpdateUserAsync(user);
-
-                    if (user.ShowroomId.HasValue)
-                    {
-                        await _notiService.CreateNotificationAsync(
-                            userId: null,
-                            roleTarget: null,
-                            showroomId: user.ShowroomId.Value,
-                            title: "Tài khoản bị Xóa ❌",
-                            content: $"Admin vừa gạch tên {user.FullName} ({user.Role}) khỏi hệ thống chi nhánh này.",
-                            actionUrl: "/admin/users",
-                            type: "System"
-                        );
-                    }
-                    return (true, "Đã xóa tài khoản ra khỏi hệ thống!");
                 }
-                // 👇 THÊM NHÁNH XÓA CỨNG VÀO ĐÂY 👇
+                // XÓA CỨNG (Hard Delete) - Bứng gốc vĩnh viễn
                 else if (safeAction == "hard_delete")
                 {
                     try
                     {
-                        // 1. Lưu lại thông tin trước khi bứng gốc để tí còn biết tên mà báo cáo
                         string deletedName = user.FullName;
-                        string deletedRole = user.Role;
                         int? showroomId = user.ShowroomId;
 
-                        // 2. Ra đòn kết liễu
                         await _userRepository.HardDeleteUserAsync(user);
 
-                        // 3. Bắn chuông cho Showroom
+                        // Nếu có showroom, bắn tin cho sếp chi nhánh biết
                         if (showroomId.HasValue)
                         {
                             await _notiService.CreateNotificationAsync(
                                 userId: null,
-                                roleTarget: null,
                                 showroomId: showroomId.Value,
+                                roleTarget: "ShowroomManager", // 👈 Đã sửa: Chỉ báo cho Quản lý chi nhánh
                                 title: "Tài khoản bị XÓA VĨNH VIỄN ☠️",
-                                content: $"Admin vừa bứng gốc tài khoản {deletedName} ({deletedRole}) khỏi hệ thống. Dữ liệu này không thể khôi phục!",
+                                content: $"Admin vừa gạch tên vĩnh viễn {deletedName} khỏi hệ thống chi nhánh.",
                                 actionUrl: "/admin/users",
                                 type: "System"
                             );
                         }
-
-                        return (true, "Đã xóa CỨNG (vĩnh viễn) tài khoản ra khỏi hệ thống!");
+                        return (true, "Đã xóa vĩnh viễn tài khoản thành công!");
                     }
                     catch (Exception)
                     {
-                        // Bắt lỗi rớt khóa ngoại của SQL Server
-                        return (false, "Không thể xóa vĩnh viễn người này vì họ đã có lịch sử giao dịch/đặt lịch trong hệ thống. Chỉ nên dùng Xóa mềm!");
+                        return (false, "Không thể xóa cứng do người này có dữ liệu ràng buộc (đơn hàng/lịch hẹn). Hãy dùng Xóa mềm!");
                     }
                 }
-                // 👆 KẾT THÚC NHÁNH XÓA CỨNG 👆
+                // KHÓA / MỞ KHÓA
+                else if (new[] { "deactivate", "inactive", "lock" }.Contains(safeAction))
+                    user.Status = "Inactive";
+                else if (new[] { "activate", "active", "unlock" }.Contains(safeAction))
+                    user.Status = "Active";
                 else
-                {
-                    // Admin Khóa / Mở khóa
-                    if (safeAction == "deactivate" || safeAction == "inactive" || safeAction == "lock")
-                    {
-                        user.Status = "Inactive";
-                    }
-                    else if (safeAction == "activate" || safeAction == "active" || safeAction == "unlock")
-                    {
-                        user.Status = "Active";
-                    }
-                    else
-                    {
-                        return (false, $"Hành động '{action}' không hợp lệ!");
-                    }
-
-                    await _userRepository.UpdateUserAsync(user);
-
-                    string actionText = user.Status == "Inactive" ? "bị khóa" : "được khôi phục hoạt động";
-                    await _notiService.CreateNotificationAsync(
-                        userId: targetUserId,
-                        showroomId: null,
-                        roleTarget: null,
-                        title: "Thay đổi trạng thái tài khoản ⚠️",
-                        content: $"Tài khoản của bạn vừa {actionText} bởi Admin hệ thống.",
-                        actionUrl: "#",
-                        type: "System"
-                    );
-                    return (true, $"Đã {(user.Status == "Inactive" ? "khóa" : "mở khóa")} tài khoản thành công!");
-                }
+                    return (false, $"Hành động '{action}' không hợp lệ!");
+            }
+            else
+            {
+                return (false, "Lỗi quyền truy cập! Chức vụ của bạn không có quyền thực hiện việc này.");
             }
 
-            return (false, "Lỗi quyền truy cập! Không xác định được chức vụ của bạn.");
+            // ---------------------------------------------------------
+            // 3. HOÀN TẤT: LƯU VÀ BẮN THÔNG BÁO
+            // ---------------------------------------------------------
+            await _userRepository.UpdateUserAsync(user);
+
+            string actionDesc = user.Status == "Inactive" ? "bị khóa/đình chỉ" : "được khôi phục hoạt động";
+            string authority = safeRole == "admin" ? "Admin hệ thống" : "Quản lý chi nhánh";
+
+            // 👈 Đã sửa: Bắn thông báo cho Sếp của chi nhánh thay vì bắn cho người bị khóa
+            await _notiService.CreateNotificationAsync(
+                userId: null,
+                showroomId: user.ShowroomId,
+                roleTarget: "ShowroomManager",
+                title: "Biến động nhân sự ⚠️",
+                content: $"Tài khoản của nhân viên {user.FullName} ({user.Role}) vừa {actionDesc} bởi {authority}.",
+                actionUrl: "/admin/users",
+                type: "System"
+            );
+
+            return (true, $"Đã cập nhật trạng thái cho nhân viên thành công!");
+        }
+
+        public async Task<(bool Success, string Message)> UpdateStaffAccountAsync(
+             int targetUserId,
+             UserUpdateRequestDto request,
+             string currentUserRole,
+             int? currentUserShowroomId)
+        {
+            var user = await _userRepository.GetUserByIdAsync(targetUserId);
+            if (user == null || user.IsDeleted)
+                return (false, "Không tìm thấy người dùng hoặc tài khoản đã bị xóa!");
+
+            // 1. Định nghĩa các nhóm quyền để check cho gọn
+            var staffRoles = new List<string> { "Sales", "Technician", "Content", "Marketing", "ShowroomSales" };
+            var managerRoles = new List<string> { "ShowroomManager", "SalesManager" };
+            var allValidRoles = staffRoles.Concat(managerRoles).Concat(new[] { "Admin" }).ToList();
+
+            // Kiểm tra Role mới có nằm trong hệ thống không
+            if (!allValidRoles.Contains(request.Role))
+                return (false, "Chức vụ (Role) mới không hợp lệ trong hệ thống!");
+
+            var showroom = await _showroomRepository.GetByIdAsync(request.ShowroomId);
+            if (showroom == null)
+                return (false, "Showroom này không tồn tại!");
+
+            string safeRole = currentUserRole?.Trim().ToLower() ?? "";
+
+            // ---------------------------------------------------------
+            // 2. PHÂN QUYỀN CHỈNH SỬA
+            // ---------------------------------------------------------
+            if (safeRole == "showroommanager" || safeRole == "salesmanager")
+            {
+                // Manager không được sửa Admin hoặc các Manager khác
+                if (user.Role == "Admin" || managerRoles.Contains(user.Role))
+                    return (false, "Sếp không có quyền chỉnh sửa cấp trên hoặc đồng cấp!");
+
+                // Chỉ được sửa nhân viên trong "ao nhà" mình
+                if (!currentUserShowroomId.HasValue || user.ShowroomId != currentUserShowroomId.Value)
+                    return (false, "Nhân viên này thuộc chi nhánh khác, sếp không quản lý được!");
+
+                // Manager chỉ được gán các quyền nhân viên (không được tự ý bổ nhiệm Manager mới)
+                if (!staffRoles.Contains(request.Role))
+                    return (false, "Sếp chỉ được phép gán các chức vụ nhân viên cấp dưới!");
+
+                // Không được đẩy nhân viên sang showroom khác
+                if (request.ShowroomId != currentUserShowroomId.Value)
+                    return (false, "Sếp không được phép chuyển nhân viên sang chi nhánh khác!");
+            }
+            else if (safeRole != "admin")
+            {
+                return (false, "Ní không có quyền thực hiện chức năng này!");
+            }
+
+            // ---------------------------------------------------------
+            // 3. CẬP NHẬT DỮ LIỆU
+            // ---------------------------------------------------------
+            user.FullName = request.FullName;
+            user.Email = request.Email;
+            user.Phone = request.Phone;
+            user.Role = request.Role;
+            user.ShowroomId = request.ShowroomId;
+
+            var status = request.Status?.Trim();
+            if (!string.IsNullOrEmpty(status))
+            {
+                if (status != "Active" && status != "Inactive")
+                    return (false, "Trạng thái (Status) chỉ nhận Active hoặc Inactive!");
+                user.Status = status;
+            }
+
+            await _userRepository.UpdateUserAsync(user);
+            return (true, $"Đã cập nhật thông tin cho {user.FullName} thành công!");
         }
     }
 }

@@ -56,7 +56,7 @@ async function getCarOptions(): Promise<CarOption[]> {
 }
 
 type LaiThuLocationState = {
-  trialPrefill?: { fullName?: string; phone?: string }
+  trialPrefill?: { fullName?: string; phone?: string; carId?: string }
 }
 
 export function LaiThuRegisterSection() {
@@ -75,10 +75,19 @@ export function LaiThuRegisterSection() {
     staleTime: 5 * 60_000,
   })
 
+
+
   const rootRef = useRef<HTMLDivElement | null>(null)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [selectedCar, setSelectedCar] = useState<CarOption | null>(null)
+
+  useEffect(() => {
+    const prefillCarId = trialPrefill?.carId
+    if (!prefillCarId || !carOptions.length) return
+    const found = carOptions.find((c) => c.id === prefillCarId)
+    if (found) setSelectedCar(found)
+  }, [carOptions, trialPrefill?.carId])
   const [touched, setTouched] = useState(false)
   const [bookingDate, setBookingDate] = useState('')
   const [bookingTime, setBookingTime] = useState('')

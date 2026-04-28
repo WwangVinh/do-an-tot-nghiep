@@ -6,12 +6,13 @@ using Microsoft.AspNetCore.Mvc;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using LogicBusiness.DTOs;
 
 namespace OtoBackend.Controllers.Admin
 {
     [Route("api/admin/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin, ShowroomManager")] // 👈 Chỉ Sếp mới được vào đây chốt giá
+    [[Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Manager}")]
     public class ConsignmentsController : ControllerBase
     {
         private readonly IConsignmentService _consignService;

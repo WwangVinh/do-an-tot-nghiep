@@ -1,4 +1,5 @@
 ﻿
+using LogicBusiness.DTOs;
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
@@ -79,5 +80,7 @@ public partial class Car
     public virtual ICollection<CarFeature> CarFeatures { get; set; } = new List<CarFeature>();
 
     public virtual ICollection<CarPricingVersion> CarPricingVersions { get; set; } = new List<CarPricingVersion>();
-   
+
+    public virtual ICollection<ArticleCar> ArticleCars { get; set; } = new List<ArticleCar>();
+
 }

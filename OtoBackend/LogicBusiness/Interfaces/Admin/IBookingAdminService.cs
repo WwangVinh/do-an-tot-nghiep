@@ -31,6 +31,14 @@ namespace LogicBusiness.Interfaces.Admin
             string userRole,
             int? userShowroomId);
 
+        // Cập nhật trạng thái + kết quả (kết quả lưu vào Note dạng log)
+        Task<(bool Success, string Message)> UpdateBookingAsync(
+            int bookingId,
+            string? newStatus,
+            string? result,
+            string? userRole,
+            int? userShowroomId);
+
         // Hủy lịch hẹn từ phía nội bộ (Dành cho Manager/Sales khi khách "bom")
         Task<(bool Success, string Message)> CancelBookingByAdminAsync(
             int bookingId,

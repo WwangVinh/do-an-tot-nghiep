@@ -1,14 +1,13 @@
 ﻿using CoreEntities.Models;
 using LogicBusiness.DTOs;
-using LogicBusiness.Interfaces.Customer;
-using LogicBusiness.Interfaces.Repositories;
-using SqlServer.Repositories;
-using LogicBusiness.Interfaces.Shared;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using LogicBusiness.Interfaces.Customer;
+using LogicBusiness.Interfaces.Repositories;
+using LogicBusiness.Interfaces.Shared;
 
 namespace LogicBusiness.Services.Customer
 {

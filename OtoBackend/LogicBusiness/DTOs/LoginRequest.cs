@@ -44,10 +44,10 @@ namespace CoreEntities.Models.DTOs
         public string? Email { get; set; }
         public string? Phone { get; set; }
 
-        // Quyền của tài khoản: "ShowroomManager" hoặc "ShowroomSales"
+        // Quyền của tài khoản (Staff roles)
         [Required(ErrorMessage = "Bắt buộc phải truyền Quyền (Role) vào!")]
-        [RegularExpression("^(ShowroomManager|ShowroomSales)$",
-            ErrorMessage = "Hệ thống chỉ cho phép tạo quyền 'ShowroomManager' hoặc 'ShowroomSales' thôi!")]
+        [RegularExpression("^(ShowroomManager|ShowroomSales|SalesManager|Sales|Technician)$",
+            ErrorMessage = "Role không hợp lệ. Chỉ nhận: ShowroomManager, ShowroomSales, SalesManager, Sales, Technician.")]
         public string Role { get; set; } = null!;
         public int ShowroomId { get; set; }        // ID của Showroom mà người này sẽ quản lý
     }

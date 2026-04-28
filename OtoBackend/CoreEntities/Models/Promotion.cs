@@ -25,6 +25,14 @@ public partial class Promotion
     public string? Description { get; set; }
 
     public string? Status { get; set; }
+    public int? CarId { get; set; }
+
+    [ForeignKey("CarId")]
+    public virtual Car? Car { get; set; }
+
+    public int? MaxUsage { get; set; }
+
+    public int CurrentUsage { get; set; } = 0;
 
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 }

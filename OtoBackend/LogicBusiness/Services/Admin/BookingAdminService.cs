@@ -86,7 +86,7 @@ namespace LogicBusiness.Services.Admin
             if (userRole != "Admin")
             {
                 if (!userShowroomId.HasValue || booking.ShowroomId != userShowroomId.Value)
-                    return (false, "Ní không có quyền can thiệp vào lịch hẹn của chi nhánh khác!");
+                    return (false, "Bạn không có quyền can thiệp vào lịch hẹn của chi nhánh khác!");
             }
 
             if (booking.Status == "Cancelled" || booking.Status == "Completed")
@@ -111,6 +111,65 @@ namespace LogicBusiness.Services.Admin
                 );
             }
             return (true, $"[{userRole}] Đã cập nhật trạng thái thành: {newStatus}");
+        }
+
+        // Cập nhật trạng thái + kết quả (kết quả lưu vào Note dạng log)
+        public async Task<(bool Success, string Message)> UpdateBookingAsync(int bookingId, string? newStatus, string? result, string? userRole, int? userShowroomId)
+        {
+            var booking = await _bookingRepo.GetByIdAsync(bookingId);
+            if (booking == null) return (false, "Không tìm thấy lịch hẹn.");
+
+            string role = string.IsNullOrWhiteSpace(userRole) ? "Staff" : userRole!;
+
+            if (role != "Admin")
+            {
+                if (!userShowroomId.HasValue || booking.ShowroomId != userShowroomId.Value)
+                    return (false, "Ní không có quyền can thiệp vào lịch hẹn của chi nhánh khác!");
+            }
+
+            if (booking.Status == "Cancelled")
+                return (false, "Lịch hẹn này đã bị hủy, không thể cập nhật.");
+
+            bool changed = false;
+
+            if (!string.IsNullOrWhiteSpace(newStatus))
+            {
+                // Dùng lại rule của UpdateBookingStatusAsync (chặn đổi khi đã Completed)
+                if (booking.Status == "Completed")
+                    return (false, "Lịch hẹn này đã hoàn thành, không thể thay đổi trạng thái.");
+
+                booking.Status = newStatus!;
+                changed = true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(result))
+            {
+                var timeStamp = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
+                var line = $"[{timeStamp} - {role} cập nhật kết quả]: {result!.Trim()}";
+                booking.Note = string.IsNullOrWhiteSpace(booking.Note) ? line : $"{booking.Note}\n{line}";
+                changed = true;
+            }
+
+            if (!changed) return (false, "Không có dữ liệu cập nhật.");
+
+            booking.UpdatedAt = DateTime.Now;
+            await _bookingRepo.UpdateAsync(booking);
+
+            if (booking.UserId.HasValue)
+            {
+                // Thông báo ngắn gọn cho khách (tránh lộ nội dung kết quả)
+                await _notiService.CreateNotificationAsync(
+                    userId: booking.UserId.Value,
+                    showroomId: null,
+                    roleTarget: null,
+                    title: "Cập nhật lịch hẹn 📅",
+                    content: "Lịch hẹn của bạn vừa được Showroom cập nhật. Vui lòng kiểm tra chi tiết!",
+                    actionUrl: $"/customer/my-bookings/{bookingId}",
+                    type: "Booking"
+                );
+            }
+
+            return (true, "Đã cập nhật lịch hẹn.");
         }
 
         // HỦY LỊCH (Admin/Manager/Sales hủy khi khách bom)
@@ -147,6 +206,17 @@ namespace LogicBusiness.Services.Admin
                     type: "Booking"
                 );
             }
+
+            // THÊM MỚI: Báo cho Manager của Showroom đó biết
+            await _notiService.CreateNotificationAsync(
+                userId: null,
+                showroomId: booking.ShowroomId, // Target vào đúng chi nhánh đó
+                roleTarget: "Manager",         // Chỉ báo cho Manager
+                title: "Cảnh báo hủy lịch hẹn",
+                content: $"Nhân viên {userRole} vừa hủy lịch hẹn của khách {booking.CustomerName}. Lý do: {cancelReason}",
+                actionUrl: $"/admin/bookings/{bookingId}",
+                type: "SystemAlert"
+            );
             return (true, "Đã hủy lịch hẹn thành công.");
         }
     }

@@ -66,6 +66,15 @@ namespace SqlServer.Repositories
             await _context.SaveChangesAsync();
         }
 
+        public async Task AddRangeAsync(IEnumerable<CarPricingVersion> entities)
+        {
+            if (entities == null) return;
+            var list = entities.ToList();
+            if (!list.Any()) return;
+            await _context.CarPricingVersions.AddRangeAsync(list);
+            await _context.SaveChangesAsync();
+        }
+
         public async Task UpdateAsync(CarPricingVersion entity)
         {
             _context.CarPricingVersions.Update(entity);
@@ -76,6 +85,16 @@ namespace SqlServer.Repositories
         {
             _context.CarPricingVersions.Remove(entity);
             await _context.SaveChangesAsync();
+        }
+
+        public async Task DeleteByCarIdAsync(int carId)
+        {
+            var rows = await _context.CarPricingVersions.Where(x => x.CarId == carId).ToListAsync();
+            if (rows.Any())
+            {
+                _context.CarPricingVersions.RemoveRange(rows);
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }

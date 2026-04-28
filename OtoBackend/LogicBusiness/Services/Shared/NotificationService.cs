@@ -1,13 +1,13 @@
 ﻿using CoreEntities.Models;
 using LogicBusiness.DTOs;
-using LogicBusiness.Interfaces.Repositories;
-using LogicBusiness.Interfaces.Shared;
 using LogicBusiness.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using LogicBusiness.Interfaces.Repositories;
+using LogicBusiness.Interfaces.Shared;
 
 namespace LogicBusiness.Services.Shared
 {
@@ -33,11 +33,11 @@ namespace LogicBusiness.Services.Shared
                 Content = content,
                 ActionUrl = actionUrl,
                 NotificationType = type,
-                CreatedAt = DateTime.Now,
+                // Fix chuẩn múi giờ Việt Nam (+7) bất chấp server đặt ở đâu
+                CreatedAt = DateTime.UtcNow.AddHours(7),
                 IsRead = false
             };
             await _repo.AddAsync(noti);
-
 
             var notiDto = new NotificationDto
             {
@@ -50,26 +50,32 @@ namespace LogicBusiness.Services.Shared
                 CreatedAt = noti.CreatedAt.ToString("dd/MM/yyyy HH:mm")
             };
 
-
+            // LOGIC PHÂN LUỒNG SIGNALR ĐÃ ĐƯỢC TỐI ƯU HÓA:
             if (userId.HasValue)
             {
-                // Bắn cho 1 người cụ thể
+                // 1. Bắn cho 1 người cụ thể (Ví dụ: Thông báo đơn hàng cho khách)
                 await _hubContext.Clients.Group($"User_{userId.Value}").SendAsync("ReceiveNotification", notiDto);
             }
-            else if (roleTarget == "Admin" && !showroomId.HasValue)
+            else if (!showroomId.HasValue && !string.IsNullOrEmpty(roleTarget))
             {
-                // Bắn cho Admin tổng
-                await _hubContext.Clients.Group("Role_Admin").SendAsync("ReceiveNotification", notiDto);
+                // 2. Bắn cho 1 Role chung toàn hệ thống (VD: Admin, Marketing, Sales tổng...)
+                // Tự động linh hoạt không cần code cứng chữ "Admin"
+                await _hubContext.Clients.Group($"Role_{roleTarget}").SendAsync("ReceiveNotification", notiDto);
             }
             else if (showroomId.HasValue && !string.IsNullOrEmpty(roleTarget))
             {
-                // Bắn cho 1 Chức vụ tại 1 Showroom (Ví dụ: Manager của Showroom 2)
+                // 3. Bắn cho 1 Chức vụ tại 1 Showroom (Ví dụ: ShowroomSales của Showroom 2)
                 await _hubContext.Clients.Group($"Showroom_{showroomId.Value}_Role_{roleTarget}").SendAsync("ReceiveNotification", notiDto);
             }
             else if (showroomId.HasValue && string.IsNullOrEmpty(roleTarget))
             {
-                // Bắn Broadcast cho cả Showroom
+                // 4. Bắn Broadcast cho toàn bộ nhân viên thuộc 1 Showroom
                 await _hubContext.Clients.Group($"Showroom_{showroomId.Value}").SendAsync("ReceiveNotification", notiDto);
+            }
+            else
+            {
+                // 5. Bắn Broadcast cho TOÀN BỘ hệ thống (Trường hợp cả userId, showroomId, roleTarget đều null)
+                await _hubContext.Clients.All.SendAsync("ReceiveNotification", notiDto);
             }
         }
 

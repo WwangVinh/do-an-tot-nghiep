@@ -1,4 +1,4 @@
-﻿using LogicBusiness.Interfaces.Admin; // Dùng chung Service với Admin luôn
+﻿using LogicBusiness.Interfaces.Admin;
 using Microsoft.AspNetCore.Mvc;
 
 namespace OtoBackend.Controllers.Customer

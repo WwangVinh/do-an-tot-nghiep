@@ -14,6 +14,7 @@ namespace LogicBusiness.Interfaces.Repositories
         Task AddUserAsync(User user);
         Task<IEnumerable<User>> GetAllActiveUsersAsync();
         Task<User?> GetUserByIdAsync(int userId);
+        Task<User?> GetUserByPhoneAsync(string phone);
         Task UpdateUserAsync(User user);
         Task<(IEnumerable<User> Users, int TotalCount)> GetFilteredUsersAdminAsync(string userType, bool isDeleted, string? search, int page, int pageSize, string currentUserRole, int? currentUserShowroomId, int? filterShowroomId = null);
         Task HardDeleteUserAsync(User user);

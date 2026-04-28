@@ -1,4 +1,4 @@
-﻿using CoreEntities.Models;
+using CoreEntities.Models;
 using LogicBusiness.DTOs;
 using Microsoft.AspNetCore.Http;
 
@@ -10,6 +10,7 @@ namespace LogicBusiness.Interfaces.Admin
         Task<object?> GetCarDetailAsync(int id, string userRole, int? userShowroomId);
         Task<(bool Success, string Message, Car? Data)> CreateCarAsync(CarCreateDto dto, string userRole, int? userShowroomId);
         Task<(bool Success, string Message, Car? Data)> CreateCarFullAsync(CarCreateFullDto dto, string userRole, int? userShowroomId);
+        Task<(bool Success, string Message, Car? Data)> UpdateCarFullAsync(int id, CarCreateFullDto dto, string userRole, int? userShowroomId);
         Task<(bool Success, string Message, Car? Car)> UpdateCarAsync(int id, CarUpdateDto dto, string userRole, int? userShowroomId);
         Task<(bool Success, string Message)> ApproveCarAsync(int carId, string userRole, int? userShowroomId);
         Task<(bool Success, string Message, object? Data)> UploadGalleryImagesAsync(int carId, List<IFormFile> files, List<string>? titles, List<string>? descriptions, string imageType);

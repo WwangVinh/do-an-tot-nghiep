@@ -1,12 +1,12 @@
-﻿using CoreEntities.Models;
+using CoreEntities.Models;
 using LogicBusiness.DTOs;
-using LogicBusiness.Interfaces.Admin;
-using LogicBusiness.Interfaces.Repositories;
 using LogicBusiness.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using System.Linq;
+using LogicBusiness.Interfaces.Admin;
+using LogicBusiness.Interfaces.Repositories;
 using LogicBusiness.Interfaces.Shared;
 
 namespace LogicBusiness.Services.Admin
@@ -41,6 +41,19 @@ namespace LogicBusiness.Services.Admin
             _pricingVersionRepo = pricingVersionRepo;
             _uow = uow;
             _notiService = notiService;
+        }
+
+        private static string BuildSystemErrorMessage(Exception ex)
+        {
+            // EF Core often throws a generic DbUpdateException message; the real cause is in BaseException/InnerException.
+            var baseMsg = ex.GetBaseException()?.Message ?? ex.Message;
+
+            // Include the top-level message only if it adds information beyond the base exception.
+            var topMsg = ex.Message;
+            if (string.Equals(topMsg, baseMsg, StringComparison.OrdinalIgnoreCase))
+                return $"Lỗi hệ thống: {baseMsg}";
+
+            return $"Lỗi hệ thống: {topMsg} | Chi tiết: {baseMsg}";
         }
 
         // 1. GET ALL
@@ -205,8 +218,257 @@ namespace LogicBusiness.Services.Admin
                     .Select(group => new {
                         Category = group.Key,
                         Images = group.Select(i => new { i.CarImageId, i.Title, i.Description, i.ImageUrl }).ToList()
+                    }).ToList(),
+
+                // 6. PRICING VERSIONS (phục vụ UI edit full)
+                PricingVersions = car.CarPricingVersions
+                    .OrderBy(p => p.SortOrder)
+                    .ThenBy(p => p.PricingVersionId)
+                    .Select(p => new {
+                        p.PricingVersionId,
+                        p.VersionName,
+                        p.PriceVnd,
+                        p.SortOrder,
+                        p.IsActive
                     }).ToList()
             };
+        }
+
+        // 3C. UPDATE FULL: Cập nhật đủ Cars + Images + Specs + Features + Pricing + Inventories
+        public async Task<(bool Success, string Message, Car? Data)> UpdateCarFullAsync(int id, CarCreateFullDto dto, string userRole, int? userShowroomId)
+        {
+            // Chuẩn hóa input cơ bản
+            if (!string.IsNullOrWhiteSpace(dto.Brand)) dto.Brand = dto.Brand.Trim().ToUpper();
+            if (!string.IsNullOrWhiteSpace(dto.Name)) dto.Name = dto.Name.Trim();
+
+            var oldCar = await _carRepo.GetCarDetailForAdminAsync(id);
+            if (oldCar == null) return (false, "Không tìm thấy xe này trong hệ thống!", null);
+
+            // Showroom mục tiêu
+            int targetShowroomId = (userRole != "Admin" && userShowroomId.HasValue) ? userShowroomId.Value : dto.ShowroomId;
+
+            // Trạng thái theo phân quyền
+            CarStatus finalStatus = (userRole == "Admin" || userRole == "ShowroomManager" || userRole == "SalesManager")
+                                    ? (dto.Status ?? oldCar.Status ?? CarStatus.Draft)
+                                    : CarStatus.PendingApproval;
+
+            var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+            // Parse specs
+            List<CarSpecificationCreateDto> specs = new();
+            if (!string.IsNullOrWhiteSpace(dto.SpecificationsJson))
+            {
+                try { specs = JsonSerializer.Deserialize<List<CarSpecificationCreateDto>>(dto.SpecificationsJson, jsonOptions) ?? new(); }
+                catch { return (false, "SpecificationsJson không đúng định dạng JSON.", null); }
+            }
+            else if (!string.IsNullOrWhiteSpace(dto.Specifications))
+            {
+                var specLines = dto.Specifications.Split(';', StringSplitOptions.RemoveEmptyEntries);
+                specs = specLines
+                    .Select(line => line.Split('|'))
+                    .Where(p => p.Length == 3)
+                    .Select(p => new CarSpecificationCreateDto
+                    {
+                        Category = p[0].Trim(),
+                        SpecName = p[1].Trim(),
+                        SpecValue = p[2].Trim()
+                    })
+                    .ToList();
+            }
+
+            // Parse pricing versions
+            List<CarPricingVersionCreateDto> pricingVersions = new();
+            if (!string.IsNullOrWhiteSpace(dto.PricingVersionsJson))
+            {
+                try { pricingVersions = JsonSerializer.Deserialize<List<CarPricingVersionCreateDto>>(dto.PricingVersionsJson, jsonOptions) ?? new(); }
+                catch { return (false, "PricingVersionsJson không đúng định dạng JSON.", null); }
+            }
+
+            // Parse inventories
+            List<CarInventoryCreateDto> inventories = new();
+            if (!string.IsNullOrWhiteSpace(dto.InventoriesJson))
+            {
+                try { inventories = JsonSerializer.Deserialize<List<CarInventoryCreateDto>>(dto.InventoriesJson, jsonOptions) ?? new(); }
+                catch { return (false, "InventoriesJson không đúng định dạng JSON.", null); }
+            }
+
+            // Parse gallery metas
+            List<CarImageMetaDto> galleryMetas = new();
+            if (!string.IsNullOrWhiteSpace(dto.GalleryMetasJson))
+            {
+                try { galleryMetas = JsonSerializer.Deserialize<List<CarImageMetaDto>>(dto.GalleryMetasJson, jsonOptions) ?? new(); }
+                catch { return (false, "GalleryMetasJson không đúng định dạng JSON.", null); }
+            }
+
+            // Validate: nếu có galleryFiles thì meta phải khớp
+            if (dto.GalleryFiles != null && dto.GalleryFiles.Any())
+            {
+                if (galleryMetas.Count != dto.GalleryFiles.Count)
+                    return (false, "GalleryMetasJson phải có số phần tử đúng bằng số file trong GalleryFiles.", null);
+            }
+
+            Car? updated = null;
+            try
+            {
+                await _uow.RunInTransactionAsync(async () =>
+                {
+                    // 1) Cars
+                    oldCar.Name = dto.Name;
+                    oldCar.Brand = dto.Brand;
+                    oldCar.Year = dto.Year;
+                    oldCar.Model = dto.Model;
+                    oldCar.Color = dto.Color;
+                    oldCar.FuelType = dto.FuelType;
+                    oldCar.Mileage = (decimal)(dto.Mileage ?? 0);
+                    oldCar.Description = dto.Description;
+                    oldCar.Transmission = dto.Transmission;
+                    oldCar.BodyStyle = dto.BodyStyle;
+                    oldCar.Condition = dto.Condition;
+                    oldCar.Status = finalStatus;
+                    oldCar.UpdatedAt = DateTime.Now;
+
+                    if (dto.ImageFile != null)
+                    {
+                        if (!string.IsNullOrEmpty(oldCar.ImageUrl) && !oldCar.ImageUrl.StartsWith("http") && !oldCar.ImageUrl.Contains("default-car"))
+                        {
+                            FileHelper.DeleteFile(oldCar.ImageUrl);
+                        }
+
+                        string subFolder = $"Cars/{oldCar.Brand}";
+                        string targetName = $"{oldCar.Brand}_{oldCar.Name}";
+                        oldCar.ImageUrl = await FileHelper.UploadFileAsync(dto.ImageFile, subFolder, targetName);
+                    }
+
+                    // 2) Inventories (replace all)
+                    await _inventoryRepo.DeleteInventoriesByCarIdAsync(id);
+                    if (inventories.Any())
+                    {
+                        if (userRole != "Admin" && userShowroomId.HasValue && inventories.Any(i => i.ShowroomId != userShowroomId.Value))
+                            throw new InvalidOperationException("Không được tạo tồn kho cho showroom khác chi nhánh của mình.");
+
+                        foreach (var inv in inventories.Where(i => i.ShowroomId > 0))
+                        {
+                            await _inventoryRepo.AddInventoryAsync(new CarInventory
+                            {
+                                CarId = id,
+                                ShowroomId = inv.ShowroomId,
+                                Quantity = inv.Quantity,
+                                DisplayStatus = string.IsNullOrWhiteSpace(inv.DisplayStatus)
+                                    ? ((finalStatus == CarStatus.Available) ? "OnDisplay" : "Pending")
+                                    : inv.DisplayStatus.Trim(),
+                                UpdatedAt = DateTime.Now
+                            });
+                        }
+                    }
+                    else if (targetShowroomId > 0)
+                    {
+                        await _inventoryRepo.AddInventoryAsync(new CarInventory
+                        {
+                            CarId = id,
+                            ShowroomId = targetShowroomId,
+                            Quantity = dto.Quantity,
+                            DisplayStatus = (finalStatus == CarStatus.Available) ? "OnDisplay" : "Pending",
+                            UpdatedAt = DateTime.Now
+                        });
+                    }
+
+                    // 3) Features (replace all)
+                    await _carFeatureRepo.DeleteByCarIdAsync(id);
+                    if (!string.IsNullOrWhiteSpace(dto.FeatureIds))
+                    {
+                        var fIds = dto.FeatureIds
+                            .Split(',')
+                            .Select(x => x.Trim())
+                            .Where(x => int.TryParse(x, out _))
+                            .Select(int.Parse)
+                            .Distinct()
+                            .ToList();
+
+                        if (fIds.Any())
+                        {
+                            var entities = fIds.Select(fid => new CarFeature { CarId = id, FeatureId = fid }).ToList();
+                            await _carFeatureRepo.AddRangeAsync(entities);
+                        }
+                    }
+
+                    // 4) Specs (replace all)
+                    await _carSpecificationRepo.DeleteByCarIdAsync(id);
+                    if (specs.Any())
+                    {
+                        var entities = specs
+                            .Where(s => !string.IsNullOrWhiteSpace(s.Category) && !string.IsNullOrWhiteSpace(s.SpecName) && !string.IsNullOrWhiteSpace(s.SpecValue))
+                            .Select(s => new CarSpecification
+                            {
+                                CarId = id,
+                                Category = s.Category.Trim(),
+                                SpecName = s.SpecName.Trim(),
+                                SpecValue = s.SpecValue.Trim()
+                            })
+                            .ToList();
+                        if (entities.Any()) await _carSpecificationRepo.AddRangeAsync(entities);
+                    }
+
+                    // 5) Pricing versions (replace all)
+                    await _pricingVersionRepo.DeleteByCarIdAsync(id);
+                    if (pricingVersions.Any())
+                    {
+                        var entities = pricingVersions
+                            .Where(p => !string.IsNullOrWhiteSpace(p.VersionName))
+                            .Select((p, idx) => new CarPricingVersion
+                            {
+                                CarId = id,
+                                VersionName = p.VersionName.Trim(),
+                                PriceVnd = p.PriceVnd,
+                                SortOrder = p.SortOrder <= 0 ? (idx + 1) : p.SortOrder,
+                                IsActive = p.IsActive
+                            })
+                            .ToList();
+                        if (entities.Any()) await _pricingVersionRepo.AddRangeAsync(entities);
+                    }
+
+                    // Set Cars.Price theo min pricing (nếu có), fallback dto.Price
+                    var active = await _pricingVersionRepo.GetAllAsync(id, true);
+                    if (active.Any())
+                    {
+                        oldCar.Price = active.Min(x => x.PriceVnd);
+                    }
+                    else
+                    {
+                        oldCar.Price = dto.Price;
+                    }
+
+                    // 6) Gallery images (replace all non-360 if any new)
+                    if (dto.GalleryFiles != null && dto.GalleryFiles.Any())
+                    {
+                        await _imageRepo.DeleteAllGalleryImagesByCarIdAsync(id);
+                        for (int i = 0; i < dto.GalleryFiles.Count; i++)
+                        {
+                            var file = dto.GalleryFiles[i];
+                            var meta = galleryMetas[i];
+                            string folder = $"Cars/{oldCar.Brand}/{oldCar.Brand}_{oldCar.Name}/Gallery";
+                            var url = await FileHelper.UploadFileAsync(file, folder, meta.Title ?? $"img_{i + 1}");
+                            await _imageRepo.AddCarImageAsync(new CarImage
+                            {
+                                CarId = id,
+                                Title = meta.Title,
+                                Description = meta.Description,
+                                ImageType = meta.ImageType,
+                                ImageUrl = url,
+                                Is360Degree = false
+                            });
+                        }
+                    }
+
+                    await _carRepo.UpdateCarAsync(oldCar);
+                    updated = oldCar;
+                });
+
+                return (true, "Cập nhật xe (full) thành công!", updated);
+            }
+            catch (Exception ex)
+            {
+                return (false, BuildSystemErrorMessage(ex), null);
+            }
         }
 
         // 3. CREATE
@@ -350,7 +612,7 @@ namespace LogicBusiness.Services.Admin
             int targetShowroomId = (userRole != "Admin" && userShowroomId.HasValue) ? userShowroomId.Value : dto.ShowroomId;
 
             // Trạng thái theo phân quyền
-            CarStatus finalStatus = (userRole == "Admin" || userRole == "ShowroomManager")
+            CarStatus finalStatus = (userRole == "Admin" || userRole == "ShowroomManager" || userRole == "SalesManager")
                                     ? (dto.Status ?? CarStatus.Available)
                                     : CarStatus.PendingApproval;
 
@@ -433,15 +695,6 @@ namespace LogicBusiness.Services.Admin
                 if (galleryMetas.Count != dto.GalleryFiles.Count)
                 {
                     return (false, "GalleryMetasJson phải có số phần tử đúng bằng số file trong GalleryFiles.", null);
-                }
-
-                for (int i = 0; i < galleryMetas.Count; i++)
-                {
-                    var meta = galleryMetas[i];
-                    if (meta == null || string.IsNullOrWhiteSpace(meta.Title) || string.IsNullOrWhiteSpace(meta.Description))
-                    {
-                        return (false, $"Ảnh phụ #{i + 1} thiếu Title hoặc Description.", null);
-                    }
                 }
             }
 
@@ -603,8 +856,8 @@ namespace LogicBusiness.Services.Admin
                             if (file == null || file.Length == 0) continue;
 
                             var meta = (i < galleryMetas.Count) ? galleryMetas[i] : null;
-                            if (meta == null || string.IsNullOrWhiteSpace(meta.Title) || string.IsNullOrWhiteSpace(meta.Description))
-                                throw new InvalidOperationException($"Ảnh phụ #{i + 1} thiếu Title hoặc Description.");
+                            if (meta == null)
+                                throw new InvalidOperationException($"GalleryMetasJson thiếu phần tử ở vị trí #{i + 1} (không khớp số lượng ảnh).");
 
                             string imagePath = await FileHelper.UploadFileAsync(file, subFolder, targetName);
                             string fileHash = FileHelper.GetFileHash(file);
@@ -616,8 +869,8 @@ namespace LogicBusiness.Services.Admin
                                 Is360Degree = false,
                                 IsMainImage = meta?.IsMainImage ?? false,
                                 ImageType = string.IsNullOrWhiteSpace(meta?.ImageType) ? null : meta!.ImageType!.Trim(),
-                                Title = meta.Title.Trim(),
-                                Description = meta.Description.Trim(),
+                                Title = string.IsNullOrWhiteSpace(meta.Title) ? null : meta.Title.Trim(),
+                                Description = string.IsNullOrWhiteSpace(meta.Description) ? null : meta.Description.Trim(),
                                 FileHash = string.IsNullOrWhiteSpace(fileHash) ? null : fileHash,
                                 CreatedAt = DateTime.Now
                             });
@@ -647,7 +900,7 @@ namespace LogicBusiness.Services.Admin
             }
             catch (Exception ex)
             {
-                return (false, $"Lỗi hệ thống: {ex.Message}", null);
+                return (false, BuildSystemErrorMessage(ex), null);
             }
         }
 
@@ -701,12 +954,12 @@ namespace LogicBusiness.Services.Admin
             car.UpdatedAt = DateTime.Now;
 
             // 6.LOGIC TRẠNG THÁI THÔNG MINH (Lưu nháp vs Gửi duyệt)
-            if (userRole == "Admin" || userRole == "ShowroomManager")
+            if (userRole == "Admin" || userRole == "ShowroomManager" || userRole == "SalesManager")
             {
                 // Sếp sửa thì cho phép sếp quyết định trạng thái luôn (nếu sếp có gửi Status lên)
                 if (dto.Status.HasValue) car.Status = dto.Status.Value;
             }
-            else if (userRole == "ShowroomSales" || userRole == "Staff")
+            else if (userRole == "ShowroomSales" || userRole == "Sales" || userRole == "Technician" || userRole == "Staff")
             {
                 // Nhân viên: Nếu bấm "Nộp bài" (Status = PendingApproval) thì mới gửi sếp
                 // Còn lại (Lưu nháp hoặc không chọn) thì cứ để là Draft cho lính sửa tiếp
@@ -806,7 +1059,7 @@ namespace LogicBusiness.Services.Admin
             }
             catch (Exception ex)
             {
-                return (false, $"Lỗi hệ thống: {ex.Message}", null);
+                return (false, BuildSystemErrorMessage(ex), null);
             }
         }
 
@@ -1044,6 +1297,16 @@ namespace LogicBusiness.Services.Admin
             // ==========================================================
             await _carRepo.DeleteCarAsync(id);
 
+            await _notiService.CreateNotificationAsync(
+                userId: null,
+                showroomId: null, // Vì xe đã bị xóa kho, bắn cho toàn bộ Manager để họ nắm thông tin
+                roleTarget: AppRoles.Manager, // Báo riêng cho các sếp chi nhánh
+                title: "Cảnh báo: Dữ liệu xe bị xóa 🗑️",
+                content: $"Admin hệ thống vừa xóa vĩnh viễn mẫu {car.Brand} {car.Name} cùng toàn bộ hình ảnh liên quan.",
+                actionUrl: "/admin/cars",
+                type: "SystemAlert"
+            );
+
             return true;
         }
 
@@ -1182,7 +1445,7 @@ namespace LogicBusiness.Services.Admin
                 return (false, "Xe này đang bán rồi, duyệt gì nữa ní!");
 
             // 👇 BÍ KÍP: CHẶN QUẢN LÝ DUYỆT LÁO XE CHI NHÁNH KHÁC
-            if (userRole == "ShowroomManager" && userShowroomId.HasValue)
+            if ((userRole == "ShowroomManager" || userRole == "SalesManager") && userShowroomId.HasValue)
             {
                 var inventories = await _inventoryRepo.GetInventoriesByCarIdAsync(carId);
                 // Nếu con xe này KHÔNG nằm trong Showroom của Quản lý đó -> Chửi!
@@ -1200,14 +1463,14 @@ namespace LogicBusiness.Services.Admin
 
             var showroomId = (await _inventoryRepo.GetInventoriesByCarIdAsync(carId)).FirstOrDefault()?.ShowroomId;
             await _notiService.CreateNotificationAsync(
-                 userId: null,
-                 showroomId: showroomId,
-                 roleTarget: null,
+                 userId: null, // Nếu ní có truyền currentUserId xuống thì để vào đây nhé
+                 showroomId: showroomId, // Vẫn target đúng chi nhánh đó
+                 roleTarget: $"{AppRoles.Sales},{AppRoles.ShowroomSales},{AppRoles.Marketing}", // 👈 Chỉ đích danh ai cần biết
                  title: "Xe đã lên sàn! 🎉",
-                 content: $"Sếp đã duyệt mẫu {car.Brand} {car.Name}. Anh em đẩy số đi!",
+                 content: $"Sếp đã duyệt mẫu {car.Brand} {car.Name}. Anh em Sales đẩy số, Marketing chạy Ads thôi!",
                  actionUrl: $"/admin/cars/detail/{carId}",
                  type: "CarApproval"
-             );
+            );
             return (true, "Đã duyệt xe thành công! Xe đã lên sóng.");
         }
 
@@ -1230,10 +1493,10 @@ namespace LogicBusiness.Services.Admin
             await _notiService.CreateNotificationAsync(
                 userId: null,
                 showroomId: showroomId,
-                roleTarget: null,
+                roleTarget: $"{AppRoles.Sales},{AppRoles.ShowroomSales},{AppRoles.Content}", // 👈 Đám lính đăng bài
                 title: "Xe bị từ chối duyệt 🚨",
-                content: $"Mẫu {car.Brand} {car.Name} bị sếp chê. Lý do: {reason}",
-                actionUrl: $"/admin/cars/edit/{carId}", // Trỏ link về chỗ sửa xe luôn
+                content: $"Mẫu {car.Brand} {car.Name} bị sếp chê. Lý do: {reason}. Ní vào sửa lại ngay nha!",
+                actionUrl: $"/admin/cars/edit/{carId}",
                 type: "CarApproval"
             );
             return (true, "Đã từ chối và gửi phản hồi lại cho nhân viên!");
@@ -1253,6 +1516,18 @@ namespace LogicBusiness.Services.Admin
             car.RejectionReason = null;
 
             await _carRepo.UpdateAsync(car); // Lưu vào DB
+
+            var showroomId = (await _inventoryRepo.GetInventoriesByCarIdAsync(carId)).FirstOrDefault()?.ShowroomId;
+
+            await _notiService.CreateNotificationAsync(
+                userId: null,
+                showroomId: showroomId,
+                roleTarget: $"{AppRoles.Manager},{AppRoles.Sales},{AppRoles.ShowroomSales}", // Báo cho quản lý và Sale
+                title: "Trạng thái xe bị thay đổi đột ngột 🔄",
+                content: $"Mẫu {car.Brand} {car.Name} vừa bị quản trị viên đổi trạng thái thành {newStatus}.",
+                actionUrl: $"/admin/cars/detail/{carId}",
+                type: "CarStatus"
+            );
             return (true, $"Đã ép trạng thái xe thành: {newStatus}");
         }
 

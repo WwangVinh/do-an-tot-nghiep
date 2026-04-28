@@ -145,5 +145,13 @@ namespace SqlServer.Repositories
                 .OrderByDescending(b => b.CreatedAt) // Mới nhất lên đầu
                 .ToListAsync();
         }
+
+        public async Task<bool> HasBookedCarAsync(string phone, int carId)
+        {
+            // Kiểm tra xem khách đã từng đặt lịch và hoàn thành với xe này chưa
+            return await _context.Bookings.AnyAsync(b => b.Phone == phone
+                && b.CarId == carId
+                && b.Status == "Completed");
+        }
     }
 }

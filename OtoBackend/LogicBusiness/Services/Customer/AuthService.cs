@@ -1,6 +1,5 @@
 ﻿using CoreEntities.Models.DTOs;
 using CoreEntities.Models;
-using LogicBusiness.Interfaces.Customer;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using System;
@@ -12,6 +11,7 @@ using System.Threading.Tasks;
 using BCrypt.Net;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.Extensions.Configuration;
+using LogicBusiness.Interfaces.Customer;
 using LogicBusiness.Interfaces.Repositories;
 using LogicBusiness.Interfaces.Shared;
 
