@@ -9,7 +9,7 @@ export type Promotion = {
   startDate: string
   endDate: string
   status: string
-  carId: number
+  carId: number | null
   maxUsage: number
 }
 
