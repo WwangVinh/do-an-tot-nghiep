@@ -144,6 +144,7 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
     }
   }, [gallery])
 
+  const [featureSearch, setFeatureSearch] = useState('')
   // Tải danh sách Features
   useEffect(() => {
     async function loadFeatures() {
@@ -440,6 +441,31 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
     }
   }
 
+
+  // Hàm xóa tính năng
+  async function handleDeleteFeature(id: string, e: React.MouseEvent) {
+    e.stopPropagation(); // Ngăn việc click vào nút xóa lại làm trigger checkbox của label
+    
+    if (!window.confirm('Ní có chắc muốn xóa tính năng này không? Nó sẽ mất khỏi hệ thống luôn á!')) return;
+
+    try {
+      const headers: Record<string, string> = {}
+      if (token.trim()) headers.Authorization = token.trim().startsWith('Bearer ') ? token.trim() : `Bearer ${token.trim()}`
+
+      // Giả định endpoint là DELETE /api/admin/features/{id}
+      await http.delete(`/api/admin/features/${id}`, { headers })
+
+      // Cập nhật lại list hiển thị tại chỗ
+      setAvailableFeatures((prev) => prev.filter((f) => f.id !== id))
+      // Nếu tính năng đang được chọn thì bỏ chọn luôn
+      setFeatureIds((prev) => prev.filter((fid) => fid !== id))
+      
+      toast.success('Đã tiễn tính năng lên đường!')
+    } catch (err: any) {
+      toast.error('Lỗi xóa tính năng: ' + getErrorMessage(err))
+    }
+  }
+  
   const createM = useMutation({
     mutationFn: async () => {
       setGalleryErrors({})
@@ -482,7 +508,7 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
   return (
     <div className="w-full bg-slate-50/60 px-4 py-6 text-slate-900 dark:bg-zinc-950/10 dark:text-zinc-100">
       <div className="w-full max-w-none">
-        <div className="sticky top-0 z-20 -mx-4 mb-6 border-b border-slate-200/70 bg-gradient-to-r from-indigo-50/70 via-slate-50/70 to-sky-50/40 px-4 py-4 backdrop-blur dark:border-zinc-800/80 dark:from-indigo-950/25 dark:via-zinc-950/40 dark:to-sky-950/10">
+        <div className="sticky top-[64px] z-20 -mx-4 mb-6 border-b border-slate-200/70 bg-gradient-to-r from-indigo-50/70 via-slate-50/70 to-sky-50/40 px-4 py-4 backdrop-blur dark:border-zinc-800/80 dark:from-indigo-950/25 dark:via-zinc-950/40 dark:to-sky-950/10">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">
@@ -615,17 +641,68 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
                       </div>
 
                       {isFeatureOpen && (
-                        <div className="absolute z-10 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg max-h-48 overflow-auto py-1 dark:border-zinc-800 dark:bg-zinc-950">
-                          {availableFeatures.length > 0 ? (
-                            availableFeatures.map(f => (
-                              <label key={f.id} className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50 cursor-pointer text-sm text-slate-800 dark:text-zinc-200 dark:hover:bg-zinc-900">
-                                <input type="checkbox" checked={featureIds.includes(f.id)} onChange={(e) => { if (e.target.checked) setFeatureIds(prev => [...prev, f.id]); else setFeatureIds(prev => prev.filter(id => id !== f.id)) }} className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-900" />
-                                {f.name}
-                              </label>
-                            ))
-                          ) : (
-                            <div className="px-3 py-2 text-sm text-slate-500 italic dark:text-zinc-500">Đang tải tính năng từ server...</div>
-                          )}
+                        <div className="absolute z-10 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-950">
+                          {/* Ô search */}
+                          <div className="p-2 border-b border-slate-100 dark:border-zinc-800">
+                            <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-zinc-700 dark:bg-zinc-800">
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                              <input
+                                autoFocus
+                                value={featureSearch}
+                                onChange={(e) => setFeatureSearch(e.target.value)}
+                                placeholder="Tìm tính năng..."
+                                className="flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              {featureSearch && (
+                                <button type="button" onClick={() => setFeatureSearch('')}>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400 hover:text-slate-600"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Danh sách */}
+                          <div className="max-h-48 overflow-auto py-1">
+                            {availableFeatures
+                              .filter((f) => f.name.toLowerCase().includes(featureSearch.toLowerCase()))
+                              .map((f) => (
+                                <div key={f.id} className="flex items-center justify-between px-3 py-2 border-b border-slate-100 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-900">
+                                  <label className="flex flex-1 cursor-pointer items-center gap-3 text-sm text-slate-800 dark:text-zinc-200">
+                                    <input
+                                      type="checkbox"
+                                      checked={featureIds.includes(f.id)}
+                                      onChange={(e) => {
+                                        if (e.target.checked) setFeatureIds((prev) => [...prev, f.id])
+                                        else setFeatureIds((prev) => prev.filter((id) => id !== f.id))
+                                      }}
+                                      className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-900"
+                                    />
+                                    <span className="truncate">{f.name}</span>
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleDeleteFeature(f.id, e)}
+                                    className="ml-2 flex items-center justify-center rounded-md p-1.5 text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30"
+                                    title="Xóa tính năng"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                                    </svg>
+                                  </button>
+                                </div>
+                              ))}
+                            {availableFeatures.filter((f) => f.name.toLowerCase().includes(featureSearch.toLowerCase())).length === 0 && (
+                              <div className="px-3 py-2 text-sm text-slate-400 italic">Không tìm thấy tính năng.</div>
+                            )}
+                          </div>
+
+                          <div className="border-t border-slate-100 px-3 py-2 dark:border-zinc-800">
+                            <button type="button" onClick={() => { setIsFeatureOpen(false); setFeatureSearch('') }}
+                              className="w-full rounded-md bg-slate-900 py-1.5 text-xs font-medium text-white hover:bg-slate-700 dark:bg-white dark:text-zinc-900">
+                              Xong
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>

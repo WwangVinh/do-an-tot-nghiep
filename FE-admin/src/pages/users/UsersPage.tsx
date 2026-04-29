@@ -4,6 +4,8 @@ import toast from 'react-hot-toast'
 import { Pencil, Plus, RefreshCcw, Save, Shield, Trash2, X } from 'lucide-react'
 
 import { useAuth } from '../../app/auth/useAuth'
+// Ní nhớ kiểm tra lại đường dẫn file roles.ts của ní nhé
+import { type AdminRole, normalizeRole } from '../../app/auth/roles'
 import type { Showroom } from '../../services/showrooms/showrooms'
 import { fetchAdminShowrooms } from '../../services/showrooms/showrooms'
 import type { AdminUserListItem, CreateAdminStaffInput, FetchAdminUsersParams, UpdateAdminStaffInput } from '../../services/users/users'
@@ -21,6 +23,22 @@ function getErrorMessage(err: unknown): string {
     if (typeof anyErr.message === 'string' && anyErr.message.trim()) return anyErr.message
   }
   return 'Có lỗi xảy ra'
+}
+
+// Map hiển thị chức danh ra tiếng Việt
+const ROLE_LABELS: Record<AdminRole, string> = {
+  Admin: 'Quản trị viên',
+  Manager: 'Quản lý',
+  ShowroomSales: 'Nhân viên Showroom',
+  Technician: 'Nhân viên Kỹ thuật',
+  Sales: 'Nhân viên Sale',
+  Marketing: 'Nhân viên Marketing',
+  Content: 'Nhân viên Content',
+}
+
+function getRoleLabel(role: unknown): string {
+  const normalized = normalizeRole(role)
+  return normalized ? ROLE_LABELS[normalized] : String(role ?? '—')
 }
 
 type DialogMode = 'create' | 'edit'
@@ -52,7 +70,9 @@ export function UsersPage() {
   const qc = useQueryClient()
   const auth = useAuth()
 
-  const isAdmin = (auth.user?.role ?? '').toLowerCase() === 'admin'
+  // Phân quyền trên UI
+  const userRole = normalizeRole(auth.user?.role)
+  const isAdmin = userRole === 'Admin'
 
   const [userType, setUserType] = useState<'Staff' | 'Customer'>('Staff')
   const [isDeleted, setIsDeleted] = useState(false)
@@ -88,7 +108,7 @@ export function UsersPage() {
   const showroomsQ = useQuery({
     queryKey: ['admin-showrooms'],
     queryFn: () => fetchAdminShowrooms(),
-    enabled: dialogOpen || isAdmin,
+    // Lấy luôn danh sách để còn map tên showroom ra bảng cho cả Admin lẫn Manager
   })
 
   const createM = useMutation({
@@ -128,6 +148,11 @@ export function UsersPage() {
   const totalPages = listQ.data?.totalPages ?? 1
   const showrooms: Showroom[] = showroomsQ.data ?? []
 
+  // Phân luồng quyền chọn Role trong Form: Quản lý không được tạo Admin/Manager khác
+  const roleOptions = isAdmin 
+    ? Object.entries(ROLE_LABELS) 
+    : Object.entries(ROLE_LABELS).filter(([val]) => !['Admin', 'Manager'].includes(val))
+
   function openCreate() {
     setDialogMode('create')
     setEditing(null)
@@ -146,16 +171,7 @@ export function UsersPage() {
       fullName: (u.fullName ?? '').toString(),
       email: u.email ?? '',
       phone: u.phone ?? '',
-      role:
-        (u.role as any) === 'ShowroomManager'
-          ? 'ShowroomManager'
-          : (u.role as any) === 'SalesManager'
-            ? 'SalesManager'
-            : (u.role as any) === 'Technician'
-              ? 'Technician'
-              : (u.role as any) === 'Sales'
-                ? 'Sales'
-                : 'ShowroomSales',
+      role: normalizeRole(u.role) ?? 'ShowroomSales',
       showroomId: Number(u.showroomId ?? 0),
       status: (u.status as any) === 'Inactive' ? 'Inactive' : 'Active',
     })
@@ -176,10 +192,10 @@ export function UsersPage() {
     const fullName = createForm.fullName.trim()
     const showroomId = Number(createForm.showroomId)
 
-    if (!username) return toast.error('Vui lòng nhập Username')
-    if (!password) return toast.error('Vui lòng nhập Password')
+    if (!username) return toast.error('Vui lòng nhập Tên đăng nhập')
+    if (!password) return toast.error('Vui lòng nhập Mật khẩu')
     if (!fullName) return toast.error('Vui lòng nhập Họ tên')
-    if (!Number.isFinite(showroomId) || showroomId <= 0) return toast.error('Vui lòng chọn Showroom')
+    if (!Number.isFinite(showroomId) || showroomId <= 0) return toast.error('Vui lòng chọn Chi nhánh')
 
     createM.mutate({
       username,
@@ -197,7 +213,7 @@ export function UsersPage() {
     const fullName = editForm.fullName.trim()
     const showroomId = Number(editForm.showroomId)
     if (!fullName) return toast.error('Vui lòng nhập Họ tên')
-    if (!Number.isFinite(showroomId) || showroomId <= 0) return toast.error('Vui lòng chọn Showroom')
+    if (!Number.isFinite(showroomId) || showroomId <= 0) return toast.error('Vui lòng chọn Chi nhánh')
 
     updateM.mutate({
       userId: editing.userId,
@@ -365,7 +381,11 @@ export function UsersPage() {
                     <td className="py-3 pr-3 text-xs text-slate-600 dark:text-zinc-300">
                       <div>{u.phone ?? '—'}</div>
                     </td>
-                    <td className="py-3 pr-3">{u.role ?? '—'}</td>
+                    <td className="py-3 pr-3">
+                      <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 dark:bg-zinc-800 dark:text-zinc-300">
+                        {getRoleLabel(u.role)}
+                      </span>
+                    </td>
                     <td className="py-3 pr-3">
                       <span
                         className={[
@@ -378,7 +398,12 @@ export function UsersPage() {
                         {u.status === 'Active' ? 'Đang hoạt động' : u.status === 'Inactive' ? 'Đã khóa' : (u.status ?? '—')}
                       </span>
                     </td>
-                    <td className="py-3 pr-3 text-xs text-slate-600 dark:text-zinc-300">{u.showroomId ?? '—'}</td>
+                    <td className="py-3 pr-3 text-xs font-medium text-indigo-600 dark:text-indigo-400">
+                      {/* Xử lý map Tên Chi nhánh ở đây nè */}
+                      {u.showroomId 
+                        ? showrooms.find((s) => s.showroomId === u.showroomId)?.name || `Mã ${u.showroomId}`
+                        : '—'}
+                    </td>
                     <td className="py-3 pr-3 text-xs text-slate-600 dark:text-zinc-300">
                       {u.createdAt ? new Date(u.createdAt).toLocaleString() : '—'}
                     </td>
@@ -480,7 +505,7 @@ export function UsersPage() {
                   {dialogMode === 'create' ? 'Thêm nhân sự' : `Chỉnh sửa #${editing?.userId ?? ''}`}
                 </div>
                 <div className="mt-1 text-sm text-slate-500 dark:text-zinc-300">
-                      {dialogMode === 'create' ? 'Tạo tài khoản nhân sự (Nhân viên/Quản lý).' : 'Cập nhật thông tin tài khoản.'}
+                      {dialogMode === 'create' ? 'Tạo tài khoản nhân sự mới.' : 'Cập nhật thông tin tài khoản.'}
                 </div>
               </div>
               <button
@@ -555,25 +580,14 @@ export function UsersPage() {
                       onChange={(e) =>
                         setCreateForm((f) => ({
                           ...f,
-                          role:
-                            e.target.value === 'ShowroomManager'
-                              ? 'ShowroomManager'
-                              : e.target.value === 'SalesManager'
-                                ? 'SalesManager'
-                                : e.target.value === 'Technician'
-                                  ? 'Technician'
-                                  : e.target.value === 'Sales'
-                                    ? 'Sales'
-                                    : 'ShowroomSales',
+                          role: (e.target.value as AdminRole)
                         }))
                       }
                       className="mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50"
                     >
-                      <option value="ShowroomSales">Nhân viên bán hàng (Showroom)</option>
-                      <option value="ShowroomManager">Quản lý chi nhánh (Showroom)</option>
-                      <option value="Sales">Sale</option>
-                      <option value="SalesManager">Quản lý sale</option>
-                      <option value="Technician">Nhân viên kỹ thuật</option>
+                      {roleOptions.map(([val, label]) => (
+                        <option key={val} value={val}>{label}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -636,27 +650,14 @@ export function UsersPage() {
                       onChange={(e) =>
                         setEditForm((f) => ({
                           ...f,
-                          role:
-                            e.target.value === 'ShowroomManager'
-                              ? 'ShowroomManager'
-                              : e.target.value === 'SalesManager'
-                                ? 'SalesManager'
-                                : e.target.value === 'Technician'
-                                  ? 'Technician'
-                                  : e.target.value === 'Sales'
-                                    ? 'Sales'
-                                    : 'ShowroomSales',
+                          role: (e.target.value as AdminRole)
                         }))
                       }
                       className="mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50"
-                      disabled={!isAdmin}
-                      title={!isAdmin ? 'Quản lý không được đổi vai trò' : undefined}
                     >
-                      <option value="ShowroomSales">Nhân viên bán hàng (Showroom)</option>
-                      <option value="ShowroomManager">Quản lý chi nhánh (Showroom)</option>
-                      <option value="Sales">Sale</option>
-                      <option value="SalesManager">Quản lý sale</option>
-                      <option value="Technician">Nhân viên kỹ thuật</option>
+                      {roleOptions.map(([val, label]) => (
+                        <option key={val} value={val}>{label}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -721,4 +722,3 @@ export function UsersPage() {
     </div>
   )
 }
-

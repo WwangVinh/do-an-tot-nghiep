@@ -1,8 +1,10 @@
 ﻿using CoreEntities.Models;
+using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Admin;
 using LogicBusiness.Interfaces.Repositories;
 using LogicBusiness.Interfaces.Shared;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -19,23 +21,41 @@ namespace LogicBusiness.Services.Admin
             _notiService = notiService;
         }
 
-        // LẤY DANH SÁCH
-        public async Task<object> GetBookingsForAdminAsync(int page, int pageSize, string? search, string? status, string userRole, int? userShowroomId)
+        private bool HasShowroomAccess(string userRole, int? userShowroomId, int? bookingShowroomId)
         {
-            // Nếu không phải Admin mà cũng không có ShowroomId -> Chặn
-            if (userRole != "Admin" && !userShowroomId.HasValue)
-            {
+            if (userRole == AppRoles.Admin) return true;
+            if (userRole == AppRoles.Technician) return true; // Technician xem được tất cả để duyệt xe
+            return userShowroomId.HasValue && bookingShowroomId == userShowroomId.Value;
+        }
+
+        private bool IsSalesSide(string userRole) =>
+            userRole == AppRoles.Admin ||
+            userRole == AppRoles.Manager ||
+            userRole == AppRoles.Sales ||
+            userRole == AppRoles.ShowroomSales;
+
+        private string AppendNote(string? existingNote, string userRole, string content)
+        {
+            var line = $"[{DateTime.Now:dd/MM/yyyy HH:mm} - {userRole}]: {content.Trim()}";
+            return string.IsNullOrWhiteSpace(existingNote) ? line : $"{existingNote}\n{line}";
+        }
+
+        public async Task<object> GetBookingsForAdminAsync(
+            int page, int pageSize, string? search, string? status,
+            string userRole, int? userShowroomId)
+        {
+            if (userRole != AppRoles.Admin && !userShowroomId.HasValue)
                 return new { TotalCount = 0, Data = new List<object>() };
-            }
 
-            int? filterShowroom = (userRole == "Admin") ? null : userShowroomId;
-
-            var (bookings, total) = await _bookingRepo.GetAdminBookingsAsync(page, pageSize, search, status, null, null, filterShowroom);
+            int? filterShowroom = (userRole == AppRoles.Admin) ? null : userShowroomId;
+            var (bookings, total) = await _bookingRepo.GetAdminBookingsAsync(
+                page, pageSize, search, status, null, null, filterShowroom);
 
             return new
             {
                 TotalCount = total,
-                Data = bookings.Select(b => new {
+                Data = bookings.Select(b => new
+                {
                     b.BookingId,
                     b.CustomerName,
                     b.Phone,
@@ -48,18 +68,14 @@ namespace LogicBusiness.Services.Admin
                 })
             };
         }
-        // XEM CHI TIẾT
+
         public async Task<object?> GetBookingDetailAsync(int bookingId, string userRole, int? userShowroomId)
         {
             var booking = await _bookingRepo.GetByIdAsync(bookingId);
             if (booking == null) return null;
 
-            // Manager/Sales chi nhánh này không xem được chi nhánh kia
-            if (userRole != "Admin")
-            {
-                if (!userShowroomId.HasValue || booking.ShowroomId != userShowroomId.Value)
-                    return null;
-            }
+            if (!HasShowroomAccess(userRole, userShowroomId, booking.ShowroomId))
+                return null;
 
             return new
             {
@@ -77,147 +93,263 @@ namespace LogicBusiness.Services.Admin
             };
         }
 
-        // ĐỔI TRẠNG THÁI
-        public async Task<(bool Success, string Message)> UpdateBookingStatusAsync(int bookingId, string newStatus, string userRole, int? userShowroomId)
+        public async Task<(bool Success, string Message)> MarkAsConsultedAsync(
+            int bookingId, BookingConsultDto dto, string userRole, int? userShowroomId)
         {
+            if (!IsSalesSide(userRole))
+                return (false, "Chỉ Sales mới được thực hiện bước tư vấn.");
+
             var booking = await _bookingRepo.GetByIdAsync(bookingId);
             if (booking == null) return (false, "Không tìm thấy lịch hẹn.");
 
-            if (userRole != "Admin")
-            {
-                if (!userShowroomId.HasValue || booking.ShowroomId != userShowroomId.Value)
-                    return (false, "Bạn không có quyền can thiệp vào lịch hẹn của chi nhánh khác!");
-            }
+            if (!HasShowroomAccess(userRole, userShowroomId, booking.ShowroomId))
+                return (false, "Bạn không có quyền can thiệp vào lịch hẹn của chi nhánh khác!");
 
-            if (booking.Status == "Cancelled" || booking.Status == "Completed")
-                return (false, "Lịch hẹn này đã kết thúc, không thể thay đổi trạng thái.");
+            if (booking.Status != BookingStatus.Pending)
+                return (false, $"Lịch hẹn đang ở trạng thái '{booking.Status}', không thể chuyển sang tư vấn.");
 
-            booking.Status = newStatus;
+            booking.Status = BookingStatus.Consulted;
+            booking.Note = AppendNote(booking.Note, userRole, $"Kết quả tư vấn: {dto.ConsultNote}");
             booking.UpdatedAt = DateTime.Now;
 
             await _bookingRepo.UpdateAsync(booking);
-
-            if (booking.UserId.HasValue)
-            {
-                string statusVN = newStatus == "Confirmed" ? "Đã được xác nhận" : newStatus == "Completed" ? "Đã hoàn thành" : newStatus;
-                await _notiService.CreateNotificationAsync(
-                    userId: booking.UserId.Value, 
-                    showroomId: null,
-                    roleTarget: null,
-                    title: "Cập nhật lịch hẹn lái thử 📅",
-                    content: $"Lịch hẹn xem xe của bạn {statusVN}. Vui lòng kiểm tra chi tiết!",
-                    actionUrl: $"/customer/my-bookings/{bookingId}",
-                    type: "Booking"
-                );
-            }
-            return (true, $"[{userRole}] Đã cập nhật trạng thái thành: {newStatus}");
+            return (true, "Đã ghi nhận kết quả tư vấn.");
         }
 
-        // Cập nhật trạng thái + kết quả (kết quả lưu vào Note dạng log)
-        public async Task<(bool Success, string Message)> UpdateBookingAsync(int bookingId, string? newStatus, string? result, string? userRole, int? userShowroomId)
+        public async Task<(bool Success, string Message)> SendToTechCheckAsync(
+            int bookingId, BookingSendTechDto dto, string userRole, int? userShowroomId)
         {
+            if (!IsSalesSide(userRole))
+                return (false, "Chỉ Sales mới được gửi xe qua kỹ thuật.");
+
             var booking = await _bookingRepo.GetByIdAsync(bookingId);
             if (booking == null) return (false, "Không tìm thấy lịch hẹn.");
 
-            string role = string.IsNullOrWhiteSpace(userRole) ? "Staff" : userRole!;
+            if (!HasShowroomAccess(userRole, userShowroomId, booking.ShowroomId))
+                return (false, "Bạn không có quyền can thiệp vào lịch hẹn của chi nhánh khác!");
 
-            if (role != "Admin")
-            {
-                if (!userShowroomId.HasValue || booking.ShowroomId != userShowroomId.Value)
-                    return (false, "Ní không có quyền can thiệp vào lịch hẹn của chi nhánh khác!");
-            }
+            if (booking.Status != BookingStatus.Consulted)
+                return (false, $"Lịch hẹn đang ở trạng thái '{booking.Status}', cần tư vấn xong mới gửi kỹ thuật.");
 
-            if (booking.Status == "Cancelled")
-                return (false, "Lịch hẹn này đã bị hủy, không thể cập nhật.");
-
-            bool changed = false;
-
-            if (!string.IsNullOrWhiteSpace(newStatus))
-            {
-                // Dùng lại rule của UpdateBookingStatusAsync (chặn đổi khi đã Completed)
-                if (booking.Status == "Completed")
-                    return (false, "Lịch hẹn này đã hoàn thành, không thể thay đổi trạng thái.");
-
-                booking.Status = newStatus!;
-                changed = true;
-            }
-
-            if (!string.IsNullOrWhiteSpace(result))
-            {
-                var timeStamp = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
-                var line = $"[{timeStamp} - {role} cập nhật kết quả]: {result!.Trim()}";
-                booking.Note = string.IsNullOrWhiteSpace(booking.Note) ? line : $"{booking.Note}\n{line}";
-                changed = true;
-            }
-
-            if (!changed) return (false, "Không có dữ liệu cập nhật.");
-
-            booking.UpdatedAt = DateTime.Now;
-            await _bookingRepo.UpdateAsync(booking);
-
-            if (booking.UserId.HasValue)
-            {
-                // Thông báo ngắn gọn cho khách (tránh lộ nội dung kết quả)
-                await _notiService.CreateNotificationAsync(
-                    userId: booking.UserId.Value,
-                    showroomId: null,
-                    roleTarget: null,
-                    title: "Cập nhật lịch hẹn 📅",
-                    content: "Lịch hẹn của bạn vừa được Showroom cập nhật. Vui lòng kiểm tra chi tiết!",
-                    actionUrl: $"/customer/my-bookings/{bookingId}",
-                    type: "Booking"
-                );
-            }
-
-            return (true, "Đã cập nhật lịch hẹn.");
-        }
-
-        // HỦY LỊCH (Admin/Manager/Sales hủy khi khách bom)
-        public async Task<(bool Success, string Message)> CancelBookingByAdminAsync(int bookingId, string cancelReason, string userRole, int? userShowroomId)
-        {
-            var booking = await _bookingRepo.GetByIdAsync(bookingId);
-            if (booking == null) return (false, "Không tìm thấy lịch hẹn.");
-
-            if (userRole != "Admin" && booking.ShowroomId != userShowroomId)
-                return (false, "Ní không có quyền hủy lịch của chi nhánh khác!");
-
-            if (string.IsNullOrWhiteSpace(cancelReason))
-                return (false, "Vui lòng nhập lý do hủy để báo cáo sếp nhé!");
-
-            booking.Status = "Cancelled";
+            booking.Status = BookingStatus.PendingTechCheck;
+            if (!string.IsNullOrWhiteSpace(dto.TechNote))
+                booking.Note = AppendNote(booking.Note, userRole, $"Ghi chú gửi kỹ thuật: {dto.TechNote}");
             booking.UpdatedAt = DateTime.Now;
 
-            // Log lý do hủy
-            string timeStamp = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
-            booking.Note = string.IsNullOrWhiteSpace(booking.Note)
-                ? $"[{timeStamp} - {userRole} hủy]: {cancelReason}"
-                : $"{booking.Note}\n[{timeStamp} - {userRole} hủy]: {cancelReason}";
-
             await _bookingRepo.UpdateAsync(booking);
-            if (booking.UserId.HasValue)
-            {
-                await _notiService.CreateNotificationAsync(
-                    userId: booking.UserId.Value,
-                    showroomId: null,
-                    roleTarget: null,
-                    title: "Lịch hẹn đã bị hủy ❌",
-                    content: $"Lịch hẹn của bạn đã bị hủy bởi Showroom. Lý do: {cancelReason}",
-                    actionUrl: $"/customer/my-bookings/{bookingId}",
-                    type: "Booking"
-                );
-            }
 
-            // THÊM MỚI: Báo cho Manager của Showroom đó biết
             await _notiService.CreateNotificationAsync(
                 userId: null,
-                showroomId: booking.ShowroomId, // Target vào đúng chi nhánh đó
-                roleTarget: "Manager",         // Chỉ báo cho Manager
-                title: "Cảnh báo hủy lịch hẹn",
-                content: $"Nhân viên {userRole} vừa hủy lịch hẹn của khách {booking.CustomerName}. Lý do: {cancelReason}",
+                showroomId: booking.ShowroomId,
+                roleTarget: AppRoles.Technician,
+                title: "Xe cần kiểm tra kỹ thuật 🔧",
+                content: $"Xe {booking.Car?.Name} cần kiểm tra trước lịch lái thử của khách {booking.CustomerName} vào {booking.BookingDate:dd/MM/yyyy} lúc {booking.BookingTime}.",
+                actionUrl: $"/admin/bookings/{bookingId}",
+                type: "TechCheck"
+            );
+
+            return (true, "Đã gửi yêu cầu kiểm tra kỹ thuật.");
+        }
+
+        public async Task<(bool Success, string Message)> SubmitTechResultAsync(
+            int bookingId, BookingTechResultDto dto, string userRole, int? userShowroomId)
+        {
+            if (userRole != AppRoles.Technician && userRole != AppRoles.Admin)
+                return (false, "Chỉ Kỹ thuật viên mới được cập nhật kết quả kiểm tra xe.");
+
+            var booking = await _bookingRepo.GetByIdAsync(bookingId);
+            if (booking == null) return (false, "Không tìm thấy lịch hẹn.");
+
+            if (!HasShowroomAccess(userRole, userShowroomId, booking.ShowroomId))
+                return (false, "Bạn không có quyền can thiệp vào lịch hẹn của chi nhánh khác!");
+
+            if (booking.Status != BookingStatus.PendingTechCheck)
+                return (false, $"Lịch hẹn đang ở trạng thái '{booking.Status}', không phải đang chờ kiểm tra kỹ thuật.");
+
+            if (dto.IsApproved)
+            {
+                booking.Status = BookingStatus.TechApproved;
+                booking.Note = AppendNote(booking.Note, userRole, $"Kỹ thuật DUYỆT xe: {dto.TechNote}");
+                booking.UpdatedAt = DateTime.Now;
+                await _bookingRepo.UpdateAsync(booking);
+
+                await _notiService.CreateNotificationAsync(
+                    userId: null,
+                    showroomId: booking.ShowroomId,
+                    roleTarget: $"{AppRoles.Sales},{AppRoles.ShowroomSales},{AppRoles.Manager}",
+                    title: "Xe đã sẵn sàng ✅",
+                    content: $"Xe {booking.Car?.Name} đã qua kiểm tra kỹ thuật. Vui lòng xác nhận lịch lái thử với khách {booking.CustomerName}.",
+                    actionUrl: $"/admin/bookings/{bookingId}",
+                    type: "TechCheck"
+                );
+
+                return (true, "Xe đã được duyệt, đang chờ Sales xác nhận lịch với khách.");
+            }
+            else
+            {
+                booking.Status = BookingStatus.Consulted;
+                booking.Note = AppendNote(booking.Note, userRole, $"Kỹ thuật TỪ CHỐI xe: {dto.TechNote}");
+                booking.UpdatedAt = DateTime.Now;
+                await _bookingRepo.UpdateAsync(booking);
+
+                await _notiService.CreateNotificationAsync(
+                    userId: null,
+                    showroomId: booking.ShowroomId,
+                    roleTarget: $"{AppRoles.Sales},{AppRoles.ShowroomSales},{AppRoles.Manager}",
+                    title: "Xe chưa đạt kỹ thuật ⚠️",
+                    content: $"Xe {booking.Car?.Name} chưa đạt kiểm tra kỹ thuật. Lý do: {dto.TechNote}. Vui lòng liên hệ khách {booking.CustomerName} để xử lý.",
+                    actionUrl: $"/admin/bookings/{bookingId}",
+                    type: "TechCheck"
+                );
+
+                return (true, "Đã ghi nhận xe chưa đạt, lịch hẹn trả về cho Sales xử lý.");
+            }
+        }
+
+        public async Task<(bool Success, string Message)> ConfirmBookingAsync(
+            int bookingId, string userRole, int? userShowroomId)
+        {
+            if (!IsSalesSide(userRole))
+                return (false, "Chỉ Sales mới được xác nhận lịch hẹn.");
+
+            var booking = await _bookingRepo.GetByIdAsync(bookingId);
+            if (booking == null) return (false, "Không tìm thấy lịch hẹn.");
+
+            if (!HasShowroomAccess(userRole, userShowroomId, booking.ShowroomId))
+                return (false, "Bạn không có quyền can thiệp vào lịch hẹn của chi nhánh khác!");
+
+            if (booking.Status != BookingStatus.TechApproved)
+                return (false, $"Lịch hẹn đang ở trạng thái '{booking.Status}', xe cần được kỹ thuật duyệt trước.");
+
+            booking.Status = BookingStatus.Confirmed;
+            booking.Note = AppendNote(booking.Note, userRole, "Đã xác nhận lịch lái thử với khách.");
+            booking.UpdatedAt = DateTime.Now;
+
+            await _bookingRepo.UpdateAsync(booking);
+            return (true, "Đã xác nhận lịch hẹn thành công.");
+        }
+
+        public async Task<(bool Success, string Message)> CompleteBookingAsync(
+            int bookingId, string? resultNote, string userRole, int? userShowroomId)
+        {
+            if (!IsSalesSide(userRole))
+                return (false, "Bạn không có quyền thực hiện thao tác này.");
+
+            var booking = await _bookingRepo.GetByIdAsync(bookingId);
+            if (booking == null) return (false, "Không tìm thấy lịch hẹn.");
+
+            if (!HasShowroomAccess(userRole, userShowroomId, booking.ShowroomId))
+                return (false, "Bạn không có quyền can thiệp vào lịch hẹn của chi nhánh khác!");
+
+            if (booking.Status != BookingStatus.Confirmed)
+                return (false, $"Lịch hẹn đang ở trạng thái '{booking.Status}', cần Confirmed mới hoàn thành được.");
+
+            booking.Status = BookingStatus.Completed;
+            if (!string.IsNullOrWhiteSpace(resultNote))
+                booking.Note = AppendNote(booking.Note, userRole, $"Kết quả lái thử: {resultNote}");
+            booking.UpdatedAt = DateTime.Now;
+
+            await _bookingRepo.UpdateAsync(booking);
+            return (true, "Đã hoàn thành lịch hẹn.");
+        }
+
+        public async Task<(bool Success, string Message)> MarkNoShowAsync(
+            int bookingId, BookingNoShowDto dto, string userRole, int? userShowroomId)
+        {
+            if (!IsSalesSide(userRole))
+                return (false, "Bạn không có quyền thực hiện thao tác này.");
+
+            var booking = await _bookingRepo.GetByIdAsync(bookingId);
+            if (booking == null) return (false, "Không tìm thấy lịch hẹn.");
+
+            if (!HasShowroomAccess(userRole, userShowroomId, booking.ShowroomId))
+                return (false, "Bạn không có quyền can thiệp vào lịch hẹn của chi nhánh khác!");
+
+            if (booking.Status != BookingStatus.Confirmed)
+                return (false, $"Lịch hẹn đang ở trạng thái '{booking.Status}', chỉ báo NoShow được khi đã Confirmed.");
+
+            booking.Status = BookingStatus.NoShow;
+            var reason = string.IsNullOrWhiteSpace(dto.Reason) ? "Khách không đến đúng hẹn" : dto.Reason;
+            booking.Note = AppendNote(booking.Note, userRole, $"NoShow: {reason}");
+            booking.UpdatedAt = DateTime.Now;
+
+            await _bookingRepo.UpdateAsync(booking);
+
+            await _notiService.CreateNotificationAsync(
+                userId: null,
+                showroomId: booking.ShowroomId,
+                roleTarget: AppRoles.Manager,
+                title: "Khách không đến đúng hẹn",
+                content: $"Khách {booking.CustomerName} ({booking.Phone}) không đến lái thử xe {booking.Car?.Name} vào {booking.BookingDate:dd/MM/yyyy} lúc {booking.BookingTime}.",
                 actionUrl: $"/admin/bookings/{bookingId}",
                 type: "SystemAlert"
             );
+
+            return (true, "Đã ghi nhận khách không tới.");
+        }
+
+        public async Task<(bool Success, string Message)> CancelBookingByAdminAsync(
+            int bookingId, BookingCancelDto dto, string userRole, int? userShowroomId)
+        {
+            var booking = await _bookingRepo.GetByIdAsync(bookingId);
+            if (booking == null) return (false, "Không tìm thấy lịch hẹn.");
+
+            if (!HasShowroomAccess(userRole, userShowroomId, booking.ShowroomId))
+                return (false, "Bạn không có quyền hủy lịch của chi nhánh khác!");
+
+            if (booking.Status == BookingStatus.Completed)
+                return (false, "Lịch hẹn đã hoàn thành, không thể hủy.");
+
+            if (booking.Status == BookingStatus.Cancelled)
+                return (false, "Lịch hẹn này đã bị hủy trước đó rồi.");
+
+            booking.Status = BookingStatus.Cancelled;
+            booking.Note = AppendNote(booking.Note, userRole, $"Hủy lịch: {dto.CancelReason}");
+            booking.UpdatedAt = DateTime.Now;
+
+            await _bookingRepo.UpdateAsync(booking);
+
+            if (userRole != AppRoles.Manager && userRole != AppRoles.Admin)
+            {
+                await _notiService.CreateNotificationAsync(
+                    userId: null,
+                    showroomId: booking.ShowroomId,
+                    roleTarget: AppRoles.Manager,
+                    title: "Cảnh báo: Lịch hẹn bị hủy",
+                    content: $"Nhân viên [{userRole}] vừa hủy lịch hẹn của khách {booking.CustomerName}. Lý do: {dto.CancelReason}",
+                    actionUrl: $"/admin/bookings/{bookingId}",
+                    type: "SystemAlert"
+                );
+            }
+
             return (true, "Đã hủy lịch hẹn thành công.");
+        }
+
+        public async Task<object> GetPendingTechCheckAsync(string userRole, int? userShowroomId)
+        {
+            if (userRole != AppRoles.Technician && userRole != AppRoles.Admin && userRole != AppRoles.Manager)
+                return new List<object>();
+
+            int? filterShowroom = (userRole == AppRoles.Admin) ? null : userShowroomId;
+            var bookings = await _bookingRepo.GetPendingTechCheckAsync(filterShowroom);
+
+            return bookings.Select(b => new
+            {
+                b.BookingId,
+                b.CustomerName,
+                b.Phone,
+                b.BookingDate,
+                b.BookingTime,
+                CarName = b.Car?.Name,
+                ShowroomName = b.Showroom?.Name,
+                b.Note
+            });
+        }
+
+        public async Task<Dictionary<string, int>> GetBookingStatsAsync(string userRole, int? userShowroomId)
+        {
+            int? filterShowroom = (userRole == AppRoles.Admin) ? null : userShowroomId;
+            return await _bookingRepo.CountByStatusAsync(filterShowroom);
         }
     }
 }

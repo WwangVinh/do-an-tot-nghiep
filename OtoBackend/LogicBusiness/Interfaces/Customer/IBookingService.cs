@@ -6,13 +6,12 @@ namespace LogicBusiness.Interfaces.Customer
 {
     public interface IBookingService
     {
-        // Khách đặt lịch mới
         Task<(bool Success, string Message)> CreateBookingAsync(BookingCreateDto dto);
 
-        // Khách xem lại danh sách lịch của mình
-        Task<IEnumerable<object>> GetMyBookingsAsync(int userId);
+        Task<IEnumerable<object>> GetBookingsByPhoneAsync(string phone);
 
-        // Khách tự hủy lịch
-        Task<(bool Success, string Message)> CancelBookingAsync(int bookingId, int userId);
+        Task<object?> GetBookingDetailByPhoneAsync(int bookingId, string phone);
+
+        Task<(bool Success, string Message)> CancelBookingByPhoneAsync(int bookingId, string phone, string? reason);
     }
 }

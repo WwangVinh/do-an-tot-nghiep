@@ -1,24 +1,35 @@
 export type AdminRole =
   | 'Admin'
-  | 'ShowroomManager'
+  | 'Manager'
   | 'ShowroomSales'
-  | 'SalesManager'
-  | 'Sales'
   | 'Technician'
+  | 'Sales'
+  | 'Marketing'
+  | 'Content'
 
 export function normalizeRole(role: unknown): AdminRole | null {
   if (typeof role !== 'string') return null
-  const r = role.trim()
+  const r = role.trim().toLowerCase()
   if (!r) return null
 
-  const lower = r.toLowerCase()
-  if (lower === 'admin') return 'Admin'
-  if (lower === 'showroommanager') return 'ShowroomManager'
-  if (lower === 'showroomsales') return 'ShowroomSales'
-  if (lower === 'salesmanager') return 'SalesManager'
-  if (lower === 'sales' || lower === 'sale') return 'Sales'
-  if (lower === 'technician' || lower === 'tech') return 'Technician'
-  return null
+  switch (r) {
+    case 'admin':
+      return 'Admin'
+    case 'manager':
+      return 'Manager'
+    case 'showroomsales':
+      return 'ShowroomSales'
+    case 'technician':
+      return 'Technician'
+    case 'sales':
+      return 'Sales'
+    case 'marketing':
+      return 'Marketing'
+    case 'content':
+      return 'Content'
+    default:
+      return null
+  }
 }
 
 export function isInRole(userRole: unknown, allowed: readonly AdminRole[]): boolean {
@@ -31,4 +42,3 @@ export function isInRole(userRole: unknown, allowed: readonly AdminRole[]): bool
 export function isAdminRole(userRole: unknown): boolean {
   return normalizeRole(userRole) === 'Admin'
 }
-

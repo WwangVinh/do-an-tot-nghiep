@@ -51,6 +51,7 @@ type CustomerCarDetailDto = {
   specifications: CarSpecGroupDto[]
   galleryImages: GalleryGroupDto[]
   images360: string[]
+  features: { featureId: number; featureName: string; icon: string }[]
 }
 
 type ApiEnvelope<T> = { message?: string; data: T }
@@ -123,7 +124,7 @@ function CarApiLandingPage({ carId }: { carId: number }) {
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
-  const [meta, setMeta] = useState<CarProductMeta | null>(null)
+  const [meta, setMeta] = useState<(CarProductMeta & { features?: any[] }) | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -237,6 +238,7 @@ function CarApiLandingPage({ carId }: { carId: number }) {
           name: carName,
           imageSrc,
           priceText,
+          features: payload.features ?? [],
           content: {
             overviewIntro: payload.description ?? '',
             overviewHighlights: [],

@@ -10,10 +10,10 @@ const BRAND_BLUE = '#335599'
 const BUTTON_BLUE = '#1a3a5a'
 
 const CONTACT = {
-  showroomName: 'Tên công ty',
+  showroomName: 'CMC AUTOMOTIVE',
   address: 'Địa chỉ trụ sở chính',
   hotline: '0393.775.683',
-  email: 'tencongty@gmail.com',
+  email: 'cmcautomotive@gmail.com',
 } as const
 
 export type ShowroomListItem = {

@@ -190,7 +190,7 @@ function DetailGallerySplitBlock({
   )
 }
 
-export function CarProductLanding({ name, imageSrc, priceText, content }: CarProductMeta) {
+export function CarProductLanding({ name, imageSrc, priceText, content, features }: CarProductMeta) {
   const navigate = useNavigate()
   const trialNameFieldId = useId()
   const trialPhoneFieldId = useId()
@@ -202,7 +202,6 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
     toast.success('Brochure sẽ được gửi qua email khi có kết nối hệ thống.')
   }, [])
 
-  /** `undefined`: trang catalog demo (dùng bảng màu cố định). Có key (kể cả `[]`): dữ liệu từ API. */
   const apiColorList = content.colorGallery
   const isApiColorSource = apiColorList !== undefined
 
@@ -254,6 +253,7 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
     <div className="w-full bg-white text-slate-900">
       {/* Hero */}
       <section className="border-b border-slate-100 bg-white">
+        {/* Giữ nguyên Hero Section của bạn */}
         <div className="mx-auto w-full max-w-screen-2xl px-5 py-10 sm:px-6 lg:px-8 lg:py-14">
           <div className="grid gap-10 lg:grid-cols-12 lg:items-start lg:gap-8 xl:gap-12">
             <div className="lg:col-span-5">
@@ -506,7 +506,7 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
                     }
                     const carIdFromUrl = window.location.pathname.split('/').pop() ?? ''
                     navigate('/lai-thu', {
-                      state: { trialPrefill: { fullName: full, phone, carId: carIdFromUrl } },
+                      state: { trialPrefill: { fullName: full, phone, carId: carIdFromUrl,carImage: heroImageSrc } },
                     })
                   }}
                 >
@@ -556,7 +556,7 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
         </div>
       </section>
 
-      {/* Sticky sub-nav */}
+      {/* Sticky sub-nav: ĐÃ CHÈN "Tính năng" VÀO TRƯỚC "Ngoại thất" */}
       <nav
         className={`sticky ${stickyHeaderOffsetClass} z-40 border-b border-white/10 shadow-sm`}
         style={{ backgroundColor: NAVY }}
@@ -566,6 +566,7 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
           {[
             ['#car-hinh-anh', 'Hình ảnh'],
             ['#car-tong-quan', 'Tổng quan'],
+            ['#car-tinh-nang', 'Tính năng'],
             ['#car-ngoai-that', 'Ngoại thất'],
             ['#car-noi-that', 'Nội thất'],
             ['#car-an-toan', 'An toàn'],
@@ -589,7 +590,7 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
         </div>
       </nav>
 
-      {/* Hình ảnh — đặt trước Tổng quan */}
+      {/* Hình ảnh */}
       <section id="car-hinh-anh" className="scroll-mt-28 border-b border-slate-100 bg-slate-50/80 pb-14 pt-10 sm:pb-16 sm:pt-12">
         <div className="mx-auto max-w-screen-2xl px-5 sm:px-6 lg:px-8">
           <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl" style={{ color: NAVY }}>
@@ -648,7 +649,7 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
       </section>
 
       {/* Tổng quan */}
-      <section id="car-tong-quan" className="scroll-mt-28 border-b border-slate-100 bg-slate-50/80">
+      <section id="car-tong-quan" className="scroll-mt-28 border-b border-slate-100 bg-white">
         <div className="mx-auto max-w-screen-2xl space-y-8 px-5 py-14 sm:px-6 lg:px-8 lg:py-16">
           {content.overviewSplit ? (
             <>
@@ -677,12 +678,57 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
         </div>
       </section>
 
-      {/* Ngoại thất */}
+      {/* TÍNH NĂNG */}
+      <section id="car-tinh-nang" className="scroll-mt-28 border-b border-slate-100 bg-slate-50/80">
+        <div className="mx-auto max-w-screen-2xl space-y-8 px-5 py-14 sm:px-6 lg:px-8 lg:py-16">
+          <SectionHeading 
+            tag="02" 
+            title="Tính năng" 
+            intro="Các tính năng tiện ích được trang bị sẵn trên phiên bản này." 
+          />
+          {features && features.length > 0 ? (
+            <div className="mt-8 relative w-full">
+              {/* Container cuộn ngang, ẩn thanh cuộn mặc định của trình duyệt */}
+              <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-6 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {features.map((feature: any) => (
+                  <div 
+                    key={feature.featureId} 
+                    // shrink-0 để không bị ép nhỏ lại, w-[140px] hoặc w-[160px] tuỳ chỉnh độ rộng thẻ
+                    className="shrink-0 w-[140px] sm:w-[160px] snap-start flex flex-col items-center justify-start p-5 border border-slate-200 rounded-xl bg-white text-center hover:shadow-md transition hover:-translate-y-1"
+                  >
+                    <div className="h-16 w-16 mb-4 flex shrink-0 items-center justify-center rounded-full bg-slate-50 border border-slate-100 p-3 shadow-sm">
+                      <img
+                        src={
+                          feature.icon?.startsWith('http') || feature.icon?.startsWith('/')
+                            ? feature.icon
+                            : `https://localhost:7033${feature.icon}`
+                        }
+                        alt={feature.featureName}
+                        className="w-full h-full object-contain"
+                        onError={(e) => { e.currentTarget.src = '/fallback-icon.png' }}
+                      />
+                    </div>
+                    <span className="text-[13px] sm:text-sm font-semibold text-slate-700 leading-snug">
+                      {feature.featureName}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500 mt-4 rounded-lg border border-dashed border-slate-300 bg-white px-4 py-8 text-center">
+              Chưa có thông tin về tính năng cho phiên bản này.
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* Ngoại thất (Cập nhật Tag thành 03) */}
       <section id="car-ngoai-that" className="scroll-mt-28 border-b border-slate-100 bg-white">
         <div className="mx-auto max-w-screen-2xl space-y-10 px-5 py-14 sm:px-6 lg:px-8 lg:py-16">
           {content.exteriorSplit ? (
             <DetailGallerySplitBlock
-              tag="02"
+              tag="03"
               title="Ngoại thất"
               slides={content.exteriorSplit.slides}
               fallbackSingleSrc={imageSrc}
@@ -690,7 +736,7 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
             />
           ) : (
             <>
-              <SectionHeading tag="02" title="Ngoại thất" intro={content.exteriorIntro} />
+              <SectionHeading tag="03" title="Ngoại thất" intro={content.exteriorIntro} />
               <div className="grid gap-8 lg:grid-cols-12 lg:items-start">
                 <div className="lg:col-span-7">
                   <div className="overflow-hidden rounded-lg bg-slate-100 ring-1 ring-black/5">
@@ -714,12 +760,12 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
         </div>
       </section>
 
-      {/* Nội thất */}
+      {/* Nội thất (Cập nhật Tag thành 04) */}
       <section id="car-noi-that" className="scroll-mt-28 border-b border-slate-100 bg-slate-50/80">
         <div className="mx-auto max-w-screen-2xl space-y-10 px-5 py-14 sm:px-6 lg:px-8 lg:py-16">
           {content.interiorSplit ? (
             <DetailGallerySplitBlock
-              tag="03"
+              tag="04"
               title="Nội thất"
               slides={content.interiorSplit.slides}
               fallbackSingleSrc={imageSrc}
@@ -727,7 +773,7 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
             />
           ) : (
             <>
-              <SectionHeading tag="03" title="Nội thất" intro={content.interiorIntro} />
+              <SectionHeading tag="04" title="Nội thất" intro={content.interiorIntro} />
               <div className="grid gap-8 lg:grid-cols-12 lg:items-start">
                 <div className="lg:col-span-7">
                   <div className="overflow-hidden rounded-lg bg-slate-100 ring-1 ring-black/5">
@@ -751,12 +797,12 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
         </div>
       </section>
 
-      {/* An toàn */}
+      {/* An toàn (Cập nhật Tag thành 05) */}
       <section id="car-an-toan" className="scroll-mt-28 border-b border-slate-100 bg-white">
         <div className="mx-auto max-w-screen-2xl space-y-10 px-5 py-14 sm:px-6 lg:px-8 lg:py-16">
           {content.safetySplit ? (
             <DetailGallerySplitBlock
-              tag="04"
+              tag="05"
               title="An toàn"
               slides={content.safetySplit.slides}
               fallbackSingleSrc={imageSrc}
@@ -764,7 +810,7 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
             />
           ) : (
             <>
-              <SectionHeading tag="04" title="An toàn" intro={content.safetyIntro} />
+              <SectionHeading tag="05" title="An toàn" intro={content.safetyIntro} />
               <div className="max-w-4xl">
                 <BulletList items={content.safetyBullets} />
                 <p className="mt-4 text-xs text-slate-500">Trang bị có thể thay đổi theo phiên bản và thời điểm mở bán.</p>
@@ -774,12 +820,12 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
         </div>
       </section>
 
-      {/* Vận hành */}
+      {/* Vận hành (Cập nhật Tag thành 06) */}
       <section id="car-van-hanh" className="scroll-mt-28 border-b border-slate-100 bg-slate-50/80">
         <div className="mx-auto max-w-screen-2xl space-y-10 px-5 py-14 sm:px-6 lg:px-8 lg:py-16">
           {content.performanceSplit ? (
             <DetailGallerySplitBlock
-              tag="05"
+              tag="06"
               title="Vận hành"
               slides={content.performanceSplit.slides}
               fallbackSingleSrc={imageSrc}
@@ -787,7 +833,7 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
             />
           ) : (
             <>
-              <SectionHeading tag="05" title="Vận hành" intro={content.performanceIntro} />
+              <SectionHeading tag="06" title="Vận hành" intro={content.performanceIntro} />
               <div className="max-w-4xl">
                 <BulletList items={content.performanceBullets} />
               </div>
@@ -796,21 +842,15 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
         </div>
       </section>
 
-      {/* Thông số */}
+      {/* Thông số (Cập nhật Tag thành 07) */}
       <section id="car-thong-so" className="scroll-mt-28 border-b border-slate-100 bg-white">
         <div className="mx-auto max-w-screen-2xl space-y-10 px-5 py-14 sm:px-6 lg:px-8 lg:py-16">
           <SectionHeading
-            tag="06"
+            tag="07"
             title={content.specsTitle ?? 'Thông số kỹ thuật'}
             intro="Bảng thông số tham khảo theo catalogue; chi tiết chính xác theo phiên bản và thời điểm giao xe."
           />
           <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-            {/* <div className="hidden sm:grid sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1.1fr)] sm:gap-6 sm:bg-slate-100/90 sm:px-6 sm:py-3">
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-700">Danh mục</div>
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-700">Thông số</div>
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-700">Giá trị</div>
-            </div> */}
-
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-slate-100/90">
@@ -825,7 +865,6 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
                   let i = 0
                   while (i < content.specsRows.length) {
                     const category = (content.specsRows[i].category ?? '').trim()
-                    // đếm số row cùng category liên tiếp
                     let count = 1
                     while (
                       i + count < content.specsRows.length &&
@@ -870,4 +909,3 @@ export function CarProductLanding({ name, imageSrc, priceText, content }: CarPro
     </div>
   )
 }
-

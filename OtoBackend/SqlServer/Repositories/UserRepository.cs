@@ -16,8 +16,7 @@ namespace SqlServer.Repositories
         // Danh sách các chức vụ thuộc nhóm "Nhân sự" để truy vấn nhanh
         private readonly string[] _staffRoles =
         {
-            "ShowroomManager", "SalesManager", "Sales",
-            "Technician", "Content", "Marketing", "ShowroomSales"
+            "Manager", "Sales", "Technician", "Content", "Marketing", "ShowroomSales"
         };
 
         public UserRepository(OtoContext context)
@@ -98,7 +97,7 @@ namespace SqlServer.Repositories
                 string safeRole = currentUserRole?.Trim().ToLower() ?? "";
 
                 // Nếu là Quản lý chi nhánh -> Chỉ được thấy quân mình
-                if ((safeRole == "showroommanager" || safeRole == "salesmanager") && currentUserShowroomId.HasValue)
+                if (safeRole == "manager" && currentUserShowroomId.HasValue)
                 {
                     query = query.Where(u => u.ShowroomId == currentUserShowroomId.Value);
                 }

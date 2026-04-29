@@ -15,7 +15,7 @@ namespace LogicBusiness.DTOs
 
 
         [RegularExpression("^(Available|OnDisplay|Out of stock)$",
-            ErrorMessage = "Trạng thái sai rồi ní ơi! Chỉ được nhập: Available, OnDisplay, hoặc Out of stock")]
+            ErrorMessage = "Trạng thái sai rồi! Chỉ được nhập: Available, OnDisplay, hoặc Out of stock")]
         public string DisplayStatus { get; set; } = "Available";
     }
 }

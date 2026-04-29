@@ -1,18 +1,18 @@
 ﻿using CoreEntities.Models;
+using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
 using SqlServer.DBContext;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace SqlServer.Repositories
 {
     public class BookingRepository : IBookingRepository
     {
-        private readonly OtoContext _context; 
+        private readonly OtoContext _context;
 
         public BookingRepository(OtoContext context)
         {
@@ -25,42 +25,12 @@ namespace SqlServer.Repositories
             await _context.SaveChangesAsync();
         }
 
-        // KIỂM TRA LỊCH HẸN CÓ BỊ ĐỤNG GIỜ KHÔNG (Dùng cho tạo lịch hẹn mới)
-        public async Task<bool> IsTimeSlotBookedAsync(int carId, int showroomId, DateOnly bookingDate, string bookingTime)
+        public async Task UpdateAsync(Booking booking)
         {
-            if (!TimeSpan.TryParse(bookingTime, out TimeSpan parsedNewTime))
-                return false;
-
-            var buffer = TimeSpan.FromHours(2);
-            var startTime = parsedNewTime.Subtract(buffer);
-            var endTime = parsedNewTime.Add(buffer);
-
-            // Lấy TẤT CẢ lịch hẹn của chiếc xe đó TRONG NGÀY HÔM ĐÓ lên
-            // Dùng DateOnly so sánh với DateOnly là không bị báo lỗi nữa!
-            var dailyBookings = await _context.Bookings
-                .Where(b => b.CarId == carId &&
-                            b.ShowroomId == showroomId &&
-                            b.BookingDate == bookingDate &&
-                            b.Status != "Cancelled" &&
-                            b.Status != "Completed")
-                .ToListAsync();
-
-            // So sánh thủ công từng cái lịch xem có bị đụng múi giờ không
-            foreach (var b in dailyBookings)
-            {
-                if (TimeSpan.TryParse(b.BookingTime, out TimeSpan existingTime))
-                {
-                    if (existingTime > startTime && existingTime < endTime)
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
+            _context.Bookings.Update(booking);
+            await _context.SaveChangesAsync();
         }
 
-        // LẤY CHI TIẾT 1 LỊCH HẸN
         public async Task<Booking?> GetByIdAsync(int bookingId)
         {
             return await _context.Bookings
@@ -69,14 +39,41 @@ namespace SqlServer.Repositories
                 .FirstOrDefaultAsync(b => b.BookingId == bookingId);
         }
 
-        // CẬP NHẬT LỊCH HẸN
-        public async Task UpdateAsync(Booking booking)
+        public async Task<bool> IsTimeSlotBookedAsync(int carId, int showroomId, DateOnly bookingDate, string bookingTime)
         {
-            _context.Bookings.Update(booking);
-            await _context.SaveChangesAsync();
+            if (!TimeSpan.TryParse(bookingTime, out TimeSpan parsedNewTime))
+                return false;
+
+            var buffer = TimeSpan.FromHours(2);
+            var dailyBookings = await _context.Bookings
+                .Where(b => b.CarId == carId &&
+                            b.ShowroomId == showroomId &&
+                            b.BookingDate == bookingDate &&
+                            b.Status != BookingStatus.Cancelled &&
+                            b.Status != BookingStatus.Completed &&
+                            b.Status != BookingStatus.NoShow)
+                .ToListAsync();
+
+            foreach (var b in dailyBookings)
+            {
+                if (TimeSpan.TryParse(b.BookingTime, out TimeSpan existingTime))
+                {
+                    if (existingTime > parsedNewTime.Subtract(buffer) && existingTime < parsedNewTime.Add(buffer))
+                        return true;
+                }
+            }
+
+            return false;
         }
 
-        // LẤY DANH SÁCH CHO QUẢN LÝ
+        public async Task<bool> HasBookedCarAsync(string phone, int carId)
+        {
+            return await _context.Bookings.AnyAsync(b =>
+                b.Phone == phone &&
+                b.CarId == carId &&
+                b.Status == BookingStatus.Completed);
+        }
+
         public async Task<(IEnumerable<Booking> Bookings, int TotalCount)> GetAdminBookingsAsync(
             int page, int pageSize, string? searchName, string? status,
             DateTime? fromDate, DateTime? toDate, int? targetShowroomId)
@@ -86,47 +83,28 @@ namespace SqlServer.Repositories
                 .Include(b => b.Showroom)
                 .AsQueryable();
 
-            //Lọc theo Chi nhánh (Manager/Staff)
             if (targetShowroomId.HasValue)
-            {
                 query = query.Where(b => b.ShowroomId == targetShowroomId.Value);
-            }
 
-            //Tìm kiếm theo Tên khách hàng hoặc Số điện thoại
             if (!string.IsNullOrWhiteSpace(searchName))
             {
-                var lowerSearch = searchName.ToLower();
-                query = query.Where(b => b.CustomerName.ToLower().Contains(lowerSearch) ||
-                                         b.Phone.Contains(lowerSearch));
+                var lower = searchName.ToLower();
+                query = query.Where(b => b.CustomerName.ToLower().Contains(lower) || b.Phone.Contains(lower));
             }
 
-            //Lọc theo Trạng thái (Vd: Chỉ xem các đơn "Scheduled")
             if (!string.IsNullOrWhiteSpace(status))
-            {
                 query = query.Where(b => b.Status == status);
-            }
 
-            //Lọc theo khoảng thời gian hẹn
-            // Do DB lưu kiểu DateOnly, mà API nhận DateTime nên phải chuyển đổi nhẹ ở đây
             if (fromDate.HasValue)
-            {
-                var fromDateOnly = DateOnly.FromDateTime(fromDate.Value);
-                query = query.Where(b => b.BookingDate >= fromDateOnly);
-            }
+                query = query.Where(b => b.BookingDate >= DateOnly.FromDateTime(fromDate.Value));
 
             if (toDate.HasValue)
-            {
-                var toDateOnly = DateOnly.FromDateTime(toDate.Value);
-                query = query.Where(b => b.BookingDate <= toDateOnly);
-            }
+                query = query.Where(b => b.BookingDate <= DateOnly.FromDateTime(toDate.Value));
 
-            // Đếm tổng số lượng lịch hẹn rớt vào rổ (để FE làm phân trang)
             int totalCount = await query.CountAsync();
 
-            // Sắp xếp: Ưu tiên hiển thị lịch hẹn mới tạo lên trên cùng
-            query = query.OrderByDescending(b => b.CreatedAt);
-
             var bookings = await query
+                .OrderByDescending(b => b.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
@@ -134,24 +112,95 @@ namespace SqlServer.Repositories
             return (bookings, totalCount);
         }
 
+        public async Task<IEnumerable<Booking>> GetByPhoneAsync(string phone)
+        {
+            return await _context.Bookings
+                .Include(b => b.Car)
+                .Include(b => b.Showroom)
+                .Where(b => b.Phone == phone)
+                .OrderByDescending(b => b.CreatedAt)
+                .ToListAsync();
+        }
 
-        //LẤY LỊCH RIÊNG (Dùng cho trang My Bookings)
         public async Task<IEnumerable<Booking>> GetByUserIdAsync(int userId)
         {
             return await _context.Bookings
                 .Include(b => b.Car)
                 .Include(b => b.Showroom)
                 .Where(b => b.UserId == userId)
-                .OrderByDescending(b => b.CreatedAt) // Mới nhất lên đầu
+                .OrderByDescending(b => b.CreatedAt)
                 .ToListAsync();
         }
 
-        public async Task<bool> HasBookedCarAsync(string phone, int carId)
+        public async Task<IEnumerable<Booking>> GetByStatusAsync(string status, int? showroomId = null)
         {
-            // Kiểm tra xem khách đã từng đặt lịch và hoàn thành với xe này chưa
-            return await _context.Bookings.AnyAsync(b => b.Phone == phone
-                && b.CarId == carId
-                && b.Status == "Completed");
+            var query = _context.Bookings
+                .Include(b => b.Car)
+                .Include(b => b.Showroom)
+                .Where(b => b.Status == status);
+
+            if (showroomId.HasValue)
+                query = query.Where(b => b.ShowroomId == showroomId.Value);
+
+            return await query
+                .OrderBy(b => b.BookingDate)
+                .ThenBy(b => b.BookingTime)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Booking>> GetPendingTechCheckAsync(int? showroomId)
+        {
+            var query = _context.Bookings
+                .Include(b => b.Car)
+                .Include(b => b.Showroom)
+                .Where(b => b.Status == BookingStatus.PendingTechCheck);
+
+            if (showroomId.HasValue)
+                query = query.Where(b => b.ShowroomId == showroomId.Value);
+
+            return await query
+                .OrderBy(b => b.BookingDate)
+                .ThenBy(b => b.BookingTime)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Booking>> GetBookingsTomorrowAsync()
+        {
+            var tomorrow = DateOnly.FromDateTime(DateTime.Today.AddDays(1));
+
+            return await _context.Bookings
+                .Include(b => b.Car)
+                .Include(b => b.Showroom)
+                .Where(b =>
+                    b.BookingDate == tomorrow &&
+                    (b.Status == BookingStatus.TechApproved ||
+                     b.Status == BookingStatus.Confirmed))
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Booking>> GetOverdueBookingsAsync()
+        {
+            var today = DateOnly.FromDateTime(DateTime.Today);
+
+            return await _context.Bookings
+                .Where(b =>
+                    b.BookingDate < today &&
+                    (b.Status == BookingStatus.TechApproved ||
+                     b.Status == BookingStatus.Confirmed))
+                .ToListAsync();
+        }
+
+        public async Task<Dictionary<string, int>> CountByStatusAsync(int? showroomId = null)
+        {
+            var query = _context.Bookings.AsQueryable();
+
+            if (showroomId.HasValue)
+                query = query.Where(b => b.ShowroomId == showroomId.Value);
+
+            return await query
+                .GroupBy(b => b.Status)
+                .Select(g => new { Status = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Status, x => x.Count);
         }
     }
 }

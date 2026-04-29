@@ -12,7 +12,7 @@ namespace OtoBackend.Controllers.Admin
 {
     [Route("api/admin/[controller]")]
     [ApiController]
-    [[Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Manager}")]
+    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Manager}")]
     public class ConsignmentsController : ControllerBase
     {
         private readonly IConsignmentService _consignService;

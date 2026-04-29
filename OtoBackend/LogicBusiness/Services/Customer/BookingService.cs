@@ -3,13 +3,9 @@ using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Customer;
 using LogicBusiness.Interfaces.Repositories;
 using LogicBusiness.Interfaces.Shared;
-using LogicBusiness.Services.Shared;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace LogicBusiness.Services.Customer
@@ -21,7 +17,11 @@ namespace LogicBusiness.Services.Customer
         private readonly ICarRepository _carRepo;
         private readonly INotificationService _notiService;
 
-        public BookingService(IBookingRepository bookingRepo, ICarInventoryRepository inventoryRepo, ICarRepository carRepo, INotificationService notiService)
+        public BookingService(
+            IBookingRepository bookingRepo,
+            ICarInventoryRepository inventoryRepo,
+            ICarRepository carRepo,
+            INotificationService notiService)
         {
             _bookingRepo = bookingRepo;
             _inventoryRepo = inventoryRepo;
@@ -31,7 +31,6 @@ namespace LogicBusiness.Services.Customer
 
         public async Task<(bool Success, string Message)> CreateBookingAsync(BookingCreateDto dto)
         {
-            // Kiểm tra xe còn trên sàn không?
             var car = await _carRepo.GetByIdAsync(dto.CarId);
             if (car == null)
                 return (false, "Xe không tồn tại!");
@@ -39,90 +38,186 @@ namespace LogicBusiness.Services.Customer
             if (car.Status != CarStatus.Available && car.Status != CarStatus.COMING_SOON)
                 return (false, "Rất tiếc, xe này hiện đã có người cọc hoặc ngừng giao dịch.");
 
-            // Kiểm tra xem xe có đang ở chi nhánh khách muốn đến xem không?
             var inventory = await _inventoryRepo.GetInventoryAsync(dto.CarId, dto.ShowroomId);
             if (inventory == null || inventory.Quantity <= 0)
-                return (false, "Chi nhánh này hiện không có sẵn mẫu xe bạn chọn. Ní thử chọn cơ sở khác xem!");
+                return (false, "Chi nhánh này hiện không có sẵn mẫu xe bạn chọn. Bạn thử chọn cơ sở khác xem!");
 
-            // Kiểm tra xem có ai hẹn xem con xe ĐỘC BẢN này cùng giờ không?
-            // Giả sử 1 ca lái thử / tư vấn tốn khoảng 2 tiếng
-            bool isTimeSlotTaken = await _bookingRepo.IsTimeSlotBookedAsync(dto.CarId, dto.ShowroomId, dto.BookingDate, dto.BookingTime);
+            bool isTimeSlotTaken = await _bookingRepo.IsTimeSlotBookedAsync(
+                dto.CarId, dto.ShowroomId, dto.BookingDate, dto.BookingTime);
             if (isTimeSlotTaken)
-            {
-                return (false, "Khung giờ này đã có khách khác hẹn xem xe rồi. Ní vui lòng chọn giờ khác nhé!");
-            }
+                return (false, "Khung giờ này đã có khách khác hẹn xem xe rồi. Bạn vui lòng chọn giờ khác nhé!");
 
-            // LÊN LỊCH HẸN TRẢI NGHIỆM
             var booking = new Booking
             {
                 CarId = dto.CarId,
                 ShowroomId = dto.ShowroomId,
-                CustomerName = dto.CustomerName,
-                Phone = dto.Phone,
+                CustomerName = dto.CustomerName.Trim(),
+                Phone = dto.Phone.Trim(),
                 BookingDate = dto.BookingDate,
                 BookingTime = dto.BookingTime,
                 Note = dto.Note,
-                UserId = dto.UserId,
-                Status = "Scheduled", // Trạng thái: Đã lên lịch hẹn xem xe
+                UserId = null,
+                Status = BookingStatus.Pending,
                 CreatedAt = DateTime.Now
             };
 
             await _bookingRepo.AddAsync(booking);
 
-            // Bắn thông báo: Người làm là currentUserId (int), người nhận là các Role liên quan
-            string formattedDate = dto.BookingDate.ToString("dd/MM/yyyy");
             await _notiService.CreateNotificationAsync(
-                 userId: null,
-                 roleTarget: "Manager,ShowroomSales", // Chỉ quản lý và sale tại cơ sở đó nhận tin
-                 showroomId: dto.ShowroomId,
-                 title: "Có lịch hẹn xem xe mới! 📅",
-                 content: $"Khách hàng {dto.CustomerName} ({dto.Phone}) vừa đặt lịch xem mẫu {car.Brand} {car.Name} vào lúc {dto.BookingTime} ngày {formattedDate}.",
-                 actionUrl: "/admin/bookings",
-                 type: "Booking"
-             );
+                userId: null,
+                showroomId: dto.ShowroomId,
+                roleTarget: $"{AppRoles.Manager},{AppRoles.Sales},{AppRoles.ShowroomSales}",
+                title: "Có lịch hẹn lái thử mới! 📅",
+                content: $"Khách {dto.CustomerName} ({dto.Phone}) vừa đặt lịch lái thử {car.Brand} {car.Name} lúc {dto.BookingTime} ngày {dto.BookingDate:dd/MM/yyyy}.",
+                actionUrl: "/admin/bookings",
+                type: "Booking"
+            );
 
-            return (true, "Đặt lịch hẹn lái thử thành công! Sale bên em sẽ liên hệ để đón ní nhé.");
+            return (true, "Đặt lịch hẹn lái thử thành công! Nhân viên sẽ liên hệ bạn sớm nhé.");
         }
 
-
-        public async Task<IEnumerable<object>> GetMyBookingsAsync(int userId)
+        public async Task<IEnumerable<object>> GetBookingsByPhoneAsync(string phone)
         {
-            var bookings = await _bookingRepo.GetByUserIdAsync(userId);
-            return bookings.Select(b => new {
+            var bookings = await _bookingRepo.GetByPhoneAsync(phone);
+
+            return bookings.Select(b => new
+            {
                 b.BookingId,
                 b.BookingDate,
                 b.BookingTime,
                 b.Status,
+                StatusLabel = ToStatusLabel(b.Status),
                 CarName = b.Car?.Name,
+                CarImage = b.Car?.ImageUrl,
                 ShowroomName = b.Showroom?.Name,
-                b.CreatedAt
+                CreatedAt = b.CreatedAt?.ToString("dd/MM/yyyy HH:mm")
             });
         }
 
-        public async Task<(bool Success, string Message)> CancelBookingAsync(int bookingId, int userId)
+        public async Task<object?> GetBookingDetailByPhoneAsync(int bookingId, string phone)
         {
             var booking = await _bookingRepo.GetByIdAsync(bookingId);
-            if (booking == null || booking.UserId != userId)
-                return (false, "Không tìm thấy lịch hẹn hoặc ní không có quyền hủy lịch này!");
 
-            if (booking.Status != "Scheduled")
-                return (false, "Lịch hẹn này không ở trạng thái có thể hủy.");
+            if (booking == null || booking.Phone != phone)
+                return null;
 
-            booking.Status = "Cancelled";
+            return new
+            {
+                booking.BookingId,
+                booking.CustomerName,
+                booking.Phone,
+                booking.BookingDate,
+                booking.BookingTime,
+                booking.Status,
+                StatusLabel = ToStatusLabel(booking.Status),
+                HasNote = !string.IsNullOrWhiteSpace(booking.Note),
+                CarDetails = new
+                {
+                    booking.Car?.CarId,
+                    booking.Car?.Name,
+                    booking.Car?.Brand,
+                    ImageUrl = booking.Car?.ImageUrl
+                },
+                ShowroomDetails = new
+                {
+                    booking.Showroom?.ShowroomId,
+                    booking.Showroom?.Name,
+                    booking.Showroom?.District,
+                    booking.Showroom?.StreetAddress
+                },
+                CreatedAt = booking.CreatedAt?.ToString("dd/MM/yyyy HH:mm"),
+                UpdatedAt = booking.UpdatedAt?.ToString("dd/MM/yyyy HH:mm"),
+                Timeline = BuildTimeline(booking.Status)
+            };
+        }
+
+        public async Task<(bool Success, string Message)> CancelBookingByPhoneAsync(int bookingId, string phone, string? reason)
+        {
+            var booking = await _bookingRepo.GetByIdAsync(bookingId);
+
+            if (booking == null || booking.Phone != phone)
+                return (false, "Không tìm thấy lịch hẹn hoặc số điện thoại không khớp.");
+
+            if (booking.Status == BookingStatus.PendingTechCheck ||
+                booking.Status == BookingStatus.TechApproved ||
+                booking.Status == BookingStatus.Confirmed)
+                return (false, "Lịch hẹn đang trong quá trình chuẩn bị, bạn vui lòng liên hệ trực tiếp showroom để hủy nhé!");
+
+            if (booking.Status == BookingStatus.Completed)
+                return (false, "Lịch hẹn này đã hoàn thành, không thể hủy.");
+
+            if (booking.Status == BookingStatus.Cancelled)
+                return (false, "Lịch hẹn này đã bị hủy trước đó rồi.");
+
+            booking.Status = BookingStatus.Cancelled;
             booking.UpdatedAt = DateTime.Now;
+
+            if (!string.IsNullOrWhiteSpace(reason))
+            {
+                var line = $"[{DateTime.Now:dd/MM/yyyy HH:mm} - Khách hủy]: {reason.Trim()}";
+                booking.Note = string.IsNullOrWhiteSpace(booking.Note)
+                    ? line
+                    : $"{booking.Note}\n{line}";
+            }
 
             await _bookingRepo.UpdateAsync(booking);
 
             await _notiService.CreateNotificationAsync(
                 userId: null,
-                roleTarget: "Manager,ShowroomSales", // Tương tự, chỉ báo cho Sale và Quản lý
                 showroomId: booking.ShowroomId,
+                roleTarget: $"{AppRoles.Manager},{AppRoles.Sales},{AppRoles.ShowroomSales}",
                 title: "Khách tự hủy lịch hẹn ❌",
-                content: $"Khách hàng {booking.CustomerName} đã tự hủy lịch xem xe trên web. Anh em cập nhật lại lịch trình nhé!",
+                content: $"Khách {booking.CustomerName} ({booking.Phone}) vừa tự hủy lịch lái thử xe {booking.Car?.Name}."
+                    + (string.IsNullOrWhiteSpace(reason) ? "" : $" Lý do: {reason}"),
                 actionUrl: "/admin/bookings",
                 type: "Booking"
             );
+
             return (true, "Đã hủy lịch hẹn thành công!");
+        }
+
+        private static string ToStatusLabel(string? status) => status switch
+        {
+            BookingStatus.Pending => "Chờ tư vấn",
+            BookingStatus.Consulted => "Đã tư vấn",
+            BookingStatus.PendingTechCheck => "Đang kiểm tra xe",
+            BookingStatus.TechApproved => "Xe sẵn sàng",
+            BookingStatus.Confirmed => "Đã xác nhận lịch",
+            BookingStatus.Completed => "Hoàn thành",
+            BookingStatus.NoShow => "Không đến",
+            BookingStatus.Cancelled => "Đã hủy",
+            _ => status ?? "Không xác định"
+        };
+
+        private static object BuildTimeline(string? currentStatus)
+        {
+            var steps = new[]
+            {
+                BookingStatus.Pending,
+                BookingStatus.Consulted,
+                BookingStatus.PendingTechCheck,
+                BookingStatus.TechApproved,
+                BookingStatus.Confirmed,
+                BookingStatus.Completed
+            };
+
+            if (currentStatus == BookingStatus.Cancelled || currentStatus == BookingStatus.NoShow)
+                return new { IsTerminated = true, Status = currentStatus };
+
+            int currentIndex = Array.IndexOf(steps, currentStatus);
+
+            return new
+            {
+                IsTerminated = false,
+                Steps = steps.Select((s, i) => new
+                {
+                    Status = s,
+                    Label = ToStatusLabel(s),
+                    IsDone = i < currentIndex,
+                    IsCurrent = i == currentIndex,
+                    IsPending = i > currentIndex
+                })
+            };
         }
     }
 }

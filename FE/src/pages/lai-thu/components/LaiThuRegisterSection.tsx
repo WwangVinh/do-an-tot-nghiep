@@ -23,6 +23,18 @@ type PagedCarsResponse = {
   data: CustomerCarListDto[]
 }
 
+type PricingVersionDto = {
+  pricingVersionId: number
+  name: string
+}
+
+type ShowroomDto = {
+  showroomId: number // <-- BACKEND PHẢI TRẢ VỀ TRƯỜNG NÀY NHÉ NÍ
+  showroomName: string
+  showroomAddress: string
+  quantity: number
+}
+
 const carsApi = axios.create({
   baseURL: new URL('/api/', env.VITE_API_BASE_URL).toString(),
   timeout: 20_000,
@@ -36,9 +48,10 @@ const bookingsApi = axios.create({
 type BookingCreatePayload = {
   carId: number
   showroomId: number
+  pricingVersionId?: number 
   customerName: string
   phone: string
-  bookingDate: string // YYYY-MM-DD (DateOnly)
+  bookingDate: string 
   bookingTime?: string
   timeSpan?: string
   note?: string
@@ -48,15 +61,31 @@ async function getCarOptions(): Promise<CarOption[]> {
   const res = await carsApi.get<PagedCarsResponse>('Cars', {
     params: { page: 1, pageSize: 100, inStockOnly: false },
   })
-
   const list = Array.isArray(res.data?.data) ? res.data.data : []
   return list
     .map((c) => ({ id: String(c.carId), label: c.name }))
     .filter((c) => c.label.trim().length > 0)
 }
 
+async function getCarDetails(carId: string) {
+  const res = await carsApi.get(`Cars/${carId}`)
+  const data = res.data?.data
+  
+  return {
+    versions: (data?.pricingVersions as PricingVersionDto[]) || [],
+    showrooms: (data?.showroomDetails as ShowroomDto[]) || [],
+    imageUrl: data?.imageUrl ? new URL(data.imageUrl, env.VITE_API_BASE_URL).toString() : null
+  }
+}
+
 type LaiThuLocationState = {
-  trialPrefill?: { fullName?: string; phone?: string; carId?: string }
+  trialPrefill?: { 
+    fullName?: string; 
+    phone?: string; 
+    carId?: string;
+    carName?: string;
+    carImage?: string; 
+  }
 }
 
 export function LaiThuRegisterSection() {
@@ -75,12 +104,13 @@ export function LaiThuRegisterSection() {
     staleTime: 5 * 60_000,
   })
 
-
-
   const rootRef = useRef<HTMLDivElement | null>(null)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [selectedCar, setSelectedCar] = useState<CarOption | null>(null)
+
+  const [selectedVersionId, setSelectedVersionId] = useState('')
+  const [selectedShowroomId, setSelectedShowroomId] = useState('') // Đổi tên state cho chuẩn
 
   useEffect(() => {
     const prefillCarId = trialPrefill?.carId
@@ -88,6 +118,21 @@ export function LaiThuRegisterSection() {
     const found = carOptions.find((c) => c.id === prefillCarId)
     if (found) setSelectedCar(found)
   }, [carOptions, trialPrefill?.carId])
+
+  const { data: carDetails, isFetching: isCarDetailsLoading } = useQuery({
+    queryKey: ['car-details', selectedCar?.id],
+    queryFn: () => getCarDetails(selectedCar!.id),
+    enabled: !!selectedCar?.id,
+  })
+
+  const versions = carDetails?.versions || []
+  const showrooms = carDetails?.showrooms || []
+
+  useEffect(() => {
+    setSelectedVersionId('')
+    setSelectedShowroomId('')
+  }, [selectedCar?.id])
+  
   const [touched, setTouched] = useState(false)
   const [bookingDate, setBookingDate] = useState('')
   const [bookingTime, setBookingTime] = useState('')
@@ -110,23 +155,30 @@ export function LaiThuRegisterSection() {
   }, [])
 
   const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), [])
-  const SHOWROOM_ID = 1
+
+  const displayImage = carDetails?.imageUrl 
+    || (selectedCar?.id === trialPrefill?.carId ? trialPrefill?.carImage : banner1) 
+    || banner1
+
+  const displayName = selectedCar?.label || trialPrefill?.carName || "Showroom VinFast Nam Từ Liêm"
 
   return (
     <section className="w-full bg-white">
       <div className="mx-auto w-full max-w-screen-2xl px-5 py-10 sm:px-6 sm:py-14 lg:px-8 lg:py-16">
         <div className="grid gap-10 lg:grid-cols-2 lg:items-stretch lg:gap-12 xl:gap-16">
-          {/* Cột trái: ảnh showroom */}
-          <div className="relative min-h-[240px] overflow-hidden rounded-lg bg-slate-100 sm:min-h-[320px] lg:min-h-0">
-            <img
-              src={banner1}
-              alt="Showroom VinFast Nam Từ Liêm"
-              className="h-full w-full object-cover"
-              loading="eager"
-            />
+          <div className="relative min-h-[240px] flex items-center justify-center overflow-hidden rounded-lg bg-slate-50 border border-slate-100 sm:min-h-[320px] lg:min-h-0">
+            {isCarDetailsLoading ? (
+              <div className="flex items-center justify-center text-slate-400">Đang tải ảnh xe...</div>
+            ) : (
+              <img
+                src={displayImage}
+                alt={displayName}
+                className={displayImage === banner1 ? "h-full w-full object-cover" : "w-full p-4 object-contain transition-opacity duration-300"}
+                loading="eager"
+              />
+            )}
           </div>
 
-          {/* Cột phải: nội dung + form */}
           <div className="flex flex-col justify-center">
             <div className="space-y-4 text-[15px] leading-[1.7] text-slate-800 sm:text-base sm:leading-relaxed">
               <p>
@@ -135,8 +187,7 @@ export function LaiThuRegisterSection() {
                 đến tận nhà phục vụ Quý khách hàng.
               </p>
               <p>
-                Để đăng ký lái thử với đại lý Vinfast Nam Từ Liêm vui lòng gọi nhanh qua số
-                Hotline hoặc điền vào mẫu dưới đây và gửi yêu cầu của Quý khách hàng. Chúng
+                Để đăng ký lái thử, vui lòng điền thông tin vào mẫu dưới đây và gửi yêu cầu. Chúng
                 tôi sẽ liên hệ lại để hỗ trợ trong vòng 24h.
               </p>
             </div>
@@ -148,11 +199,19 @@ export function LaiThuRegisterSection() {
                   e.preventDefault()
                   setTouched(true)
                   setOpen(false)
+
                   if (!selectedCar?.id) {
-                    toast.error('Vui lòng chọn xe muốn mua.')
+                    toast.error('Vui lòng chọn xe muốn lái thử.')
                     return
                   }
-
+                  if (!selectedVersionId) {
+                    toast.error('Vui lòng chọn phiên bản xe.')
+                    return
+                  }
+                  if (!selectedShowroomId) {
+                    toast.error('Vui lòng chọn Showroom.')
+                    return
+                  }
                   if (!bookingDate) {
                     toast.error('Vui lòng chọn ngày muốn lái thử.')
                     return
@@ -167,22 +226,39 @@ export function LaiThuRegisterSection() {
                   const customerName = String(fd.get('fullName') ?? '').trim()
                   const phone = String(fd.get('phone') ?? '').trim()
 
+                  // Lấy tên Phiên bản và Showroom để nhét vào Ghi chú (Note)
+                  const versionName = versions.find(v => String(v.pricingVersionId) === selectedVersionId)?.name || ''
+                  
+                  // Lấy tên Showroom từ list
+                  let showroomName = showrooms.find(s => String(s.showroomId) === selectedShowroomId)?.showroomName || selectedShowroomId;
+
+                  // XỬ LÝ LỖI 400 CỦA SHOWROOM ID:
+                  // Nếu BE chưa trả showroomId, selectedShowroomId sẽ là chữ -> Number() ra NaN.
+                  // Lúc này mình fallback về 1 (giống biến SHOWROOM_ID = 1 ở code cũ của ní) để API không bị lỗi 400.
+                  const parsedShowroomId = Number(selectedShowroomId);
+                  const safeShowroomId = isNaN(parsedShowroomId) || parsedShowroomId === 0 ? 1 : parsedShowroomId;
+
+                  // PAYLOAD CHUẨN (Khớp 100% code cũ của ní, không gửi thừa trường)
                   const payload: BookingCreatePayload = {
                     carId: Number(selectedCar.id),
-                    showroomId: SHOWROOM_ID,
+                    showroomId: safeShowroomId,
                     customerName,
                     phone,
                     bookingDate,
                     bookingTime,
-                    note: 'Đăng ký lái thử',
+                    note: `Đăng ký lái thử phiên bản [${versionName}] tại [${showroomName}]`,
+                    // bỏ userId: null
                   }
 
                   try {
                     setIsSubmitting(true)
-                    await bookingsApi.post('Bookings/public-create', payload)
+                    // Nhớ check lại link này là 'Bookings/public-create' hay 'Bookings/create' theo BE của ní nha
+                    await bookingsApi.post('Bookings/create', payload)
                     toast.success('Đặt lịch lái thử thành công. Chúng tôi sẽ liên hệ sớm.')
                     form.reset()
                     setSelectedCar(null)
+                    setSelectedVersionId('')
+                    setSelectedShowroomId('')
                     setQuery('')
                     setBookingDate('')
                     setBookingTime('')
@@ -199,6 +275,7 @@ export function LaiThuRegisterSection() {
                         toast.error('Bạn cần đăng nhập để đặt lịch lái thử.')
                         return
                       }
+                      console.error("LỖI API:", err.response?.data) // Log ra console để ní F12 bắt lỗi dễ hơn
                       toast.error(message || 'Đặt lịch thất bại. Vui lòng thử lại.')
                       return
                     }
@@ -209,9 +286,6 @@ export function LaiThuRegisterSection() {
                 }}
               >
                 <div>
-                  <label htmlFor={nameId} className="sr-only">
-                    Họ và tên
-                  </label>
                   <input
                     id={nameId}
                     name="fullName"
@@ -224,9 +298,6 @@ export function LaiThuRegisterSection() {
                 </div>
 
                 <div>
-                  <label htmlFor={phoneId} className="sr-only">
-                    Số điện thoại
-                  </label>
                   <input
                     id={phoneId}
                     name="phone"
@@ -242,18 +313,13 @@ export function LaiThuRegisterSection() {
                 </div>
 
                 <div ref={rootRef} className="relative">
-                  <label htmlFor={carId} className="sr-only">
-                    Xe muốn mua
-                  </label>
-
                   <input type="hidden" name="carId" value={selectedCar?.id ?? ''} />
-
                   <input
                     id={carId}
                     role="combobox"
                     aria-expanded={open}
                     aria-controls={`${carId}-listbox`}
-                    placeholder={isCarsLoading ? 'Đang tải danh sách xe...' : 'Xe muốn mua'}
+                    placeholder={isCarsLoading ? 'Đang tải danh sách xe...' : 'Xe muốn lái thử'}
                     value={open ? query : selectedCar?.label ?? ''}
                     onFocus={() => {
                       setOpen(true)
@@ -276,7 +342,6 @@ export function LaiThuRegisterSection() {
                   <button
                     type="button"
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-600"
-                    aria-label={open ? 'Đóng danh sách xe' : 'Mở danh sách xe'}
                     onClick={() => {
                       setTouched(true)
                       setOpen((v) => !v)
@@ -284,22 +349,12 @@ export function LaiThuRegisterSection() {
                     }}
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-                      <path
-                        d="M6 9l6 6 6-6"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
+                      <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </button>
 
                   {open ? (
-                    <div
-                      id={`${carId}-listbox`}
-                      role="listbox"
-                      className="absolute z-20 mt-2 max-h-64 w-full overflow-auto rounded border border-slate-200 bg-white py-1 text-sm shadow-lg"
-                    >
+                    <div className="absolute z-20 mt-2 max-h-64 w-full overflow-auto rounded border border-slate-200 bg-white py-1 text-sm shadow-lg">
                       {isCarsLoading ? (
                         <div className="px-4 py-2 text-slate-500">Đang tải...</div>
                       ) : filteredCars.length === 0 ? (
@@ -311,12 +366,7 @@ export function LaiThuRegisterSection() {
                             <button
                               key={c.id}
                               type="button"
-                              role="option"
-                              aria-selected={isSelected}
-                              className={[
-                                'flex w-full items-center justify-between px-4 py-2 text-left',
-                                isSelected ? 'bg-slate-100 text-slate-900' : 'text-slate-700 hover:bg-slate-50',
-                              ].join(' ')}
+                              className={`flex w-full items-center justify-between px-4 py-2 text-left ${isSelected ? 'bg-slate-100 text-slate-900' : 'text-slate-700 hover:bg-slate-50'}`}
                               onClick={() => {
                                 setSelectedCar(c)
                                 setQuery(c.label)
@@ -325,9 +375,7 @@ export function LaiThuRegisterSection() {
                               }}
                             >
                               <span className="truncate">{c.label}</span>
-                              {isSelected ? (
-                                <span className="ml-3 text-[11px] font-semibold text-[#1a3a5a]">Đã chọn</span>
-                              ) : null}
+                              {isSelected && <span className="ml-3 text-[11px] font-semibold text-[#1a3a5a]">Đã chọn</span>}
                             </button>
                           )
                         })
@@ -338,9 +386,41 @@ export function LaiThuRegisterSection() {
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
-                    <label htmlFor={bookingDateId} className="sr-only">
-                      Ngày muốn lái thử
-                    </label>
+                    <select
+                      value={selectedVersionId}
+                      onChange={(e) => setSelectedVersionId(e.target.value)}
+                      className={inputClassName}
+                      disabled={!selectedCar?.id || isCarDetailsLoading}
+                    >
+                      <option value="">{isCarDetailsLoading ? 'Đang tải...' : 'Chọn phiên bản'}</option>
+                      {versions.map(v => (
+                        <option key={v.pricingVersionId} value={v.pricingVersionId}>
+                          {v.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <select
+                      value={selectedShowroomId}
+                      onChange={(e) => setSelectedShowroomId(e.target.value)}
+                      className={inputClassName}
+                      disabled={!selectedCar?.id || isCarDetailsLoading}
+                    >
+                      <option value="">{isCarDetailsLoading ? 'Đang tải...' : 'Chọn Showroom'}</option>
+                      {showrooms.map(s => (
+                        /* ĐÂY NÈ NÍ: Value là truyền ID vào, Chữ kẹp giữa là hiển thị Tên ra */
+                        <option key={s.showroomId} value={s.showroomId}>
+                          {s.showroomName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
                     <input
                       id={bookingDateId}
                       name="bookingDate"
@@ -357,9 +437,6 @@ export function LaiThuRegisterSection() {
                   </div>
 
                   <div>
-                    <label htmlFor={bookingTimeId} className="sr-only">
-                      Giờ muốn lái thử
-                    </label>
                     <input
                       id={bookingTimeId}
                       name="bookingTime"
@@ -378,7 +455,7 @@ export function LaiThuRegisterSection() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="mt-2 inline-flex h-12 w-full cursor-pointer items-center justify-center rounded px-4 text-[13px] font-bold uppercase tracking-[0.06em] text-white transition hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1a3a5a] focus-visible:ring-offset-2 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
+                  className="mt-2 inline-flex h-12 w-full cursor-pointer items-center justify-center rounded px-4 text-[13px] font-bold uppercase tracking-[0.06em] text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
                   style={{ backgroundColor: NAVY }}
                 >
                   {isSubmitting ? 'Đang gửi...' : 'Gửi yêu cầu ngay'}

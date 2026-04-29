@@ -20,7 +20,7 @@ export function AdminHeader({
             <div className="flex items-center gap-2">
               <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500" />
               <div className="leading-tight">
-                <div className="text-sm font-semibold text-slate-900 dark:text-zinc-50">Tên công ty</div>
+                <div className="text-sm font-semibold text-slate-900 dark:text-zinc-50">CMC AUTOMOTIVE</div>
                 <div className="text-xs text-slate-500 dark:text-zinc-400">Admin Panel</div>
               </div>
             </div>

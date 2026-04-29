@@ -31,7 +31,8 @@ export const routes: RouteObject[] = [
   },
   {
     element: (
-      <RequireRole allowed={['Admin', 'ShowroomManager', 'ShowroomSales', 'SalesManager', 'Sales', 'Technician']}>
+      // Cho phép tất cả các role đã định nghĩa vào Layout chung
+      <RequireRole allowed={['Admin', 'Manager', 'ShowroomSales', 'Sales', 'Technician', 'Marketing', 'Content']}>
         <AdminLayout />
       </RequireRole>
     ),
@@ -40,7 +41,7 @@ export const routes: RouteObject[] = [
       {
         path: '/banners',
         element: (
-          <RequireRole allowed={['Admin']}>
+          <RequireRole allowed={['Admin', 'Marketing']}>
             <BannersPage />
           </RequireRole>
         ),
@@ -48,7 +49,7 @@ export const routes: RouteObject[] = [
       {
         path: '/cars',
         element: (
-          <RequireRole allowed={['Admin', 'ShowroomManager', 'ShowroomSales', 'SalesManager', 'Sales', 'Technician']}>
+          <RequireRole allowed={['Admin', 'Manager', 'ShowroomSales', 'Sales', 'Technician']}>
             <CarsListPage />
           </RequireRole>
         ),
@@ -56,7 +57,7 @@ export const routes: RouteObject[] = [
       {
         path: '/cars/new',
         element: (
-          <RequireRole allowed={['Admin', 'ShowroomManager', 'SalesManager']}>
+          <RequireRole allowed={['Admin', 'Manager', 'ShowroomSales', 'Sales']}>
             <CarsNewPage />
           </RequireRole>
         ),
@@ -64,7 +65,7 @@ export const routes: RouteObject[] = [
       {
         path: '/cars/:id/edit',
         element: (
-          <RequireRole allowed={['Admin', 'ShowroomManager', 'SalesManager']}>
+          <RequireRole allowed={['Admin', 'Manager', 'ShowroomSales', 'Sales']}>
             <CarsEditPage />
           </RequireRole>
         ),
@@ -72,7 +73,7 @@ export const routes: RouteObject[] = [
       {
         path: '/showrooms',
         element: (
-          <RequireRole allowed={['Admin', 'ShowroomManager', 'SalesManager']}>
+          <RequireRole allowed={['Admin', 'Manager']}>
             <ShowroomsPage />
           </RequireRole>
         ),
@@ -80,7 +81,7 @@ export const routes: RouteObject[] = [
       {
         path: '/orders',
         element: (
-          <RequireRole allowed={['Admin', 'ShowroomManager', 'ShowroomSales', 'SalesManager', 'Sales']}>
+          <RequireRole allowed={['Admin', 'Manager', 'ShowroomSales', 'Sales']}>
             <OrdersPage />
           </RequireRole>
         ),
@@ -88,7 +89,7 @@ export const routes: RouteObject[] = [
       {
         path: '/bookings',
         element: (
-          <RequireRole allowed={['Admin', 'ShowroomManager', 'ShowroomSales', 'SalesManager', 'Sales']}>
+          <RequireRole allowed={['Admin', 'Manager', 'ShowroomSales', 'Sales', 'Technician']}>
             <BookingsPage />
           </RequireRole>
         ),
@@ -96,7 +97,7 @@ export const routes: RouteObject[] = [
       {
         path: '/users',
         element: (
-          <RequireRole allowed={['Admin', 'ShowroomManager', 'SalesManager']}>
+          <RequireRole allowed={['Admin', 'Manager']}>
             <UsersPage />
           </RequireRole>
         ),
@@ -104,7 +105,7 @@ export const routes: RouteObject[] = [
       {
         path: '/articles',
         element: (
-          <RequireRole allowed={['Admin']}>
+          <RequireRole allowed={['Admin','Manager', 'Content', 'Marketing']}>
             <ArticlesPage />
           </RequireRole>
         ),
@@ -112,7 +113,7 @@ export const routes: RouteObject[] = [
       {
         path: '/promotions',
         element: (
-          <RequireRole allowed={['Admin']}>
+          <RequireRole allowed={['Admin', 'Manager', 'Marketing']}>
             <PromotionsPage />
           </RequireRole>
         ),
@@ -120,7 +121,7 @@ export const routes: RouteObject[] = [
       {
         path: '/notifications',
         element: (
-          <RequireRole allowed={['Admin']}>
+          <RequireRole allowed={['Admin', 'Manager', 'Marketing', 'Content', 'ShowroomSales', 'Sales', 'Technician']}>
             <NotificationsPage />
           </RequireRole>
         ),
@@ -128,7 +129,7 @@ export const routes: RouteObject[] = [
       {
         path: '/inventories',
         element: (
-          <RequireRole allowed={['Admin', 'ShowroomManager', 'ShowroomSales', 'SalesManager', 'Sales', 'Technician']}>
+          <RequireRole allowed={['Admin', 'Manager', 'ShowroomSales', 'Sales', 'Technician']}>
             <InventoriesPage />
           </RequireRole>
         ),
@@ -136,7 +137,7 @@ export const routes: RouteObject[] = [
       {
         path: '/reviews',
         element: (
-          <RequireRole allowed={['Admin']}>
+          <RequireRole allowed={['Admin', 'Content']}>
             <ReviewsPage />
           </RequireRole>
         ),
@@ -145,4 +146,3 @@ export const routes: RouteObject[] = [
     ],
   },
 ]
-

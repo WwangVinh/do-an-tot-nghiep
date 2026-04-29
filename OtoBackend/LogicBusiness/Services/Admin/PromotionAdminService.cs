@@ -47,7 +47,7 @@ namespace LogicBusiness.Services.Admin
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
                 Status = dto.Status,
-                CarId = dto.CarId,
+                CarId = dto.CarId == 0 ? null : dto.CarId,
                 MaxUsage = dto.MaxUsage,
                 CurrentUsage = 0
             };
@@ -83,7 +83,7 @@ namespace LogicBusiness.Services.Admin
             existing.StartDate = dto.StartDate;
             existing.EndDate = dto.EndDate;
             existing.Status = dto.Status;
-            existing.CarId = dto.CarId;
+            existing.CarId = dto.CarId == 0 ? null : dto.CarId;
             existing.MaxUsage = dto.MaxUsage;
 
             await _repo.UpdateAsync(existing);

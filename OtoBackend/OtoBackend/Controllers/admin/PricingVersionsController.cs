@@ -9,6 +9,7 @@ namespace OtoBackend.Controllers.Admin
     [Route("api/admin/[controller]")]
     [ApiController]
     [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Manager},{AppRoles.Sales},{AppRoles.ShowroomSales},{AppRoles.Technician}")]
+    public class PricingVersionsController : ControllerBase
     {
         private readonly IPricingAdminService _pricingAdminService;
 

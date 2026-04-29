@@ -1,7 +1,7 @@
 import { http } from '../http/http'
 
 export type UserStatus = 'Active' | 'Inactive' | string
-export type UserRole = 'Admin' | 'ShowroomManager' | 'ShowroomSales' | 'Customer' | string
+export type UserRole = 'Admin' | 'Manager' | 'ShowroomSales' | 'Customer' | string
 
 export type AdminUserListItem = {
   userId: number
@@ -40,7 +40,7 @@ export type CreateAdminStaffInput = {
   fullName: string
   email?: string | null
   phone?: string | null
-  role: 'ShowroomManager' | 'ShowroomSales' | 'SalesManager' | 'Sales' | 'Technician'
+  role: 'Manager' | 'ShowroomSales' | 'Sales' | 'Technician'
   showroomId: number
 }
 
@@ -48,7 +48,7 @@ export type UpdateAdminStaffInput = {
   fullName: string
   email?: string | null
   phone?: string | null
-  role: 'ShowroomManager' | 'ShowroomSales' | 'SalesManager' | 'Sales' | 'Technician'
+  role: 'Manager' | 'ShowroomSales' | 'Sales' | 'Technician'
   showroomId: number
   status?: 'Active' | 'Inactive' | null
 }

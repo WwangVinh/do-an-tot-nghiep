@@ -7,25 +7,21 @@ using System.Threading.Tasks;
 
 namespace CoreEntities.Models.DTOs
 {
-    // Đăng nhập
     public class LoginRequest
     {
         public string Username { get; set; }
         public string Password { get; set; }
     }
 
-
-    // Đăng nhập bên quản trị
     public class LoginResponseDto
     {
         public string Token { get; set; } = null!;
         public int UserId { get; set; }
         public string FullName { get; set; } = null!;
-        public string Role { get; set; } = null!; // phân quyền cho FE biết người này là Admin, Manager hay Staff để hiển thị giao diện phù hợp
-        public int? ShowroomId { get; set; } // Nếu là nhân viên có showroom thì trả về showroomId, còn Admin thì để null
+        public string Role { get; set; } = null!;
+        public int? ShowroomId { get; set; }
     }
 
-    // Đăng ký người dùng mới
     public class RegisterRequest
     {
         public string Username { get; set; }
@@ -35,7 +31,6 @@ namespace CoreEntities.Models.DTOs
         public string Phone { get; set; }
     }
 
-    // Tạo tài khoản nhân viên mới (Admin hoặc Manager mới có quyền tạo)
     public class StaffAccountRequestDto
     {
         public string Username { get; set; } = null!;
@@ -44,11 +39,11 @@ namespace CoreEntities.Models.DTOs
         public string? Email { get; set; }
         public string? Phone { get; set; }
 
-        // Quyền của tài khoản (Staff roles)
-        [Required(ErrorMessage = "Bắt buộc phải truyền Quyền (Role) vào!")]
-        [RegularExpression("^(ShowroomManager|ShowroomSales|SalesManager|Sales|Technician)$",
-            ErrorMessage = "Role không hợp lệ. Chỉ nhận: ShowroomManager, ShowroomSales, SalesManager, Sales, Technician.")]
+        [Required(ErrorMessage = "Bắt buộc phải truyền Quyền (Role)!")]
+        [RegularExpression("^(Manager|Sales|ShowroomSales|Technician|Marketing|Content)$",
+            ErrorMessage = "Role không hợp lệ. Chỉ nhận: Manager, Sales, ShowroomSales, Technician, Marketing, Content.")]
         public string Role { get; set; } = null!;
-        public int ShowroomId { get; set; }        // ID của Showroom mà người này sẽ quản lý
+
+        public int ShowroomId { get; set; }
     }
 }
