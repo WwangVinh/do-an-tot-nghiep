@@ -1,12 +1,6 @@
-﻿using CoreEntities.Models;
-using System;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CoreEntities.Models;
 
@@ -16,16 +10,26 @@ public class Consignment
     [Key]
     public int ConsignmentId { get; set; }
 
+    // ── Thông tin khách vãng lai (bắt buộc) ──────────────────────────
     [Required]
-    public int UserId { get; set; }
+    [MaxLength(255)]
+    public string GuestName { get; set; } = null!;
+
+    [Required]
+    [MaxLength(20)]
+    public string GuestPhone { get; set; } = null!;
+
+    [MaxLength(255)]
+    public string? GuestEmail { get; set; }
+
+    // ── Thông tin xe ─────────────────────────────────────────────────
+    [Required]
+    [MaxLength(100)]
+    public string Brand { get; set; } = null!;
 
     [Required]
     [MaxLength(100)]
-    public string Brand { get; set; }
-
-    [Required]
-    [MaxLength(100)]
-    public string Model { get; set; }
+    public string Model { get; set; } = null!;
 
     [Required]
     public int Year { get; set; }
@@ -37,8 +41,10 @@ public class Consignment
     [MaxLength(1000)]
     public string? ConditionDescription { get; set; }
 
+    // ── Giá cả ───────────────────────────────────────────────────────
+    [Required]
     [Column(TypeName = "decimal(18, 2)")]
-    public decimal? ExpectedPrice { get; set; }
+    public decimal ExpectedPrice { get; set; }
 
     [Column(TypeName = "decimal(18, 2)")]
     public decimal? AgreedPrice { get; set; }
@@ -46,19 +52,18 @@ public class Consignment
     [Column(TypeName = "decimal(5, 2)")]
     public decimal? CommissionRate { get; set; }
 
+    // ── Trạng thái & liên kết ────────────────────────────────────────
     [Required]
     [MaxLength(50)]
     public string Status { get; set; } = "Pending";
 
     public int? LinkedCarId { get; set; }
 
-    public DateTime? CreatedAt { get; set; } = DateTime.Now;
-    public DateTime? UpdatedAt { get; set; } = DateTime.Now;
+    // ── Thời gian ────────────────────────────────────────────────────
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-    // Navigation properties
-    [ForeignKey("UserId")]
-    public virtual User? User { get; set; }
-
+    // ── Navigation properties ─────────────────────────────────────────
     [ForeignKey("LinkedCarId")]
     public virtual Car? LinkedCar { get; set; }
 }

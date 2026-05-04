@@ -15,7 +15,7 @@ namespace LogicBusiness.Services.Admin
     {
         private readonly ICarRepository _carRepo;
         private readonly ICarImageRepository _imageRepo;
-        private readonly ICarFeatureRepository _carFeatureRepo;             
+        private readonly ICarFeatureRepository _carFeatureRepo;
         private readonly ICarSpecificationRepository _carSpecificationRepo;
         private readonly ICarInventoryRepository _inventoryRepo;
         private readonly ICarPricingVersionRepository _pricingVersionRepo;
@@ -63,14 +63,22 @@ namespace LogicBusiness.Services.Admin
             string? transmission, string? bodyStyle,
             string? fuelType, string? location,
             bool? isDeleted, int page, int pageSize,
-            int? userShowroomId = null) // 👈 Đã thêm vũ khí Phân quyền (Nhớ thêm vào Interface nha)
+            int? userShowroomId = null,
+            string? userRole = null,
+            int? createdByUserId = null)
         {
-            // Nhớ truyền userShowroomId xuống Repo để nó lọc xe theo Showroom cho Manager
             var result = await _carRepo.GetAdminCarsAsync(
                 search, brand, color, minPrice, maxPrice, status,
                 transmission, bodyStyle, fuelType, location, isDeleted, page, pageSize, userShowroomId);
 
-            var adminCars = result.Cars.Select(c => {
+            // Nhân viên Sales chỉ thấy xe Draft của chính mình
+            var filteredCars = result.Cars.Where(c =>
+                c.Status != CarStatus.Draft ||
+                userRole == "Admin" || userRole == "Manager" ||
+                (createdByUserId.HasValue && c.CreatedByUserId == createdByUserId.Value)
+            ).ToList();
+
+            var adminCars = filteredCars.Select(c => {
 
                 // 1. Tính tổng số lượng
                 int totalQty = c.CarInventories != null ? c.CarInventories.Sum(i => i.Quantity) : 0;
@@ -472,7 +480,7 @@ namespace LogicBusiness.Services.Admin
         }
 
         // 3. CREATE
-        public async Task<(bool Success, string Message, Car? Data)> CreateCarAsync(CarCreateDto dto, string userRole, int? userShowroomId)
+        public async Task<(bool Success, string Message, Car? Data)> CreateCarAsync(CarCreateDto dto, string userRole, int? userShowroomId, int? createdByUserId = null)
         {
             // 0. CHUẨN HÓA DỮ LIỆU
             if (!string.IsNullOrWhiteSpace(dto.Brand)) dto.Brand = dto.Brand.Trim().ToUpper();
@@ -541,7 +549,8 @@ namespace LogicBusiness.Services.Admin
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now,
                 Status = finalStatus,
-                IsDeleted = false
+                IsDeleted = false,
+                CreatedByUserId = createdByUserId
             };
 
             // Xử lý ảnh (Thư mục theo hãng)
@@ -602,7 +611,7 @@ namespace LogicBusiness.Services.Admin
         }
 
         // 3B. CREATE FULL: Ghi đủ Cars + CarImages + CarSpecifications + CarFeatures + CarPricingVersions + CarInventories
-        public async Task<(bool Success, string Message, Car? Data)> CreateCarFullAsync(CarCreateFullDto dto, string userRole, int? userShowroomId)
+        public async Task<(bool Success, string Message, Car? Data)> CreateCarFullAsync(CarCreateFullDto dto, string userRole, int? userShowroomId, int? createdByUserId = null)
         {
             // Chuẩn hóa input cơ bản
             if (!string.IsNullOrWhiteSpace(dto.Brand)) dto.Brand = dto.Brand.Trim().ToUpper();
@@ -725,7 +734,8 @@ namespace LogicBusiness.Services.Admin
                         CreatedAt = DateTime.Now,
                         UpdatedAt = DateTime.Now,
                         Status = finalStatus,
-                        IsDeleted = false
+                        IsDeleted = false,
+                        CreatedByUserId = createdByUserId
                     };
 
                     if (dto.ImageFile != null)
@@ -1046,7 +1056,7 @@ namespace LogicBusiness.Services.Admin
                     await _notiService.CreateNotificationAsync(
                         userId: null,
                         showroomId: dto.ShowroomId,
-                        roleTarget: "ShowroomManager", 
+                        roleTarget: "ShowroomManager",
                         title: "Có bản cập nhật xe cần duyệt 📝",
                         content: $"Nhân viên vừa sửa và nộp lại thông tin mẫu {car.Brand} {car.Name}. Sếp vào kiểm tra nhé!",
                         actionUrl: $"/admin/cars/approve/{car.CarId}",
@@ -1338,7 +1348,7 @@ namespace LogicBusiness.Services.Admin
 
 
         // NHÂN BẢN XE
-        public async Task<(bool Success, string Message, int? NewCarId)> CloneCarAsync(int id, string userRole, int? userShowroomId)
+        public async Task<(bool Success, string Message, int? NewCarId)> CloneCarAsync(int id, string userRole, int? userShowroomId, int? createdByUserId = null)
         {
             // 1. Lấy "hồn" con xe cũ lên (đảm bảo hàm này trong Repo đã Include Specs/Features)
             var oldCar = await _carRepo.GetCarDetailForAdminAsync(id);
@@ -1367,13 +1377,12 @@ namespace LogicBusiness.Services.Admin
                 BodyStyle = oldCar.BodyStyle,
                 Description = oldCar.Description,
                 Condition = oldCar.Condition,
-
-                // 👇 QUAN TRỌNG: Ép về Nháp và xóa ảnh cũ để bắt buộc lính phải vào sửa
                 Status = CarStatus.Draft,
                 ImageUrl = "/uploads/Cars/default-car.jpg.png",
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now,
-                IsDeleted = false
+                IsDeleted = false,
+                CreatedByUserId = createdByUserId
             };
 
             await _carRepo.AddCarAsync(newCar);

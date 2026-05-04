@@ -32,24 +32,26 @@ namespace SqlServer.Repositories
         public async Task<Consignment?> GetByIdAsync(int id)
         {
             return await _context.Consignments
-                .Include(c => c.User) //Lấy kèm thông tin Khách hàng để dễ gọi điện
                 .FirstOrDefaultAsync(c => c.ConsignmentId == id);
         }
 
         public async Task<IEnumerable<Consignment>> GetAllAdminAsync()
         {
             return await _context.Consignments
-                .Include(c => c.User)
-                .OrderByDescending(c => c.CreatedAt) // Mới nhất lên đầu
+                .OrderByDescending(c => c.CreatedAt)
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<Consignment>> GetByUserIdAsync(int userId)
+        public async Task<Consignment?> GetPendingByPhoneAndCarAsync(string phone, string brand, string model, int year)
         {
             return await _context.Consignments
-                .Where(c => c.UserId == userId)
-                .OrderByDescending(c => c.CreatedAt)
-                .ToListAsync();
+                .Where(c =>
+                    c.GuestPhone == phone &&
+                    c.Brand.ToLower() == brand.ToLower() &&
+                    c.Model.ToLower() == model.ToLower() &&
+                    c.Year == year &&
+                    (c.Status == "Pending" || c.Status == "Appraising"))
+                .FirstOrDefaultAsync();
         }
     }
 }

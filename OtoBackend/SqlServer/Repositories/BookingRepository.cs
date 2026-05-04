@@ -202,5 +202,15 @@ namespace SqlServer.Repositories
                 .Select(g => new { Status = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.Status, x => x.Count);
         }
+        public async Task<string?> GetCustomerNameFromBookingAsync(string phone, int carId)
+        {
+            var booking = await _context.Bookings
+                .Where(b => b.Phone == phone && b.CarId == carId)
+                .OrderByDescending(b => b.BookingDate) // Hoặc CreatedAt
+                .FirstOrDefaultAsync();
+
+            // Sửa FullName thành CustomerName nha
+            return booking?.CustomerName;
+        }
     }
 }

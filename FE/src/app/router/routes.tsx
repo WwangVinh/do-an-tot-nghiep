@@ -10,7 +10,11 @@ import { ContactPage } from '../../pages/contact/ContactPage'
 import { InstallmentPage } from '../../pages/installment/InstallmentPage'
 import { LaiThuPage } from '../../pages/lai-thu/LaiThuPage'
 import { NotFoundPage } from '../../pages/NotFoundPage'
+import { NewsDetailPage } from '../../pages/news/NewsDetailPage'
+import { KyGuiPage } from '../../pages/consignments/ConsignmentsPage'
 import { CreateCarFullPage } from '../../pages/admin/CreateCarFullPage'
+import { PaymentSuccessPage } from '../../pages/payment/PaymentSuccessPage'
+import { PaymentFailedPage } from '../../pages/payment/PaymentFailedPage'
 
 export const routes: RouteObject[] = [
   {
@@ -22,11 +26,14 @@ export const routes: RouteObject[] = [
       { path: '/san-pham', element: <ProductsPage /> },
       { path: '/bang-gia-xe', element: <PricingPage /> },
       { path: '/tin-tuc-uu-dai', element: <NewsPage /> },
+      { path: '/tin-tuc/:articleId', element: <NewsDetailPage /> },
       { path: '/tra-gop', element: <InstallmentPage /> },
       { path: '/lai-thu', element: <LaiThuPage /> },
+      { path: '/ky-gui', element: <KyGuiPage /> },
       { path: '/lien-he', element: <ContactPage /> },
+      { path: '/payment-success', element: <PaymentSuccessPage /> },
+      { path: '/payment-failed', element: <PaymentFailedPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },
 ]
-

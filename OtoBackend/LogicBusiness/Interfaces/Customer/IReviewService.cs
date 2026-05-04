@@ -15,5 +15,7 @@ namespace LogicBusiness.Interfaces.Customer
 
         // Lấy danh sách review đã duyệt của một xe
         Task<List<Review>> GetApprovedReviewsByCarIdAsync(int carId);
+
+        Task<(bool IsEligible, string? FullName, string Message)> CheckReviewEligibilityAsync(string phone, int carId);
     }
 }

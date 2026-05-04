@@ -6,16 +6,16 @@ namespace LogicBusiness.Interfaces.Admin
 {
     public interface ICarAdminService
     {
-        Task<object> GetCarsAsync(string? search, string? brand, string? color, decimal? minPrice, decimal? maxPrice, CarStatus? status, string? transmission, string? bodyStyle, string? fuelType, string? location, bool? isDeleted, int page, int pageSize, int? userShowroomId = null);
+        Task<object> GetCarsAsync(string? search, string? brand, string? color, decimal? minPrice, decimal? maxPrice, CarStatus? status, string? transmission, string? bodyStyle, string? fuelType, string? location, bool? isDeleted, int page, int pageSize, int? userShowroomId = null, string? userRole = null, int? createdByUserId = null);
         Task<object?> GetCarDetailAsync(int id, string userRole, int? userShowroomId);
-        Task<(bool Success, string Message, Car? Data)> CreateCarAsync(CarCreateDto dto, string userRole, int? userShowroomId);
-        Task<(bool Success, string Message, Car? Data)> CreateCarFullAsync(CarCreateFullDto dto, string userRole, int? userShowroomId);
+        Task<(bool Success, string Message, Car? Data)> CreateCarAsync(CarCreateDto dto, string userRole, int? userShowroomId, int? createdByUserId = null);
+        Task<(bool Success, string Message, Car? Data)> CreateCarFullAsync(CarCreateFullDto dto, string userRole, int? userShowroomId, int? createdByUserId = null);
         Task<(bool Success, string Message, Car? Data)> UpdateCarFullAsync(int id, CarCreateFullDto dto, string userRole, int? userShowroomId);
         Task<(bool Success, string Message, Car? Car)> UpdateCarAsync(int id, CarUpdateDto dto, string userRole, int? userShowroomId);
         Task<(bool Success, string Message)> ApproveCarAsync(int carId, string userRole, int? userShowroomId);
         Task<(bool Success, string Message, object? Data)> UploadGalleryImagesAsync(int carId, List<IFormFile> files, List<string>? titles, List<string>? descriptions, string imageType);
         Task<bool> UpdateImageDetailsAsync(int imageId, string? title, string? description);
-        Task<(bool Success, string Message, int? NewCarId)> CloneCarAsync(int id, string userRole, int? userShowroomId);
+        Task<(bool Success, string Message, int? NewCarId)> CloneCarAsync(int id, string userRole, int? userShowroomId, int? createdByUserId = null);
         Task<(bool Success, string Message)> Upload360ImagesAsync(int carId, List<IFormFile> files);
         Task<bool> DeleteCarImageAsync(int imageId);
         Task<bool> SoftDeleteCarAsync(int id, int deletedByUserId);

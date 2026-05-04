@@ -5,7 +5,7 @@ import { clearAuth, getAuthToken } from '../../app/auth/authStore'
 
 export const http = axios.create({
   baseURL: env.VITE_API_BASE_URL,
-  timeout: 20_000,
+  timeout: 60_000, 
 })
 
 http.interceptors.request.use((config) => {

@@ -1,10 +1,10 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 
 import { env } from '../lib/env'
+import { http } from '../services/http/http'
 
 export type QuoteRegisterMode = 'installment' | 'full'
 
@@ -30,6 +30,11 @@ type PagedCarsResponse = {
   data: CustomerCarListDto[]
 }
 
+type ShowroomDto = {
+  showroomId: number
+  showroomName: string
+}
+
 const carsApi = axios.create({
   baseURL: new URL('/api/', env.VITE_API_BASE_URL).toString(),
   timeout: 20_000,
@@ -43,6 +48,12 @@ async function getCarOptions(): Promise<QuoteRegisterCarOption[]> {
   return list
     .map((c) => ({ id: String(c.carId), label: c.name }))
     .filter((c) => c.label.trim().length > 0)
+}
+
+async function getCarShowrooms(carId: string): Promise<ShowroomDto[]> {
+  const res = await carsApi.get(`Cars/${carId}`)
+  const data = res.data?.data
+  return (data?.showroomDetails as ShowroomDto[]) || []
 }
 
 export type QuoteRegisterCardProps = {
@@ -62,15 +73,16 @@ export function QuoteRegisterCard({
   cars = [],
   onSubmit,
 }: QuoteRegisterCardProps) {
-  const navigate = useNavigate() // Hook để chuyển trang
-  
   const fullNameId = useId()
   const phoneId = useId()
   const modeInstallmentId = useId()
   const modeFullId = useId()
   const carSelectId = useId()
 
-  // ── Cars ──────────────────────────────────────────────
+  const [submitting, setSubmitting] = useState(false)
+  const [selectedShowroomId, setSelectedShowroomId] = useState('')
+  const [showroomOpen, setShowroomOpen] = useState(false)
+
   const { data: carsApiOptions = [], isLoading: isCarsLoading } = useQuery({
     queryKey: ['cars', 'select-options', 'quote-register'],
     queryFn: getCarOptions,
@@ -82,14 +94,26 @@ export function QuoteRegisterCard({
     [cars, carsApiOptions],
   )
 
-  // ── State xe ──────────────────────────────────────────
   const rootCarRef = useRef<HTMLDivElement | null>(null)
   const [carOpen, setCarOpen] = useState(false)
   const [carQuery, setCarQuery] = useState('')
   const [selectedCar, setSelectedCar] = useState<QuoteRegisterCarOption | null>(null)
   const [carTouched, setCarTouched] = useState(false)
 
-  // Tự động set xe nếu danh sách xe chỉ có 1 (ví dụ đang ở trang chi tiết xe đó)
+  // Fetch showrooms khi chọn xe
+  const { data: showrooms = [], isFetching: isShowroomsLoading } = useQuery({
+    queryKey: ['car-showrooms', selectedCar?.id],
+    queryFn: () => getCarShowrooms(selectedCar!.id),
+    enabled: !!selectedCar?.id,
+    staleTime: 5 * 60_000,
+  })
+
+  // Reset showroom khi đổi xe
+  useEffect(() => {
+    setSelectedShowroomId('')
+    setShowroomOpen(false)
+  }, [selectedCar?.id])
+
   useEffect(() => {
     if (resolvedCars.length === 1 && !selectedCar) {
       setSelectedCar(resolvedCars[0])
@@ -103,7 +127,6 @@ export function QuoteRegisterCard({
     return resolvedCars.filter((c) => c.label.toLowerCase().includes(q))
   }, [resolvedCars, carQuery])
 
-  // Đóng dropdown khi click ra ngoài
   useEffect(() => {
     function onPointerDown(e: MouseEvent) {
       if (rootCarRef.current && e.target instanceof Node && !rootCarRef.current.contains(e.target))
@@ -128,7 +151,7 @@ export function QuoteRegisterCard({
 
         <form
           className="mt-4 space-y-3"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault()
             setCarTouched(true)
             setCarOpen(false)
@@ -137,36 +160,56 @@ export function QuoteRegisterCard({
               toast.error('Vui lòng chọn dòng xe bạn quan tâm.')
               return
             }
+            if (!selectedShowroomId) {
+              toast.error('Vui lòng chọn showroom.')
+              return
+            }
 
             const fd = new FormData(e.currentTarget)
             const fullName = String(fd.get('fullName') ?? '').trim()
             const phone = String(fd.get('phone') ?? '').trim()
-            const mode = (String(fd.get('mode') ?? defaultMode) as QuoteRegisterMode)
+            const mode = String(fd.get('mode') ?? defaultMode) as QuoteRegisterMode
 
-            // Gọi hàm onSubmit của component cha (nếu có)
-            onSubmit?.({
-              mode,
-              fullName,
-              phone,
-              carId: selectedCar.id,
-              carName: selectedCar.label
-            })
+            onSubmit?.({ mode, fullName, phone, carId: selectedCar.id, carName: selectedCar.label })
 
-            // Chuyển hướng sang trang lái thử, bế theo data nhét vào state
-            navigate('/lai-thu', {
-              state: {
-                trialPrefill: {
-                  fullName,
-                  phone,
-                  carId: selectedCar.id,
-                  carName: selectedCar.label
-                  // Note: Ảnh xe sẽ được trang Lái thử tự load thông qua API như nãy mình setup!
-                }
-              }
-            })
+            const now = new Date()
+            const bookingDate = now.toISOString().split('T')[0]
+            const bookingTime = now.toTimeString().slice(0, 5)
+            const modeLabel = mode === 'installment' ? 'Trả góp' : 'Trả thẳng'
+            const showroomName = showrooms.find(s => String(s.showroomId) === selectedShowroomId)?.showroomName ?? ''
+            const note = `Tư vấn báo giá xe ${selectedCar.label} - ${modeLabel} - ${showroomName}`
+
+            const normalizedPhone = phone.startsWith('+84')
+              ? '0' + phone.slice(3)
+              : phone
+
+            try {
+              setSubmitting(true)
+              await http.post('/api/Bookings/create', {
+                carId: Number(selectedCar.id),
+                showroomId: Number(selectedShowroomId),
+                customerName: fullName,
+                phone: normalizedPhone,
+                bookingDate,
+                bookingTime,
+                timeSpan: '30 phút',
+                note,
+                userId: 0,
+              })
+              toast.success('Đăng ký thành công! Nhân viên sẽ liên hệ tư vấn cho bạn sớm nhất.')
+              setSelectedCar(null)
+              setCarQuery('')
+              setCarTouched(false)
+              setSelectedShowroomId('')
+              ;(e.target as HTMLFormElement).reset()
+            } catch {
+              toast.error('Có lỗi xảy ra, vui lòng thử lại hoặc liên hệ hotline.')
+            } finally {
+              setSubmitting(false)
+            }
           }}
         >
-          {/* ── Hình thức ── */}
+          {/* Hình thức */}
           <fieldset className="flex items-center justify-center gap-6">
             <legend className="sr-only">Hình thức</legend>
             <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-700">
@@ -193,7 +236,7 @@ export function QuoteRegisterCard({
             </label>
           </fieldset>
 
-          {/* ── Họ tên ── */}
+          {/* Họ tên */}
           <div>
             <label htmlFor={fullNameId} className="sr-only">Họ và tên</label>
             <input
@@ -206,7 +249,7 @@ export function QuoteRegisterCard({
             />
           </div>
 
-          {/* ── Điện thoại ── */}
+          {/* Điện thoại */}
           <div>
             <label htmlFor={phoneId} className="sr-only">Điện thoại</label>
             <input
@@ -214,15 +257,15 @@ export function QuoteRegisterCard({
               name="phone"
               required
               inputMode="tel"
-              pattern="^(\+84|0)[0-9]{9}$"
-              maxLength={12}
+              pattern="^(\+84|0)[0-9]{9,10}$"
+              maxLength={13}
               placeholder="Số điện thoại (VD: 09... hoặc +84...)"
               className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none transition focus-visible:border-rose-300 focus-visible:ring-2 focus-visible:ring-rose-400/40"
               autoComplete="tel"
             />
           </div>
 
-          {/* ── Chọn xe ── */}
+          {/* Chọn xe */}
           <div>
             <div ref={rootCarRef} className="relative">
               <label htmlFor={carSelectId} className="sr-only">Chọn dòng xe</label>
@@ -294,12 +337,62 @@ export function QuoteRegisterCard({
             </div>
           </div>
 
-          {/* ── Submit ── */}
+          {/* Chọn Showroom — hiện ra sau khi chọn xe, dropdown mở lên trên */}
+          {selectedCar && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => !isShowroomsLoading && setShowroomOpen(v => !v)}
+                className={[
+                  'h-11 w-full rounded-lg border bg-white px-3 pr-11 text-sm shadow-sm outline-none transition text-left',
+                  !selectedShowroomId ? 'text-slate-400' : 'text-slate-900',
+                  'border-slate-200 focus-visible:border-rose-300 focus-visible:ring-2 focus-visible:ring-rose-400/40',
+                  isShowroomsLoading ? 'opacity-60 cursor-not-allowed' : '',
+                ].join(' ')}
+              >
+                {isShowroomsLoading
+                  ? 'Đang tải showroom...'
+                  : selectedShowroomId
+                  ? showrooms.find(s => String(s.showroomId) === selectedShowroomId)?.showroomName ?? '== Chọn showroom =='
+                  : '== Chọn showroom =='}
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+              </button>
+
+              {showroomOpen && (
+                <div className="absolute bottom-full mb-2 z-50 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 text-sm shadow-lg max-h-48">
+                  {showrooms.map((s) => {
+                    const isSelected = String(s.showroomId) === selectedShowroomId
+                    return (
+                      <button
+                        key={s.showroomId}
+                        type="button"
+                        className={[
+                          'flex w-full items-center justify-between px-3 py-2 text-left',
+                          isSelected ? 'bg-slate-100 text-slate-900' : 'text-slate-700 hover:bg-slate-50',
+                        ].join(' ')}
+                        onClick={() => { setSelectedShowroomId(String(s.showroomId)); setShowroomOpen(false) }}
+                      >
+                        <span className="truncate">{s.showroomName}</span>
+                        {isSelected && <span className="ml-3 text-[11px] font-semibold text-rose-500">Đã chọn</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Submit */}
           <button
             type="submit"
-            className="inline-flex h-11 w-full cursor-pointer items-center justify-center rounded-lg bg-rose-500 px-4 text-sm font-extrabold tracking-wide text-white shadow-sm transition hover:bg-rose-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
+            disabled={submitting}
+            className="inline-flex h-11 w-full cursor-pointer items-center justify-center rounded-lg bg-rose-500 px-4 text-sm font-extrabold tracking-wide text-white shadow-sm transition hover:bg-rose-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40 disabled:opacity-60"
           >
-            {submitLabel}
+            {submitting ? 'Đang gửi...' : submitLabel}
           </button>
         </form>
       </div>

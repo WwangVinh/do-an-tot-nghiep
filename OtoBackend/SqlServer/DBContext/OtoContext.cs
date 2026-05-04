@@ -76,6 +76,7 @@ namespace SqlServer.DBContext
         public DbSet<ConsultationProfile> ConsultationProfiles { get; set; }
         public DbSet<CarInventory> CarInventories { get; set; }
         public DbSet<Consignment> Consignments { get; set; }
+        public DbSet<CarAccessory> CarAccessories { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

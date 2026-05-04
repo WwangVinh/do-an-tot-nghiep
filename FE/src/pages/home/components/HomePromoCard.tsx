@@ -42,7 +42,7 @@ const DEFAULT_BENEFITS = [
 
 export function HomePromoCard({
   className,
-  title = 'Tên công ty',
+  title = 'CMC AUTOMOVITE',
   highlightTitle = 'ƯU ĐÃI QUÀ TẶNG HẤP DẪN',
   dealerLine = 'Đại lý phân phối chính hãng toàn quốc',
   promoBannerText = 'SIÊU KM: GIẢM 6 - 10% TẤT CẢ CÁC DÒNG XE + MUA XE 0Đ NHẬN XE NGAY',
@@ -54,7 +54,7 @@ export function HomePromoCard({
   hotlineHref = 'tel:0333436743',
   quoteLabel = 'NHẬN BÁO GIÁ',
   quoteSubLabel = 'Hoặc đăng ký nhận báo giá xe lăn bánh tốt nhất',
-  quoteHref = '#',
+  quoteHref = '#quote-register',
 }: HomePromoCardProps) {
   return (
     <section className={['w-full bg-slate-50 py-10 sm:py-12', className ?? ''].join(' ')}>
@@ -68,21 +68,14 @@ export function HomePromoCard({
 
           <div className="px-6 sm:px-10">
             <div className="rounded-xl bg-slate-100 px-4 py-3 text-center text-xs font-semibold tracking-wide text-slate-700 sm:text-sm">
-              <span className="mr-2" aria-hidden="true">
-                🔥
-              </span>
+              <span className="mr-2" aria-hidden="true">🔥</span>
               {promoBannerText}
-              <span className="ml-2" aria-hidden="true">
-                🔥
-              </span>
+              <span className="ml-2" aria-hidden="true">🔥</span>
             </div>
 
             <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
               {models.map((m) => (
-                <div
-                  key={m.name}
-                  className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm"
-                >
+                <div key={m.name} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm">
                   <span className="font-semibold text-slate-800">{m.name}:</span>
                   <span className="font-semibold text-rose-600">{m.priceText}</span>
                   <span className="text-slate-500">- {m.discountText}</span>
@@ -104,10 +97,8 @@ export function HomePromoCard({
           </div>
 
           <div className="mt-7 grid grid-cols-1 gap-4 px-6 pb-7 sm:px-10 md:grid-cols-2">
-            <a
-              href={hotlineHref}
-              className="group flex w-full flex-col items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 py-5 text-white shadow-sm transition hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
-            >
+            <a href={hotlineHref}
+              className="group flex w-full flex-col items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 py-5 text-white shadow-sm transition hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40">
               <Phone className="h-5 w-5 shrink-0" aria-hidden="true" />
               <div className="text-center">
                 <div className="text-sm font-extrabold tracking-wide">{hotlineLabel}</div>
@@ -115,10 +106,8 @@ export function HomePromoCard({
               </div>
             </a>
 
-            <a
-              href={quoteHref}
-              className="group flex w-full flex-col items-center justify-center gap-2 rounded-xl bg-slate-800 px-5 py-5 text-white shadow-sm transition hover:bg-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/30"
-            >
+            <a href={quoteHref}
+              className="group flex w-full flex-col items-center justify-center gap-2 rounded-xl bg-slate-800 px-5 py-5 text-white shadow-sm transition hover:bg-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/30">
               <Mail className="h-5 w-5 shrink-0" aria-hidden="true" />
               <div className="text-center">
                 <div className="text-sm font-extrabold tracking-wide">{quoteLabel}</div>
@@ -131,4 +120,3 @@ export function HomePromoCard({
     </section>
   )
 }
-

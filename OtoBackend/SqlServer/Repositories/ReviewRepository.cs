@@ -29,12 +29,32 @@ namespace SqlServer.Repositories
             return await _context.Reviews
                 .Where(r => r.CarId == carId && r.IsApproved)
                 .OrderByDescending(r => r.CreatedAt)
+                .Select(r => new Review
+                {
+                    ReviewId = r.ReviewId,
+                    CarId = r.CarId,
+                    FullName = r.FullName,
+                    Phone = r.Phone,
+                    Rating = r.Rating,
+                    Comment = r.Comment,
+                    CreatedAt = r.CreatedAt,
+                    IsApproved = r.IsApproved,
+                    OrderCode = r.OrderCode,
+                    // Car = null  ← không include navigation property
+                })
                 .ToListAsync();
         }
 
         public async Task SaveChangesAsync()
         {
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+            {
+                throw new Exception(ex.InnerException?.Message ?? ex.Message);
+            }
         }
 
         // Thêm vào ReviewRepository.cs

@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CoreEntities.Models
 {
@@ -27,7 +23,9 @@ namespace CoreEntities.Models
 
         public bool IsActive { get; set; } = true;
 
-        // Liên kết ngược lại với OrderItems để biết phụ kiện này nằm trong những đơn hàng nào
         public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+
+        // Danh sách xe nào được gán phụ kiện này
+        public virtual ICollection<CarAccessory> CarAccessories { get; set; } = new List<CarAccessory>();
     }
 }

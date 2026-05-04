@@ -49,6 +49,7 @@ public partial class Order
 
     // Cột ní vừa yêu cầu đây:
     public int? StaffId { get; set; } // ID của nhân viên phụ trách đơn này
+    public int? ShowroomId { get; set; } // ID showroom tiếp nhận đơn
 
     // --- Tài chính ---
     [Column(TypeName = "decimal(18, 2)")]
@@ -75,6 +76,10 @@ public partial class Order
     [ForeignKey("StaffId")]
     [InverseProperty("Orders")]
     public virtual User? Staff { get; set; }
+
+    // Liên kết tới showroom
+    [ForeignKey("ShowroomId")]
+    public virtual Showroom? Showroom { get; set; }
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
     public virtual ICollection<PaymentTransaction> PaymentTransactions { get; set; } = new List<PaymentTransaction>();

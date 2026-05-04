@@ -24,5 +24,6 @@ namespace LogicBusiness.Interfaces.Repositories
         Task<IEnumerable<Booking>> GetBookingsTomorrowAsync();
         Task<IEnumerable<Booking>> GetOverdueBookingsAsync();
         Task<Dictionary<string, int>> CountByStatusAsync(int? showroomId = null);
+        Task<string?> GetCustomerNameFromBookingAsync(string phone, int carId);
     }
 }

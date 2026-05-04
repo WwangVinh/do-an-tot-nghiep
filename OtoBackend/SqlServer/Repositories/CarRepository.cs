@@ -190,6 +190,7 @@ namespace SqlServer.Repositories
         public async Task<Car?> GetCarDetailForCustomerAsync(int id)
         {
             return await _context.Cars
+                .AsNoTracking()
                 .Include(c => c.CarImages)
                 .Include(c => c.CarSpecifications) 
                 .Include(c => c.CarFeatures)

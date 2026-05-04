@@ -1,4 +1,5 @@
-﻿using LogicBusiness.DTOs;
+﻿using CoreEntities.DTOs;
+using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Admin;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
@@ -15,11 +16,28 @@ public class OrdersController : ControllerBase
         _orderService = orderService;
     }
 
-    // GET: api/admin/orders
+    // GET: api/admin/orders?search=abc&status=Pending&paymentStatus=Unpaid&page=1&pageSize=10
     [HttpGet]
-    public async Task<IActionResult> GetAllOrders()
+    public async Task<IActionResult> GetAllOrders([FromQuery] OrderQueryParams queryParams)
     {
-        var result = await _orderService.GetAdminOrdersAsync();
+        var result = await _orderService.GetAdminOrdersAsync(queryParams);
+        return Ok(new
+        {
+            success = true,
+            totalItems = result.TotalItems,
+            currentPage = result.CurrentPage,
+            pageSize = result.PageSize,
+            totalPages = result.TotalPages,
+            data = result.Data,
+        });
+    }
+
+    // GET: api/admin/orders/5
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetDetail(int id)
+    {
+        var result = await _orderService.GetOrderDetailAsync(id);
+        if (result == null) return NotFound(new { success = false, message = "Không tìm thấy đơn hàng" });
         return Ok(new { success = true, data = result });
     }
 
@@ -36,7 +54,7 @@ public class OrdersController : ControllerBase
 
     // POST: api/admin/orders/5/payments
     [HttpPost("{id}/payments")]
-    public async Task<IActionResult> AddPayment(int id, [FromBody] AddPaymentDto dto)
+    public async Task<IActionResult> AddPayment(int id, [FromBody] LogicBusiness.DTOs.AddPaymentDto dto)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 

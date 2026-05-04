@@ -21,21 +21,17 @@ namespace OtoBackend.Controllers.Customer
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            // Nhận kết quả từ Service
             var result = await _orderService.CreateGuestOrderAsync(request);
 
-            // NẾU HẾT LƯỢT DÙNG MÃ KHUYẾN MÃI -> BÁO LỖI VỀ FE
             if (!result.Success)
-            {
                 return BadRequest(new { success = false, message = result.Message });
-            }
 
-            // THÀNH CÔNG
             return Ok(new
             {
                 success = true,
                 message = result.Message,
-                orderCode = result.OrderCode
+                orderCode = result.OrderCode,
+                orderId = result.OrderId
             });
         }
 
@@ -52,6 +48,64 @@ namespace OtoBackend.Controllers.Customer
                 return NotFound(new { success = false, message = "Không tìm thấy đơn hàng. Vui lòng kiểm tra lại thông tin." });
 
             return Ok(new { success = true, data = result });
+        }
+
+        // ✅ GET: api/public/orders/by-phone?phone=0987654321
+        // Lấy tất cả đơn hàng theo SĐT — dùng cho tra cứu nhanh trên Header
+        [HttpGet("by-phone")]
+        public async Task<IActionResult> GetByPhone([FromQuery] string phone)
+        {
+            if (string.IsNullOrWhiteSpace(phone))
+                return BadRequest(new { message = "Vui lòng nhập số điện thoại." });
+
+            var orders = await _orderService.GetOrdersByPhoneAsync(phone.Trim());
+
+            if (orders == null || !orders.Any())
+                return NotFound(new { message = "Số điện thoại này chưa có đơn hàng nào." });
+
+            return Ok(orders);
+        }
+
+        [HttpGet("check-promotion")]
+        public async Task<IActionResult> CheckPromotion([FromQuery] string code, [FromQuery] int carId)
+        {
+            if (string.IsNullOrWhiteSpace(code))
+                return BadRequest(new { message = "Vui lòng nhập mã giảm giá!" });
+
+            var result = await _orderService.CheckPromotionAsync(code, carId);
+
+            if (!result.Success)
+                return BadRequest(new { message = result.Message });
+
+            return Ok(new
+            {
+                discountPercentage = result.DiscountPercentage,
+                message = result.Message
+            });
+        }
+
+        [HttpPost("{id}/cancel")]
+        public async Task<IActionResult> Cancel(int id)
+        {
+            var result = await _orderService.CancelOrderAsync(id);
+            if (!result.Success) return BadRequest(new { message = result.Message });
+            return Ok(new { message = result.Message });
+        }
+
+        // GET: api/public/orders/showrooms
+        // Trả về danh sách showroom để khách chọn khi đặt xe
+        [HttpGet("showrooms")]
+        public async Task<IActionResult> GetShowrooms()
+        {
+            var showrooms = await _orderService.GetAvailableShowroomsAsync();
+            return Ok(new { success = true, data = showrooms });
+        }
+        // GET: api/public/cars/{carId}/showrooms
+        [HttpGet("~/api/public/cars/{carId}/showrooms")]
+        public async Task<IActionResult> GetShowroomsByCar(int carId)
+        {
+            var showrooms = await _orderService.GetShowroomsByCarIdAsync(carId);
+            return Ok(new { success = true, data = showrooms });
         }
     }
 }

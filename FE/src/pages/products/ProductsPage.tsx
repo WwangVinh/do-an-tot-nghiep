@@ -259,12 +259,15 @@ export function ProductsPage() {
     return (cars ?? []).map((c) => {
       const raw = (c.imageUrl ?? '').trim()
       const imageSrc = raw ? new URL(raw, env.VITE_API_BASE_URL).toString() : vf8Img
-      return {
+     return {
         id: String(c.carId),
         name: c.name,
         priceText: formatVnd(c.price),
         imageSrc,
         imageAlt: c.name,
+        // Thêm 2 dòng này:
+        year: c.year ?? null,
+        condition: c.condition ?? null,
       }
     })
   }, [cars])

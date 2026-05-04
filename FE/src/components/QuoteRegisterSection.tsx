@@ -14,7 +14,7 @@ export function QuoteRegisterSection({
   cardProps,
 }: QuoteRegisterSectionProps) {
   return (
-    <section className={['w-full', className ?? ''].join(' ')} aria-label="Quote register section">
+    <section id="quote-register" className={['w-full', className ?? ''].join(' ')} aria-label="Quote register section">
       <div className="relative min-h-[360px] overflow-hidden bg-slate-900 sm:min-h-[420px] lg:min-h-[520px]">
         <div className="absolute inset-0">
           <img
@@ -32,7 +32,7 @@ export function QuoteRegisterSection({
           <div className="grid grid-cols-1 items-center gap-6 lg:grid-cols-12">
             <div className="hidden lg:col-span-6 lg:block" aria-hidden="true" />
             <div className="lg:col-span-6 lg:flex lg:justify-end">
-              <div className="w-full max-w-[560px]">
+              <div className="w-full max-w-[380px]">
                 <QuoteRegisterCard {...cardProps} />
               </div>
             </div>
@@ -42,4 +42,3 @@ export function QuoteRegisterSection({
     </section>
   )
 }
-

@@ -7,7 +7,7 @@ namespace OtoBackend.Controllers.admin
 {
     [Route("api/admin/[controller]")]
     [ApiController]
-    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Manager}")]
+    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Manager},{AppRoles.Sales},{AppRoles.ShowroomSales}")]
     public class CarInventoriesController : ControllerBase
     {
         private readonly ICarInventoryService _inventoryService;
@@ -17,17 +17,13 @@ namespace OtoBackend.Controllers.admin
             _inventoryService = inventoryService;
         }
 
-        /// <summary>
-        /// Xem chi tiết số lượng xe phân bổ ở các Showroom
-        /// </summary>
         [HttpGet("car/{carId}")]
         public async Task<IActionResult> GetInventoriesByCar(int carId)
         {
             var inventories = await _inventoryService.GetInventoriesByCarIdAsync(carId);
             var total = await _inventoryService.GetTotalQuantityAsync(carId);
 
-            // Xào nấu lại dữ liệu trả về cho Frontend dễ đọc
-            var result = new
+            return Ok(new
             {
                 CarId = carId,
                 TotalQuantity = total,
@@ -37,26 +33,24 @@ namespace OtoBackend.Controllers.admin
                     ShowroomName = i.Showroom?.Name ?? "Không xác định",
                     Province = i.Showroom?.Province ?? "Chưa rõ",
                     i.Quantity,
-                    i.DisplayStatus
+                    i.DisplayStatus,
+                    i.Color
                 })
-            };
-
-            return Ok(result);
+            });
         }
 
-        /// <summary>
-        /// Cập nhật số lượng xe trong kho (Nhập thêm hoặc Bán đi)
-        /// </summary>
         [HttpPut("update-stock")]
         public async Task<IActionResult> UpdateStock([FromBody] UpdateStockDto request)
         {
-            var result = await _inventoryService.UpdateStockAsync(request.CarId, request.ShowroomId, request.Quantity, request.DisplayStatus);
+            var result = await _inventoryService.UpdateStockAsync(
+                request.CarId,
+                request.ShowroomId,
+                request.Quantity,
+                request.DisplayStatus,
+                request.Color
+            );
 
-            if (result.Success)
-            {
-                return Ok(new { message = result.Message });
-            }
-
+            if (result.Success) return Ok(new { message = result.Message });
             return BadRequest(new { message = result.Message });
         }
     }

@@ -113,6 +113,17 @@ namespace LogicBusiness.Services.Admin
             booking.UpdatedAt = DateTime.Now;
 
             await _bookingRepo.UpdateAsync(booking);
+
+            await _notiService.CreateNotificationAsync(
+                userId: null,
+                showroomId: booking.ShowroomId,
+                roleTarget: $"{AppRoles.Manager},{AppRoles.Sales},{AppRoles.ShowroomSales}",
+                title: "Lịch hẹn đã được tư vấn ✅",
+                content: $"Lịch của khách {booking.CustomerName} ({booking.Phone}) - xe {booking.Car?.Name} đã được tư vấn xong. Cần kiểm tra xe và xác nhận lịch lái thử.",
+                actionUrl: $"/bookings",
+                type: "Booking"
+            );
+
             return (true, "Đã ghi nhận kết quả tư vấn.");
         }
 
@@ -144,7 +155,7 @@ namespace LogicBusiness.Services.Admin
                 roleTarget: AppRoles.Technician,
                 title: "Xe cần kiểm tra kỹ thuật 🔧",
                 content: $"Xe {booking.Car?.Name} cần kiểm tra trước lịch lái thử của khách {booking.CustomerName} vào {booking.BookingDate:dd/MM/yyyy} lúc {booking.BookingTime}.",
-                actionUrl: $"/admin/bookings/{bookingId}",
+                actionUrl: $"/bookings",
                 type: "TechCheck"
             );
 
@@ -179,7 +190,7 @@ namespace LogicBusiness.Services.Admin
                     roleTarget: $"{AppRoles.Sales},{AppRoles.ShowroomSales},{AppRoles.Manager}",
                     title: "Xe đã sẵn sàng ✅",
                     content: $"Xe {booking.Car?.Name} đã qua kiểm tra kỹ thuật. Vui lòng xác nhận lịch lái thử với khách {booking.CustomerName}.",
-                    actionUrl: $"/admin/bookings/{bookingId}",
+                    actionUrl: $"/bookings",
                     type: "TechCheck"
                 );
 
@@ -198,7 +209,7 @@ namespace LogicBusiness.Services.Admin
                     roleTarget: $"{AppRoles.Sales},{AppRoles.ShowroomSales},{AppRoles.Manager}",
                     title: "Xe chưa đạt kỹ thuật ⚠️",
                     content: $"Xe {booking.Car?.Name} chưa đạt kiểm tra kỹ thuật. Lý do: {dto.TechNote}. Vui lòng liên hệ khách {booking.CustomerName} để xử lý.",
-                    actionUrl: $"/admin/bookings/{bookingId}",
+                    actionUrl: $"/bookings",
                     type: "TechCheck"
                 );
 
@@ -226,6 +237,17 @@ namespace LogicBusiness.Services.Admin
             booking.UpdatedAt = DateTime.Now;
 
             await _bookingRepo.UpdateAsync(booking);
+
+            await _notiService.CreateNotificationAsync(
+                userId: null,
+                showroomId: booking.ShowroomId,
+                roleTarget: $"{AppRoles.Manager},{AppRoles.Sales},{AppRoles.ShowroomSales}",
+                title: "Lịch lái thử đã được xác nhận 🎉",
+                content: $"Lịch lái thử xe {booking.Car?.Name} của khách {booking.CustomerName} ({booking.Phone}) đã xác nhận vào {booking.BookingDate:dd/MM/yyyy} lúc {booking.BookingTime}.",
+                actionUrl: $"/bookings",
+                type: "Booking"
+            );
+
             return (true, "Đã xác nhận lịch hẹn thành công.");
         }
 
@@ -281,7 +303,7 @@ namespace LogicBusiness.Services.Admin
                 roleTarget: AppRoles.Manager,
                 title: "Khách không đến đúng hẹn",
                 content: $"Khách {booking.CustomerName} ({booking.Phone}) không đến lái thử xe {booking.Car?.Name} vào {booking.BookingDate:dd/MM/yyyy} lúc {booking.BookingTime}.",
-                actionUrl: $"/admin/bookings/{bookingId}",
+                actionUrl: $"/bookings",
                 type: "SystemAlert"
             );
 
@@ -317,7 +339,7 @@ namespace LogicBusiness.Services.Admin
                     roleTarget: AppRoles.Manager,
                     title: "Cảnh báo: Lịch hẹn bị hủy",
                     content: $"Nhân viên [{userRole}] vừa hủy lịch hẹn của khách {booking.CustomerName}. Lý do: {dto.CancelReason}",
-                    actionUrl: $"/admin/bookings/{bookingId}",
+                    actionUrl: $"/bookings",
                     type: "SystemAlert"
                 );
             }

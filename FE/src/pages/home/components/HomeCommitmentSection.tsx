@@ -36,8 +36,7 @@ const DEFAULT_FEATURES: HomeCommitmentFeature[] = [
   },
   {
     title: 'BẢO HÀNH TIÊU CHUẨN TOÀN CẦU',
-    description:
-      'Cung cấp phụ tùng, hỗ trợ kỹ thuật và bảo hiểm giúp quý khách an tâm tận hưởng xe; luôn được chăm sóc kĩ lưỡng.',
+    description: 'Cung cấp phụ tùng, hỗ trợ kỹ thuật và bảo hiểm giúp quý khách an tâm tận hưởng xe; luôn được chăm sóc kĩ lưỡng.',
   },
 ]
 
@@ -45,14 +44,13 @@ export function HomeCommitmentSection({
   className,
   title = 'CAM KẾT GIÁ XE VÀ CHƯƠNG TRÌNH KHUYẾN MẠI TỐT NHẤT',
   subtitle = 'TRONG HỆ THỐNG XE TẠI VIỆT NAM',
-  topNote = `Hỗ Trợ Đăng Kí, Đăng Kiểm, Giao xe tận nhà. Hỗ Trợ Lái Thử Xe Tại Nhà Bất Kì Thời Gian Nào. Hỗ Trợ Làm Thủ tục
-Biển Đẹp, Hỗ Trợ Kỹ Thuật và Bảo Hiểm 24/7`,
+  topNote = `Hỗ Trợ Đăng Kí, Đăng Kiểm, Giao xe tận nhà. Hỗ Trợ Lái Thử Xe Tại Nhà Bất Kì Thời Gian Nào. Hỗ Trợ Làm Thủ tục\nBiển Đẹp, Hỗ Trợ Kỹ Thuật và Bảo Hiểm 24/7`,
   hotlineLabel = 'Hotline 0333 436 743',
   hotlineSubLabel = 'Quý khách vui lòng gọi để có giá xe tốt nhất',
   hotlineHref = 'tel:0333436743',
   quoteLabel = 'NHẬN BÁO GIÁ',
   quoteSubLabel = 'Hoặc đăng ký nhận báo giá xe lăn bánh tốt nhất',
-  quoteHref = '#',
+  quoteHref = '#quote-register',
   imageSrc,
   imageAlt = 'Phòng kinh doanh VinFast',
   imageCaption = 'PHÒNG KINH DOANH TÊN CÔNG TY',
@@ -130,9 +128,7 @@ Biển Đẹp, Hỗ Trợ Kỹ Thuật và Bảo Hiểm 24/7`,
                   {features.map((f) => (
                     <div key={f.title}>
                       <div className="text-sm font-extrabold tracking-wide text-slate-900 sm:text-base">{f.title}</div>
-                      <div className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:leading-7">
-                        {f.description}
-                      </div>
+                      <div className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:leading-7">{f.description}</div>
                     </div>
                   ))}
                 </div>
@@ -144,4 +140,3 @@ Biển Đẹp, Hỗ Trợ Kỹ Thuật và Bảo Hiểm 24/7`,
     </section>
   )
 }
-

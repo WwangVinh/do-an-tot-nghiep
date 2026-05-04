@@ -6,11 +6,11 @@ export type CarListItem = {
   priceText?: string
   imageSrc?: string
   imageAlt?: string
-  /** Ghi đè URL chi tiết. Mặc định: `/san-pham/xe/:id` */
   to?: string
-  /** `false` = không liên kết tới trang chi tiết */
   detailLink?: boolean
   actions?: [CarCardAction, CarCardAction?]
+  year?: number | null
+  condition?: string | null
 }
 
 export type CarListSectionProps = {
@@ -41,6 +41,8 @@ export function CarListSection({ title, items, className, containerClassName }: 
               imageAlt={c.imageAlt}
               to={c.detailLink === false ? undefined : (c.to ?? `/san-pham/xe/${c.id}`)}
               actions={c.actions}
+              year={c.year}
+              condition={c.condition}
             />
           ))}
         </div>
@@ -48,4 +50,3 @@ export function CarListSection({ title, items, className, containerClassName }: 
     </section>
   )
 }
-

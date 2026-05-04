@@ -17,12 +17,51 @@ namespace SqlServer.Repositories
             _context = context;
         }
 
+        // ✅ Phân trang + lọc + tìm kiếm
+        public async Task<(List<Order> Items, int Total)> GetOrdersPagedAsync(
+            string? search, string? status, string? paymentStatus, int page, int pageSize)
+        {
+            var query = _context.Orders
+                .Include(o => o.Car)
+                .Include(o => o.Staff)
+                .Include(o => o.Showroom)
+                .AsQueryable();
+
+            // Tìm kiếm theo mã đơn, tên khách, SĐT
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim().ToLower();
+                query = query.Where(o =>
+                    (o.OrderCode != null && o.OrderCode.ToLower().Contains(s)) ||
+                    o.FullName.ToLower().Contains(s) ||
+                    o.Phone.Contains(s));
+            }
+
+            // Lọc theo trạng thái đơn
+            if (!string.IsNullOrWhiteSpace(status))
+                query = query.Where(o => o.Status == status);
+
+            // Lọc theo trạng thái thanh toán
+            if (!string.IsNullOrWhiteSpace(paymentStatus))
+                query = query.Where(o => o.PaymentStatus == paymentStatus);
+
+            var total = await query.CountAsync();
+
+            var items = await query
+                .OrderByDescending(o => o.OrderDate)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, total);
+        }
+
         public async Task<IEnumerable<Order>> GetAllOrdersWithDetailsAsync()
         {
-            // Include để lấy luôn thông tin Xe và Nhân viên (tránh lỗi N+1 query)
             return await _context.Orders
                 .Include(o => o.Car)
                 .Include(o => o.Staff)
+                .Include(o => o.Showroom) // ✅
                 .OrderByDescending(o => o.OrderDate)
                 .ToListAsync();
         }
@@ -30,6 +69,20 @@ namespace SqlServer.Repositories
         public async Task<Order?> GetOrderByIdAsync(int id)
         {
             return await _context.Orders.FindAsync(id);
+        }
+
+        public async Task<Order?> GetOrderByIdWithDetailsAsync(int id)
+        {
+            return await _context.Orders
+                .Include(o => o.Car)
+                .Include(o => o.Staff)
+                .Include(o => o.Showroom) // ✅
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Car)
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Accessory)
+                .Include(o => o.PaymentTransactions)
+                .FirstOrDefaultAsync(o => o.OrderId == id);
         }
 
         public async Task UpdateOrderAsync(Order order)
@@ -112,6 +165,50 @@ namespace SqlServer.Repositories
             return await _context.Orders.AnyAsync(o => o.Phone == phone && o.CarId == carId
                 && (o.PaymentStatus == "Paid" || o.PaymentStatus == "Deposited"));
         }
+        public async Task<string?> GetCustomerNameFromOrderAsync(string phone, int carId)
+        {
+            var order = await _context.Orders
+                .Where(o => o.Phone == phone && o.CarId == carId) // Nếu bảng Order của ní lưu nhiều xe thì dùng .Any(i => i.CarId == carId) nhé
+                .OrderByDescending(o => o.OrderDate)
+                .FirstOrDefaultAsync();
+
+            return order?.FullName;
+        }
+        public async Task<List<Order>> GetOrdersByPhoneAsync(string phone)
+        {
+            return await _context.Orders
+                .Include(o => o.Car)
+                .Include(o => o.OrderItems).ThenInclude(i => i.Accessory)
+                .Where(o => o.Phone == phone)
+                .OrderByDescending(o => o.OrderDate)
+                .ToListAsync();
+        }
+        public async Task<decimal> GetPricingVersionPriceAsync(int pricingVersionId)
+        {
+            var version = await _context.CarPricingVersions.FindAsync(pricingVersionId);
+            return version?.PriceVnd ?? 0;
+        }
+
+        public async Task<Showroom?> GetShowroomByIdAsync(int showroomId)
+        {
+            return await _context.Showrooms.FindAsync(showroomId);
+        }
+
+        public async Task<List<Showroom>> GetAllShowroomsAsync()
+        {
+            return await _context.Showrooms
+                .OrderBy(s => s.Name)
+                .ToListAsync();
+        }
+        public async Task<List<Showroom>> GetShowroomsByCarIdAsync(int carId)
+        {
+            return await _context.CarInventories
+                .Where(ci => ci.CarId == carId && ci.Quantity > 0)
+                .Select(ci => ci.Showroom)
+                .Where(s => s != null)
+                .Distinct()
+                .OrderBy(s => s.Name)
+                .ToListAsync();
+        }
     }
 }
-

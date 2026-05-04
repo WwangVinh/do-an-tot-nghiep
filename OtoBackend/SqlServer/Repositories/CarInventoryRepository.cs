@@ -21,10 +21,17 @@ namespace SqlServer.Repositories
         }
 
 
-        public async Task<CarInventory?> GetInventoryAsync(int carId, int showroomId)
+        public async Task<CarInventory?> GetInventoryAsync(int carId, int showroomId, string? color = null)
         {
-            return await _context.CarInventories
-                .FirstOrDefaultAsync(i => i.CarId == carId && i.ShowroomId == showroomId);
+            var query = _context.CarInventories
+                .Where(i => i.CarId == carId && i.ShowroomId == showroomId);
+
+            if (!string.IsNullOrWhiteSpace(color))
+                query = query.Where(i => i.Color == color.Trim());
+            else
+                query = query.Where(i => i.Color == null);
+
+            return await query.FirstOrDefaultAsync();
         }
 
         public async Task<IEnumerable<CarInventory>> GetInventoriesByCarIdAsync(int carId)
@@ -39,13 +46,13 @@ namespace SqlServer.Repositories
         public async Task AddInventoryAsync(CarInventory inventory)
         {
             await _context.CarInventories.AddAsync(inventory);
-            await _context.SaveChangesAsync(); 
+            await _context.SaveChangesAsync();
         }
 
         public async Task UpdateInventoryAsync(CarInventory inventory)
         {
             _context.CarInventories.Update(inventory);
-            await _context.SaveChangesAsync(); 
+            await _context.SaveChangesAsync();
         }
         public async Task<int> GetTotalQuantityByCarIdAsync(int carId)
         {

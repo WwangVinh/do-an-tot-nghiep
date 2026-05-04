@@ -11,6 +11,7 @@ import { CarsEditPage } from '../../pages/cars/CarsEditPage'
 import { ShowroomsPage } from '../../pages/showrooms/ShowroomsPage'
 import { OrdersPage } from '../../pages/orders/OrdersPage'
 import { BookingsPage } from '../../pages/bookings/BookingsPage'
+import { AdminConsignmentsPage } from '../../pages/consignments/AdminConsignmentsPage' // <-- Thêm import này
 import { UsersPage } from '../../pages/users/UsersPage'
 import { ArticlesPage } from '../../pages/articles/ArticlesPage'
 import { PromotionsPage } from '../../pages/promotions/PromotionsPage'
@@ -41,7 +42,7 @@ export const routes: RouteObject[] = [
       {
         path: '/banners',
         element: (
-          <RequireRole allowed={['Admin', 'Marketing']}>
+          <RequireRole allowed={['Admin','Manager', 'Marketing']}>
             <BannersPage />
           </RequireRole>
         ),
@@ -91,6 +92,14 @@ export const routes: RouteObject[] = [
         element: (
           <RequireRole allowed={['Admin', 'Manager', 'ShowroomSales', 'Sales', 'Technician']}>
             <BookingsPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: '/consignments', // <-- Thêm route ký gửi ở đây
+        element: (
+          <RequireRole allowed={['Admin', 'Manager', 'ShowroomSales', 'Sales']}>
+            <AdminConsignmentsPage />
           </RequireRole>
         ),
       },

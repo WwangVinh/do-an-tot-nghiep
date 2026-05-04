@@ -14,86 +14,126 @@ namespace LogicBusiness.Services.Shared
         private readonly IConsignmentRepository _consignRepo;
         private readonly INotificationService _notiService;
 
+        private static readonly string[] AllowedRoles =
+        {
+            AppRoles.Admin, AppRoles.Manager, AppRoles.Sales, AppRoles.ShowroomSales
+        };
+
         public ConsignmentService(IConsignmentRepository consignRepo, INotificationService notiService)
         {
             _consignRepo = consignRepo;
             _notiService = notiService;
         }
 
-        // KHÁCH HÀNG TẠO YÊU CẦU KÝ GỬI
-        public async Task<(bool Success, string Message)> CreateConsignmentAsync(int userId, string customerName, ConsignmentCreateDto dto)
+        public async Task<(bool Success, string Message)> CreateConsignmentAsync(ConsignmentCreateDto dto)
         {
+            var duplicate = await _consignRepo.GetPendingByPhoneAndCarAsync(
+                dto.GuestPhone.Trim(),
+                dto.Brand.Trim(),
+                dto.Model.Trim(),
+                dto.Year
+            );
+
+            if (duplicate != null)
+                return (false, "Xe này đã có yêu cầu ký gửi đang chờ xử lý. Vui lòng chờ nhân viên liên hệ.");
+
             var consignment = new Consignment
             {
-                UserId = userId,
+                GuestName = dto.GuestName.Trim(),
+                GuestPhone = dto.GuestPhone.Trim(),
+                GuestEmail = dto.GuestEmail?.Trim(),
                 Brand = dto.Brand.Trim(),
                 Model = dto.Model.Trim(),
                 Year = dto.Year,
                 Mileage = dto.Mileage,
-                ConditionDescription = dto.ConditionDescription,
+                ConditionDescription = dto.ConditionDescription?.Trim(),
                 ExpectedPrice = dto.ExpectedPrice,
-                Status = "Pending", // Mới tạo là Chờ xử lý
-                CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now
+                Status = ConsignmentStatus.Pending,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
             };
 
             await _consignRepo.AddAsync(consignment);
 
-            // THÔNG BÁO CHO ADMIN/MANAGER BIẾT
             await _notiService.CreateNotificationAsync(
                 userId: null,
-                roleTarget: "ShowroomManager",
+                roleTarget: AppRoles.Manager,
                 showroomId: null,
-                title: "Yêu cầu ký gửi xe mới! 🚗",
-                content: $"Khách hàng {customerName} muốn ký gửi chiếc {dto.Brand} {dto.Model} ({dto.Year}). Sếp vào check ngay!",
-                actionUrl: "/admin/consignments",
+                title: "Yêu cầu ký gửi xe mới 🚗",
+                content: $"Khách {dto.GuestName} ({dto.GuestPhone}) muốn ký gửi {dto.Brand} {dto.Model} ({dto.Year}). Vào kiểm tra ngay!",
+                actionUrl: "/consignments",
                 type: "System"
             );
 
             return (true, "Gửi yêu cầu ký gửi thành công! Showroom sẽ liên hệ bạn sớm nhất để thẩm định xe.");
         }
 
-        // ADMIN/MANAGER CẬP NHẬT TRẠNG THÁI & CHỐT GIÁ
+        public async Task<IEnumerable<ConsignmentListItemDto>> GetAllAdminAsync()
+        {
+            var list = await _consignRepo.GetAllAdminAsync();
+            return list.Select(MapToListItem);
+        }
+
+        public async Task<ConsignmentResponseDto?> GetByIdAsync(int consignmentId)
+        {
+            var c = await _consignRepo.GetByIdAsync(consignmentId);
+            return c == null ? null : MapToResponse(c);
+        }
+
         public async Task<(bool Success, string Message)> UpdateConsignmentStatusAsync(int consignmentId, ConsignmentUpdateDto dto, string adminRole)
         {
             var consignment = await _consignRepo.GetByIdAsync(consignmentId);
-            if (consignment == null) return (false, "Không tìm thấy hồ sơ ký gửi này.");
+            if (consignment == null)
+                return (false, "Không tìm thấy hồ sơ ký gửi này.");
 
-            // Chỉ Admin hoặc Manager mới được sửa giá/hoa hồng
-            if (adminRole != "Admin" && adminRole != "ShowroomManager")
-            {
-                return (false, "Chỉ quản lý mới được quyền chốt giá và cập nhật hồ sơ ký gửi!");
-            }
+            if (!AllowedRoles.Contains(adminRole))
+                return (false, "Bạn không có quyền cập nhật hồ sơ ký gửi.");
+
+            if (!ConsignmentStatus.IsValid(dto.Status))
+                return (false, $"Trạng thái '{dto.Status}' không hợp lệ. Các trạng thái được phép: {string.Join(", ", ConsignmentStatus.All)}.");
 
             consignment.Status = dto.Status;
             if (dto.AgreedPrice.HasValue) consignment.AgreedPrice = dto.AgreedPrice.Value;
             if (dto.CommissionRate.HasValue) consignment.CommissionRate = dto.CommissionRate.Value;
             if (dto.LinkedCarId.HasValue) consignment.LinkedCarId = dto.LinkedCarId.Value;
-
-            consignment.UpdatedAt = DateTime.Now;
+            consignment.UpdatedAt = DateTime.UtcNow;
 
             await _consignRepo.UpdateAsync(consignment);
 
-            // THÔNG BÁO CHO KHÁCH HÀNG KHI HỒ SƠ ĐƯỢC CẬP NHẬT
-            if (consignment.UserId > 0)
-            {
-                string statusVN = dto.Status == "Appraising" ? "đang được thẩm định"
-                                : dto.Status == "Approved" ? "đã được phê duyệt"
-                                : dto.Status == "Rejected" ? "bị từ chối"
-                                : dto.Status;
-
-                await _notiService.CreateNotificationAsync(
-                    userId: consignment.UserId, // Gắn đích danh mã khách hàng
-                    showroomId: null,
-                    roleTarget: null,
-                    title: "Cập nhật hồ sơ ký gửi 📝",
-                    content: $"Hồ sơ ký gửi xe {consignment.Brand} {consignment.Model} của bạn {statusVN}. Vui lòng kiểm tra chi tiết!",
-                    actionUrl: "/customer/my-consignments",
-                    type: "System"
-                );
-            }
-
             return (true, "Cập nhật hồ sơ ký gửi thành công!");
         }
+
+        private static ConsignmentListItemDto MapToListItem(Consignment c) => new()
+        {
+            ConsignmentId = c.ConsignmentId,
+            GuestName = c.GuestName,
+            GuestPhone = c.GuestPhone,
+            Brand = c.Brand,
+            Model = c.Model,
+            Year = c.Year,
+            ExpectedPrice = c.ExpectedPrice,
+            Status = c.Status,
+            CreatedAt = c.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+        };
+
+        private static ConsignmentResponseDto MapToResponse(Consignment c) => new()
+        {
+            ConsignmentId = c.ConsignmentId,
+            GuestName = c.GuestName,
+            GuestPhone = c.GuestPhone,
+            GuestEmail = c.GuestEmail,
+            Brand = c.Brand,
+            Model = c.Model,
+            Year = c.Year,
+            Mileage = c.Mileage,
+            ConditionDescription = c.ConditionDescription,
+            ExpectedPrice = c.ExpectedPrice,
+            AgreedPrice = c.AgreedPrice,
+            CommissionRate = c.CommissionRate,
+            Status = c.Status,
+            LinkedCarId = c.LinkedCarId,
+            CreatedAt = c.CreatedAt.ToString("dd/MM/yyyy HH:mm"),
+            UpdatedAt = c.UpdatedAt.ToString("dd/MM/yyyy HH:mm")
+        };
     }
 }

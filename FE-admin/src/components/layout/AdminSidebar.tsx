@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   Bell, CalendarDays, Gift, Image, LayoutDashboard,
   LogOut, Newspaper, Package, ShoppingBag, Star,
-  Store, Users, Wrench,
+  Store, Users, Wrench, Handshake,
 } from 'lucide-react'
 
 import { clearAuth } from '../../app/auth/authStore'
@@ -71,10 +71,11 @@ export function AdminSidebar({
   const canSeeInventories = isInRole(userRole, ['Admin', 'Manager', 'ShowroomSales', 'Sales', 'Technician'])
   const canSeeOrders      = isInRole(userRole, ['Admin', 'Manager', 'ShowroomSales', 'Sales'])
   const canSeeBookings    = isInRole(userRole, ['Admin', 'Manager', 'ShowroomSales', 'Sales', 'Technician'])
-  const canSeeShowrooms   = isInRole(userRole, ['Admin', 'Manager'])
+  const canSeeConsignments = isInRole(userRole, ['Admin', 'Manager', 'ShowroomSales', 'Sales']) 
+  const canSeeShowrooms   = isInRole(userRole, ['Admin'])
   const canSeeUsers       = isInRole(userRole, ['Admin', 'Manager'])
   const canSeeReviews     = isInRole(userRole, ['Admin', 'Manager', 'Marketing'])
-  const canSeeNotifications = isInRole(userRole, ['Admin', 'Manager'])
+  const canSeeNotifications = isInRole(userRole, ['Admin', 'Manager', 'Sales', 'ShowroomSales', 'Technician', 'Marketing', 'Content'])
   const canSeeBanners     = isInRole(userRole, ['Admin', 'Manager', 'Marketing', 'Content'])
   const canSeeArticles    = isInRole(userRole, ['Admin', 'Manager', 'Marketing', 'Content'])
   const canSeePromotions  = isInRole(userRole, ['Admin', 'Manager', 'Marketing'])
@@ -106,6 +107,7 @@ export function AdminSidebar({
           {canSeeShowrooms   && <NavItem to="/showrooms"     label="Showroom"    icon={<Store size={16} />}        collapsed={collapsed} />}
           {canSeeOrders      && <NavItem to="/orders"        label="Đơn hàng"    icon={<ShoppingBag size={16} />}  collapsed={collapsed} />}
           {canSeeBookings    && <NavItem to="/bookings"      label="Đặt lịch"    icon={<CalendarDays size={16} />} collapsed={collapsed} />}
+          {canSeeConsignments && <NavItem to="/consignments" label="Ký gửi xe"   icon={<Handshake size={16} />}    collapsed={collapsed} />}
           {canSeeUsers       && <NavItem to="/users"         label="Người dùng"  icon={<Users size={16} />}        collapsed={collapsed} />}
           {canSeeInventories && <NavItem to="/inventories"   label="Tồn kho"     icon={<Wrench size={16} />}       collapsed={collapsed} />}
           {canSeeArticles    && <NavItem to="/articles"      label="Bài viết"    icon={<Newspaper size={16} />}    collapsed={collapsed} />}

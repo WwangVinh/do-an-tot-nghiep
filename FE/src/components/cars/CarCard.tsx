@@ -13,10 +13,11 @@ export type CarCardProps = {
   priceText?: string
   imageSrc?: string
   imageAlt?: string
-  /** Điều hướng tới trang chi tiết khi bấm ảnh / tên / giá (nút hành động vẫn độc lập). */
   to?: string
   actions?: [CarCardAction, CarCardAction?]
   className?: string
+  year?: number | null
+  condition?: string | null
 }
 
 export function CarCard({
@@ -27,37 +28,33 @@ export function CarCard({
   to,
   actions,
   className,
+  year,
+  condition,
 }: CarCardProps) {
   const [a1, a2] = actions ?? [
     { label: 'Nhận ưu đãi', variant: 'primary' },
     { label: 'Gọi chốt giá', variant: 'secondary', href: 'tel:0333436743' },
   ]
 
+  const isUsed = condition?.toLowerCase() === 'used'
+
   const renderAction = (a?: CarCardAction, key?: string) => {
     if (!a) return null
-
     const isPrimary = (a.variant ?? 'secondary') === 'primary'
-    const base =
-      'inline-flex h-9 items-center justify-center gap-2 rounded-lg px-3 text-xs font-semibold shadow-sm transition outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50'
+    const base = 'inline-flex h-9 items-center justify-center gap-2 rounded-lg px-3 text-xs font-semibold shadow-sm transition outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50'
     const cls = isPrimary
       ? `${base} bg-rose-50 text-rose-600 ring-1 ring-rose-200 hover:bg-rose-100`
       : `${base} bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50`
-
     const content = (
       <>
         {!isPrimary && <Phone className="h-4 w-4" aria-hidden="true" />}
         <span className="truncate">{a.label}</span>
       </>
     )
-
     return a.href ? (
-      <a key={key} href={a.href} className={cls}>
-        {content}
-      </a>
+      <a key={key} href={a.href} className={cls}>{content}</a>
     ) : (
-      <button key={key} type="button" onClick={a.onClick} className={cls}>
-        {content}
-      </button>
+      <button key={key} type="button" onClick={a.onClick} className={cls}>{content}</button>
     )
   }
 
@@ -83,7 +80,17 @@ export function CarCard({
       </div>
 
       <div className="px-5 pt-4">
-        <div className="text-base font-semibold text-slate-800 sm:text-lg">{name}</div>
+        <div className="flex items-center gap-2">
+          <div className="text-base font-semibold text-slate-800 sm:text-lg">{name}</div>
+          {isUsed && (
+            <span className="shrink-0 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 ring-1 ring-amber-200">
+              Cũ
+            </span>
+          )}
+        </div>
+        {year && (
+          <div className="mt-0.5 text-xs text-slate-400">{year}</div>
+        )}
         {priceText ? (
           <div className="mt-1 text-sm">
             <span className="text-slate-500">Giá từ: </span>
@@ -106,17 +113,12 @@ export function CarCard({
       ].join(' ')}
     >
       {to ? (
-        <Link
-          to={to}
-          className="block rounded-t-2xl outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2"
-          aria-label={`Xem chi tiết ${name}`}
-        >
+        <Link to={to} className="block rounded-t-2xl outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2" aria-label={`Xem chi tiết ${name}`}>
           {preview}
         </Link>
       ) : (
         preview
       )}
-
       <div className="px-5 pb-4 pt-2">
         <div className="grid grid-cols-2 gap-2">
           {renderAction(a1, 'a1')}
@@ -126,4 +128,3 @@ export function CarCard({
     </article>
   )
 }
-

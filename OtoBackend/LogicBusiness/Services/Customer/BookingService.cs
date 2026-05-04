@@ -69,7 +69,7 @@ namespace LogicBusiness.Services.Customer
                 roleTarget: $"{AppRoles.Manager},{AppRoles.Sales},{AppRoles.ShowroomSales}",
                 title: "Có lịch hẹn lái thử mới! 📅",
                 content: $"Khách {dto.CustomerName} ({dto.Phone}) vừa đặt lịch lái thử {car.Brand} {car.Name} lúc {dto.BookingTime} ngày {dto.BookingDate:dd/MM/yyyy}.",
-                actionUrl: "/admin/bookings",
+                actionUrl: "/bookings",
                 type: "Booking"
             );
 
@@ -169,7 +169,7 @@ namespace LogicBusiness.Services.Customer
                 title: "Khách tự hủy lịch hẹn ❌",
                 content: $"Khách {booking.CustomerName} ({booking.Phone}) vừa tự hủy lịch lái thử xe {booking.Car?.Name}."
                     + (string.IsNullOrWhiteSpace(reason) ? "" : $" Lý do: {reason}"),
-                actionUrl: "/admin/bookings",
+                actionUrl: "/bookings",
                 type: "Booking"
             );
 

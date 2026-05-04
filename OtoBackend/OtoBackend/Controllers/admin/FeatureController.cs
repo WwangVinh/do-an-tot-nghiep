@@ -9,7 +9,7 @@ namespace OtoBackend.Controllers.Admin
 {
     [Route("api/admin/[controller]")]
     [ApiController]
-    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Manager},{AppRoles.Content},{AppRoles.Technician}")]
+    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Manager},{AppRoles.Content},{AppRoles.Technician},{AppRoles.Sales},{AppRoles.ShowroomSales}")]
     public class FeaturesController : ControllerBase
     {
         private readonly IFeatureService _featureService;

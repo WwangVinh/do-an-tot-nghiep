@@ -2,39 +2,33 @@ import { useQuery } from '@tanstack/react-query'
 import { NewsListItem } from './components/NewsListItem'
 import { NewsSidebar } from './components/NewsSidebar'
 import type { NewsPost } from './types'
-
-// 👇 IMPORT HÀM GỌI API (Ní check lại đường dẫn file services/articles/articles.ts bên project web khách hàng xem đúng không nha)
-import { fetchAdminArticles } from '../../services/articles/articles' 
-
+import { fetchPublicArticles } from '../../services/articles/articles'
 import banner4 from '../../assets/images/banner4.jpg'
 
 export function NewsPage() {
-  // 1. Gọi API lấy dữ liệu thực tế từ Database
   const { data: articleData, isLoading } = useQuery({
     queryKey: ['public-articles'],
-    queryFn: () => fetchAdminArticles({ page: 1, pageSize: 20, isPublished: true }), // Chỉ lấy bài Public
+    queryFn: () => fetchPublicArticles({ page: 1, pageSize: 20 }),
   })
 
-  // 2. Chuyển đổi dữ liệu từ API sang cấu trúc NewsPost mà giao diện đang xài
   const rawArticles = articleData?.data ?? []
-  
+
   const posts: NewsPost[] = rawArticles.map((a) => ({
     id: a.articleId.toString(),
     title: a.title,
-    excerpt: 'Bấm vào xem chi tiết để cập nhật thêm thông tin về bài viết này...', // API list chưa có content nên tui để tạm câu này
+    excerpt: 'Bấm vào xem chi tiết để cập nhật thêm thông tin về bài viết này...',
     dateText: a.createdAt ? new Date(a.createdAt).toLocaleDateString('vi-VN') : '',
-    imageSrc: a.thumbnail || 'https://images.unsplash.com/photo-1503328427499-d92d1fa3af8a?q=80&w=800&auto=format&fit=crop', // Ảnh mặc định nếu lỡ quên up thumbnail
-    href: `/tin-tuc/${a.articleId}` // 👈 Ní sửa lại route này cho khớp với router chi tiết bài viết của ní nha
+    imageSrc: a.thumbnail || 'https://images.unsplash.com/photo-1503328427499-d92d1fa3af8a?q=80&w=800&auto=format&fit=crop',
+    href: `/tin-tuc/${a.articleId}`,
   }))
 
-  // 3. Tự động lấy 5 bài viết mới nhất cho Sidebar bên phải
   const latest = posts.slice(0, 5)
 
   return (
     <main className="w-full bg-[#f4f6f9]">
       <div className="mx-auto w-full max-w-screen-2xl px-4 pb-14 pt-8 sm:px-6 lg:px-8 lg:pb-16 lg:pt-10">
-        
-        {/* Banner Hero giữ nguyên */}
+
+        {/* Banner Hero */}
         <section className="relative mb-10 overflow-hidden rounded-2xl shadow-[0_8px_32px_-6px_rgba(15,23,42,0.05),0_2px_12px_-2px_rgba(15,23,42,0.05)] ring-1 ring-inset ring-white/15">
           <div className="absolute inset-0">
             <img
@@ -61,7 +55,7 @@ export function NewsPage() {
 
         {/* Nội dung tin tức */}
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-12">
-          
+
           {/* Cột trái: Danh sách bài viết */}
           <section className="lg:col-span-8">
             <div className="flex flex-col gap-7">

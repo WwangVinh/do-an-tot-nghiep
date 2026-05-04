@@ -1,12 +1,6 @@
-﻿using CoreEntities.Models;
-using System;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CoreEntities.Models;
 
@@ -29,9 +23,12 @@ public class CarInventory
     [MaxLength(50)]
     public string DisplayStatus { get; set; } = "OnDisplay";
 
-    public DateTime? UpdatedAt { get; set; } = DateTime.Now;
+    // Màu xe cụ thể của lô hàng này — nullable vì kho cũ chưa có màu
+    [MaxLength(100)]
+    public string? Color { get; set; }
 
-    // Navigation properties
+    public DateTime? UpdatedAt { get; set; } = DateTime.UtcNow;
+
     [ForeignKey("ShowroomId")]
     public virtual Showroom? Showroom { get; set; }
 

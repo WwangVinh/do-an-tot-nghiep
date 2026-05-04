@@ -2,22 +2,18 @@
 using LogicBusiness.Interfaces.Admin;
 using LogicBusiness.Interfaces.Repositories;
 using LogicBusiness.Interfaces.Shared;
-using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-
 
 namespace LogicBusiness.Services.Admin
 {
     public class CarInventoryService : ICarInventoryService
     {
         private readonly ICarInventoryRepository _inventoryRepo;
-        private readonly INotificationService _notiService; // 👈 Thêm súng bắn thông báo
+        private readonly INotificationService _notiService;
         private readonly ICarRepository _carRepo;
-
 
         public CarInventoryService(ICarInventoryRepository inventoryRepo, INotificationService notiService, ICarRepository carRepo)
         {
@@ -25,64 +21,56 @@ namespace LogicBusiness.Services.Admin
             _notiService = notiService;
             _carRepo = carRepo;
         }
-        public async Task<(bool Success, string Message)> UpdateStockAsync(int carId, int showroomId, int newQuantity, string displayStatus)
+
+        public async Task<(bool Success, string Message)> UpdateStockAsync(int carId, int showroomId, int newQuantity, string displayStatus, string? color = null)
         {
             if (newQuantity < 0) return (false, "Số lượng không được âm!");
 
             var allowedStatuses = new List<string> { "Available", "OnDisplay", "Out of stock" };
             if (!allowedStatuses.Contains(displayStatus))
-            {
-                return (false, "Trạng thái không hợp lệ! Vui lòng nhập đúng chữ: Available, OnDisplay, hoặc Out of stock.");
-            }
+                return (false, "Trạng thái không hợp lệ! Vui lòng nhập đúng: Available, OnDisplay, hoặc Out of stock.");
 
-            // Lấy tên xe để thông báo cho đẹp (Nếu ní đã inject ICarRepository)
             var car = await _carRepo.GetByIdAsync(carId);
             string carName = car != null ? $"{car.Brand} {car.Name}" : $"ID {carId}";
+            string colorLabel = !string.IsNullOrWhiteSpace(color) ? $" ({color})" : "";
 
-            var inventory = await _inventoryRepo.GetInventoryAsync(carId, showroomId);
+            var inventory = await _inventoryRepo.GetInventoryAsync(carId, showroomId, color);
             string finalStatus = newQuantity == 0 ? "Out of stock" : displayStatus;
 
             if (inventory == null)
             {
-                // TẠO MỚI KHO
-                var newInv = new CarInventory
+                await _inventoryRepo.AddInventoryAsync(new CarInventory
                 {
                     CarId = carId,
                     ShowroomId = showroomId,
                     Quantity = newQuantity,
                     DisplayStatus = finalStatus,
-                    UpdatedAt = DateTime.Now
-                };
-                await _inventoryRepo.AddInventoryAsync(newInv);
-                return (true, "Thêm mới kho thành công!");
+                    Color = string.IsNullOrWhiteSpace(color) ? null : color.Trim(),
+                    UpdatedAt = DateTime.UtcNow
+                });
+                return (true, $"Thêm mới kho{colorLabel} thành công!");
             }
             else
             {
-                // CẬP NHẬT KHO
-                int oldQuantity = inventory.Quantity; // Lưu lại số lượng cũ để so sánh
-
+                int oldQuantity = inventory.Quantity;
                 inventory.Quantity = newQuantity;
                 inventory.DisplayStatus = finalStatus;
-                inventory.UpdatedAt = DateTime.Now;
-
+                inventory.Color = string.IsNullOrWhiteSpace(color) ? null : color.Trim();
+                inventory.UpdatedAt = DateTime.UtcNow;
                 await _inventoryRepo.UpdateInventoryAsync(inventory);
 
-                // 👇 LOGIC BẮN THÔNG BÁO Ở ĐÂY 👇
-
-                // Kịch bản 1: Vừa hết sạch hàng
                 if (oldQuantity > 0 && newQuantity == 0)
                 {
                     await _notiService.CreateNotificationAsync(
                         userId: null,
-                        showroomId: showroomId, // Chỉ báo cho chi nhánh bị hết hàng
+                        showroomId: showroomId,
                         roleTarget: "Manager,Sales,ShowroomSales",
                         title: "Cảnh báo: Xe đã hết hàng! 🚨",
-                        content: $"Mẫu {carName} tại chi nhánh hiện đã hết hàng. Anh em Sales tạm ngưng nhận cọc nhé!",
-                        actionUrl: $"/admin/inventory/detail/{carId}", // Trỏ về trang quản lý kho
+                        content: $"Mẫu {carName}{colorLabel} tại chi nhánh hiện đã hết hàng. Anh em Sales tạm ngưng nhận cọc nhé!",
+                        actionUrl: $"/admin/inventory/detail/{carId}",
                         type: "Inventory"
                     );
                 }
-                // Kịch bản 2: Vừa có hàng trở lại (Từ 0 lên một số dương)
                 else if (oldQuantity == 0 && newQuantity > 0)
                 {
                     await _notiService.CreateNotificationAsync(
@@ -90,7 +78,7 @@ namespace LogicBusiness.Services.Admin
                         showroomId: showroomId,
                         roleTarget: "Manager,Sales,ShowroomSales",
                         title: "Tin vui: Đã có xe sẵn kho! 📦",
-                        content: $"Mẫu {carName} vừa được bổ sung {newQuantity} chiếc. Anh em gọi khách chốt đơn lẹ nào!",
+                        content: $"Mẫu {carName}{colorLabel} vừa được bổ sung {newQuantity} chiếc. Anh em gọi khách chốt đơn lẹ nào!",
                         actionUrl: $"/admin/cars/detail/{carId}",
                         type: "Inventory"
                     );
@@ -100,21 +88,13 @@ namespace LogicBusiness.Services.Admin
             }
         }
 
-
         public async Task<IEnumerable<CarInventory>> GetInventoriesByCarIdAsync(int carId)
-        {
-            return await _inventoryRepo.GetInventoriesByCarIdAsync(carId);
-        }
+            => await _inventoryRepo.GetInventoriesByCarIdAsync(carId);
 
         public async Task<int> GetTotalQuantityAsync(int carId)
-        {
-            return await _inventoryRepo.GetTotalQuantityByCarIdAsync(carId);
-        }
+            => await _inventoryRepo.GetTotalQuantityByCarIdAsync(carId);
 
         public async Task<IEnumerable<CarInventory>> GetCarsByShowroomIdAsync(int showroomId)
-        {
-            // Chỉ gọi qua Repo thôi, không dùng trực tiếp _context ở đây nhé
-            return await _inventoryRepo.GetCarsByShowroomIdAsync(showroomId);
-        }
+            => await _inventoryRepo.GetCarsByShowroomIdAsync(showroomId);
     }
 }

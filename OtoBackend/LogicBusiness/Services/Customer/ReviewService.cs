@@ -64,5 +64,31 @@ namespace LogicBusiness.Services.Customer
             // Gọi xuống Repository để lấy danh sách review của con xe này
             return await _reviewRepo.GetApprovedReviewsByCarIdAsync(carId);
         }
+        public async Task<(bool IsEligible, string? FullName, string Message)> CheckReviewEligibilityAsync(string phone, int carId)
+        {
+            // 1. Kiểm tra giới hạn 10 lượt/SĐT
+            int reviewCount = await _reviewRepo.GetReviewCountByPhoneAsync(phone);
+            if (reviewCount >= 10)
+                return (false, null, "Ní đã hết lượt đánh giá cho xe này (tối đa 10 lượt).");
+
+            string? customerName = null;
+
+            // 2. Tìm tên khách trong lịch sử Mua xe
+            customerName = await _orderRepo.GetCustomerNameFromOrderAsync(phone, carId);
+
+            // 3. Nếu chưa mua, tìm tên khách trong lịch sử Đặt lịch xem xe
+            if (string.IsNullOrEmpty(customerName))
+            {
+                customerName = await _bookingRepo.GetCustomerNameFromBookingAsync(phone, carId);
+            }
+
+            // 4. Trả kết quả
+            if (string.IsNullOrEmpty(customerName))
+            {
+                return (false, null, "SĐT này chưa từng mua hay đặt lịch xem xe này. Phải trải nghiệm thật mới được đánh giá nha!");
+            }
+
+            return (true, customerName, "Hợp lệ");
+        }
     }
 }

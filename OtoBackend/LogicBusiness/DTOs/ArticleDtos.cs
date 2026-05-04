@@ -43,4 +43,12 @@ namespace LogicBusiness.DTOs
         public decimal? Price { get; set; }
         public string? ImageUrl { get; set; }
     }
+    public class ArticlePublicListResult
+    {
+        public IEnumerable<ArticleResponseDto> Data { get; set; } = new List<ArticleResponseDto>();
+        public int TotalCount { get; set; }
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public int TotalPages => PageSize > 0 ? (int)Math.Ceiling((double)TotalCount / PageSize) : 0;
+    }
 }

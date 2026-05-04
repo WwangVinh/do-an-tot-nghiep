@@ -22,6 +22,37 @@ namespace SqlServer.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("CoreEntities.Models.Accessory", b =>
+                {
+                    b.Property<int>("AccessoryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AccessoryId"));
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.HasKey("AccessoryId");
+
+                    b.ToTable("Accessories");
+                });
+
             modelBuilder.Entity("CoreEntities.Models.Airecommendation", b =>
                 {
                     b.Property<int>("RecommendationId")
@@ -238,6 +269,9 @@ namespace SqlServer.Migrations
                         .HasColumnType("datetime")
                         .HasDefaultValueSql("(getdate())");
 
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("datetime");
 
@@ -293,7 +327,32 @@ namespace SqlServer.Migrations
                     b.HasKey("CarId")
                         .HasName("PK__Cars__68A0342EA480F904");
 
+                    b.HasIndex("CreatedByUserId");
+
                     b.ToTable("Cars");
+                });
+
+            modelBuilder.Entity("CoreEntities.Models.CarAccessory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AccessoryId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CarId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccessoryId");
+
+                    b.HasIndex("CarId");
+
+                    b.ToTable("CarAccessories");
                 });
 
             modelBuilder.Entity("CoreEntities.Models.CarFeature", b =>
@@ -367,6 +426,10 @@ namespace SqlServer.Migrations
 
                     b.Property<int>("CarId")
                         .HasColumnType("int");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("DisplayStatus")
                         .IsRequired()
@@ -604,11 +667,25 @@ namespace SqlServer.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
-                    b.Property<DateTime?>("CreatedAt")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<decimal?>("ExpectedPrice")
+                    b.Property<decimal>("ExpectedPrice")
                         .HasColumnType("decimal(18, 2)");
+
+                    b.Property<string>("GuestEmail")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("GuestName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("GuestPhone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<int?>("LinkedCarId")
                         .HasColumnType("int");
@@ -626,11 +703,8 @@ namespace SqlServer.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<DateTime?>("UpdatedAt")
+                    b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
 
                     b.Property<int>("Year")
                         .HasColumnType("int");
@@ -638,8 +712,6 @@ namespace SqlServer.Migrations
                     b.HasKey("ConsignmentId");
 
                     b.HasIndex("LinkedCarId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("Consignments");
                 });
@@ -796,14 +868,32 @@ namespace SqlServer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderId"));
 
+                    b.Property<string>("AdminNote")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int?>("CarId")
                         .HasColumnType("int");
+
+                    b.Property<string>("CustomerNote")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("DiscountAmount")
                         .HasColumnType("decimal(18, 2)");
 
+                    b.Property<string>("Email")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
                     b.Property<decimal>("FinalAmount")
                         .HasColumnType("decimal(18, 2)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTime?>("LastUpdated")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("OrderCode")
                         .HasMaxLength(50)
@@ -823,12 +913,26 @@ namespace SqlServer.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<int?>("PromotionId")
                         .HasColumnType("int");
+
+                    b.Property<string>("SecretToken")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ShippingAddress")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("ShowroomId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("StaffId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Status")
                         .HasMaxLength(50)
@@ -840,9 +944,6 @@ namespace SqlServer.Migrations
                     b.Property<decimal?>("TotalAmount")
                         .HasColumnType("decimal(18, 2)");
 
-                    b.Property<int?>("UserId")
-                        .HasColumnType("int");
-
                     b.HasKey("OrderId")
                         .HasName("PK__Orders__C3905BCFC3E9C951");
 
@@ -850,7 +951,9 @@ namespace SqlServer.Migrations
 
                     b.HasIndex("PromotionId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("ShowroomId");
+
+                    b.HasIndex("StaffId");
 
                     b.ToTable("Orders");
                 });
@@ -863,8 +966,15 @@ namespace SqlServer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderItemId"));
 
+                    b.Property<int?>("AccessoryId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("CarId")
                         .HasColumnType("int");
+
+                    b.Property<string>("ItemType")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<int?>("OrderId")
                         .HasColumnType("int");
@@ -879,6 +989,8 @@ namespace SqlServer.Migrations
 
                     b.HasKey("OrderItemId")
                         .HasName("PK__OrderIte__57ED06818F5EAB7E");
+
+                    b.HasIndex("AccessoryId");
 
                     b.HasIndex("CarId");
 
@@ -930,9 +1042,15 @@ namespace SqlServer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PromotionId"));
 
+                    b.Property<int?>("CarId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Code")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("CurrentUsage")
+                        .HasColumnType("int");
 
                     b.Property<string>("Description")
                         .HasMaxLength(500)
@@ -947,6 +1065,9 @@ namespace SqlServer.Migrations
                     b.Property<DateTime?>("EndDate")
                         .HasColumnType("datetime");
 
+                    b.Property<int?>("MaxUsage")
+                        .HasColumnType("int");
+
                     b.Property<string>("PromotionName")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
@@ -960,6 +1081,8 @@ namespace SqlServer.Migrations
 
                     b.HasKey("PromotionId")
                         .HasName("PK__Promotio__52C42FCF8A6988C7");
+
+                    b.HasIndex("CarId");
 
                     b.HasIndex(new[] { "Code" }, "UQ__Promotio__A25C5AA7A444C1CD")
                         .IsUnique()
@@ -976,19 +1099,37 @@ namespace SqlServer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReviewId"));
 
-                    b.Property<int?>("CarId")
+                    b.Property<int>("CarId")
                         .HasColumnType("int");
 
                     b.Property<string>("Comment")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime?>("CreatedAt")
+                    b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime")
                         .HasDefaultValueSql("(getdate())");
 
-                    b.Property<int?>("Rating")
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<bool>("IsApproved")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("OrderCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("Rating")
                         .HasColumnType("int");
 
                     b.Property<int?>("UserId")
@@ -1091,6 +1232,25 @@ namespace SqlServer.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("SystemAuditLogs");
+                });
+
+            modelBuilder.Entity("CoreEntities.Models.SystemSetting", b =>
+                {
+                    b.Property<string>("SettingKey")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SettingValue")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("SettingKey");
+
+                    b.ToTable("SystemSettings");
                 });
 
             modelBuilder.Entity("CoreEntities.Models.User", b =>
@@ -1232,6 +1392,21 @@ namespace SqlServer.Migrations
                     b.ToTable("UserLogins");
                 });
 
+            modelBuilder.Entity("LogicBusiness.DTOs.ArticleCar", b =>
+                {
+                    b.Property<int>("ArticleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CarId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ArticleId", "CarId");
+
+                    b.HasIndex("CarId");
+
+                    b.ToTable("ArticleCars", (string)null);
+                });
+
             modelBuilder.Entity("CoreEntities.Models.Airecommendation", b =>
                 {
                     b.HasOne("CoreEntities.Models.Car", "Car")
@@ -1283,6 +1458,34 @@ namespace SqlServer.Migrations
                     b.Navigation("Showroom");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("CoreEntities.Models.Car", b =>
+                {
+                    b.HasOne("CoreEntities.Models.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId");
+
+                    b.Navigation("CreatedByUser");
+                });
+
+            modelBuilder.Entity("CoreEntities.Models.CarAccessory", b =>
+                {
+                    b.HasOne("CoreEntities.Models.Accessory", "Accessory")
+                        .WithMany("CarAccessories")
+                        .HasForeignKey("AccessoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CoreEntities.Models.Car", "Car")
+                        .WithMany("CarAccessories")
+                        .HasForeignKey("CarId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Accessory");
+
+                    b.Navigation("Car");
                 });
 
             modelBuilder.Entity("CoreEntities.Models.CarFeature", b =>
@@ -1407,15 +1610,7 @@ namespace SqlServer.Migrations
                         .WithMany()
                         .HasForeignKey("LinkedCarId");
 
-                    b.HasOne("CoreEntities.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("LinkedCar");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("CoreEntities.Models.ConsultationProfile", b =>
@@ -1460,20 +1655,31 @@ namespace SqlServer.Migrations
                         .HasForeignKey("PromotionId")
                         .HasConstraintName("FK__Orders__Promotio__29221CFB");
 
-                    b.HasOne("CoreEntities.Models.User", "User")
+                    b.HasOne("CoreEntities.Models.Showroom", "Showroom")
+                        .WithMany()
+                        .HasForeignKey("ShowroomId");
+
+                    b.HasOne("CoreEntities.Models.User", "Staff")
                         .WithMany("Orders")
-                        .HasForeignKey("UserId")
-                        .HasConstraintName("FK__Orders__UserId__628FA481");
+                        .HasForeignKey("StaffId")
+                        .HasConstraintName("FK_Orders_Staff");
 
                     b.Navigation("Car");
 
                     b.Navigation("Promotion");
 
-                    b.Navigation("User");
+                    b.Navigation("Showroom");
+
+                    b.Navigation("Staff");
                 });
 
             modelBuilder.Entity("CoreEntities.Models.OrderItem", b =>
                 {
+                    b.HasOne("CoreEntities.Models.Accessory", "Accessory")
+                        .WithMany("OrderItems")
+                        .HasForeignKey("AccessoryId")
+                        .HasConstraintName("FK_OrderItems_Accessories");
+
                     b.HasOne("CoreEntities.Models.Car", "Car")
                         .WithMany("OrderItems")
                         .HasForeignKey("CarId")
@@ -1483,6 +1689,8 @@ namespace SqlServer.Migrations
                         .WithMany("OrderItems")
                         .HasForeignKey("OrderId")
                         .HasConstraintName("FK__OrderItem__Order__60A75C0F");
+
+                    b.Navigation("Accessory");
 
                     b.Navigation("Car");
 
@@ -1499,21 +1707,29 @@ namespace SqlServer.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("CoreEntities.Models.Promotion", b =>
+                {
+                    b.HasOne("CoreEntities.Models.Car", "Car")
+                        .WithMany()
+                        .HasForeignKey("CarId");
+
+                    b.Navigation("Car");
+                });
+
             modelBuilder.Entity("CoreEntities.Models.Review", b =>
                 {
                     b.HasOne("CoreEntities.Models.Car", "Car")
                         .WithMany("Reviews")
                         .HasForeignKey("CarId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
                         .HasConstraintName("FK__Reviews__CarId__6477ECF3");
 
-                    b.HasOne("CoreEntities.Models.User", "User")
+                    b.HasOne("CoreEntities.Models.User", null)
                         .WithMany("Reviews")
-                        .HasForeignKey("UserId")
-                        .HasConstraintName("FK__Reviews__UserId__656C112C");
+                        .HasForeignKey("UserId");
 
                     b.Navigation("Car");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("CoreEntities.Models.SystemAuditLog", b =>
@@ -1564,11 +1780,46 @@ namespace SqlServer.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("LogicBusiness.DTOs.ArticleCar", b =>
+                {
+                    b.HasOne("CoreEntities.Models.Article", "Article")
+                        .WithMany("ArticleCars")
+                        .HasForeignKey("ArticleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CoreEntities.Models.Car", "Car")
+                        .WithMany("ArticleCars")
+                        .HasForeignKey("CarId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Article");
+
+                    b.Navigation("Car");
+                });
+
+            modelBuilder.Entity("CoreEntities.Models.Accessory", b =>
+                {
+                    b.Navigation("CarAccessories");
+
+                    b.Navigation("OrderItems");
+                });
+
+            modelBuilder.Entity("CoreEntities.Models.Article", b =>
+                {
+                    b.Navigation("ArticleCars");
+                });
+
             modelBuilder.Entity("CoreEntities.Models.Car", b =>
                 {
                     b.Navigation("Airecommendations");
 
+                    b.Navigation("ArticleCars");
+
                     b.Navigation("Bookings");
+
+                    b.Navigation("CarAccessories");
 
                     b.Navigation("CarFeatures");
 

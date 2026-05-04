@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -16,17 +15,20 @@ public class Review
     public string FullName { get; set; } = string.Empty;
 
     [Required]
-    public string Phone { get; set; } = string.Empty; // Dùng SĐT làm định danh
+    public string Phone { get; set; } = string.Empty;
 
-    public string? OrderCode { get; set; } // Mã để xác thực giao dịch
+    public string? OrderCode { get; set; }
 
-    public int Rating { get; set; } // Số sao
+    public int Rating { get; set; }
 
     public string? Comment { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-    public bool IsApproved { get; set; } = false; // Mặc định là đợi duyệt
+    public bool IsApproved { get; set; } = false;
+
+    // ✅ Thêm UserId nullable để EF không tự tạo shadow property gây lỗi
+    public int? UserId { get; set; }
 
     [ForeignKey("CarId")]
     public virtual Car? Car { get; set; }
