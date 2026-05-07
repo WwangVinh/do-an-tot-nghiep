@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Bot, ChevronRight, MessageCircle, Send, X } from 'lucide-react'
+import { Bot, ChevronRight, Maximize2, MessageCircle, Minimize2, Send, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { env } from '../lib/env'
@@ -63,6 +63,7 @@ async function fetchCarCardsForAi(ids: number[]): Promise<AiCarCard[]> {
 
 export function AiChatPanel() {
   const [open, setOpen] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [messages, setMessages] = useState<Turn[]>([
@@ -78,6 +79,12 @@ export function AiChatPanel() {
     if (!open) return
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages, open, loading])
+
+  // Khi đóng panel thì reset expanded
+  const handleClose = () => {
+    setOpen(false)
+    setExpanded(false)
+  }
 
   const send = useCallback(async () => {
     const text = input.trim()
@@ -119,7 +126,7 @@ export function AiChatPanel() {
           ? detailSnippet
             ? `${serverMsg}\n\n${detailSnippet}`
             : serverMsg
-          : 'Không gửi được tin. Kiểm tra backend đang chạy và cấu hình AiAdvisor (Provider + GeminiApiKey hoặc OpenAIApiKey).'
+          : 'Không gửi được tin. Kiểm tra backend đang chạy và cấu hình AiAdvisor.'
       setMessages((prev) => [
         ...prev,
         {
@@ -132,6 +139,19 @@ export function AiChatPanel() {
     }
   }, [input, loading, messages])
 
+  // ── Kích thước panel tùy theo expanded ──
+  const panelWidth = expanded
+    ? 'min(100vw - 2rem, 720px)'
+    : 'min(100vw - 2rem, 380px)'
+
+  const panelMaxHeight = expanded
+    ? 'min(85dvh, 780px)'
+    : 'min(560px, calc(100dvh - 6rem))'
+
+  const cardGridClass = expanded
+    ? 'grid grid-cols-2 gap-2'
+    : 'flex flex-col gap-2'
+
   return (
     <>
       <div
@@ -143,10 +163,15 @@ export function AiChatPanel() {
       >
         {open ? (
           <div
-            className="pointer-events-auto flex max-h-[min(560px,calc(100dvh-6rem))] w-[min(100vw-2rem,380px)] flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.18)]"
+            className="pointer-events-auto flex flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.18)] transition-all duration-300 ease-in-out"
+            style={{
+              width: panelWidth,
+              maxHeight: panelMaxHeight,
+            }}
             role="dialog"
             aria-label="Trò chuyện tư vấn AI"
           >
+            {/* Header */}
             <div className="flex items-center justify-between gap-2 border-b border-zinc-100 bg-gradient-to-r from-zinc-900 to-zinc-800 px-4 py-3 text-white">
               <div className="flex min-w-0 items-center gap-2">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10">
@@ -157,34 +182,64 @@ export function AiChatPanel() {
                   <p className="truncate text-xs text-white/70">Theo dữ liệu xe trên hệ thống</p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/90 hover:bg-white/10"
-                aria-label="Đóng khung chat"
-              >
-                <X className="h-5 w-5" />
-              </button>
+
+              {/* Nút phóng to / thu nhỏ + đóng */}
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setExpanded((e) => !e)}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/90 hover:bg-white/10 transition"
+                  aria-label={expanded ? 'Thu nhỏ khung chat' : 'Phóng to khung chat'}
+                  title={expanded ? 'Thu nhỏ' : 'Phóng to'}
+                >
+                  {expanded
+                    ? <Minimize2 className="h-4 w-4" />
+                    : <Maximize2 className="h-4 w-4" />
+                  }
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/90 hover:bg-white/10 transition"
+                  aria-label="Đóng khung chat"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
-            <div ref={listRef} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto bg-zinc-50/80 px-3 py-3">
+            {/* Messages */}
+            <div
+              ref={listRef}
+              className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto bg-zinc-50/80 px-3 py-3"
+            >
               {messages.map((m, i) => (
                 <div
                   key={`${i}-${m.role}`}
                   className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[92%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm ${
+                    className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm transition-all ${
+                      expanded ? 'max-w-[85%]' : 'max-w-[92%]'
+                    } ${
                       m.role === 'user'
                         ? 'bg-[#e30613] text-white'
                         : 'border border-zinc-200/80 bg-white text-zinc-900'
                     }`}
                   >
-                    <div className={m.role === 'assistant' ? 'whitespace-pre-wrap' : ''}>{m.content}</div>
+                    <div className={m.role === 'assistant' ? 'whitespace-pre-wrap' : ''}>
+                      {m.content}
+                    </div>
+
+                    {/* Thẻ xe gợi ý */}
                     {m.role === 'assistant' && m.cards && m.cards.length > 0 ? (
-                      <div className="mt-2.5 space-y-2 border-t border-zinc-100 pt-2.5">
-                        <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Xem nhanh</p>
-                        <div className="flex max-h-48 flex-col gap-2 overflow-y-auto pr-0.5">
+                      <div className="mt-2.5 border-t border-zinc-100 pt-2.5">
+                        <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+                          Xem nhanh
+                        </p>
+                        <div
+                          className={`max-h-56 overflow-y-auto pr-0.5 ${cardGridClass}`}
+                        >
                           {m.cards.map((c) => (
                             <Link
                               key={c.carId}
@@ -196,16 +251,26 @@ export function AiChatPanel() {
                                 <img
                                   src={toAbsoluteMedia(c.imageUrl)}
                                   alt=""
-                                  className="h-14 w-[4.5rem] shrink-0 rounded-lg object-cover"
+                                  className={`shrink-0 rounded-lg object-cover ${
+                                    expanded ? 'h-16 w-20' : 'h-14 w-[4.5rem]'
+                                  }`}
                                 />
                               ) : (
-                                <div className="flex h-14 w-[4.5rem] shrink-0 items-center justify-center rounded-lg bg-zinc-200/80 text-[10px] text-zinc-500">
+                                <div
+                                  className={`shrink-0 flex items-center justify-center rounded-lg bg-zinc-200/80 text-[10px] text-zinc-500 ${
+                                    expanded ? 'h-16 w-20' : 'h-14 w-[4.5rem]'
+                                  }`}
+                                >
                                   Ảnh
                                 </div>
                               )}
                               <div className="flex min-w-0 flex-1 flex-col py-0.5">
-                                <p className="line-clamp-2 text-xs font-semibold text-zinc-900">{c.name}</p>
-                                <p className="mt-0.5 text-[11px] text-zinc-600">{formatVnd(c.price)}</p>
+                                <p className="line-clamp-2 text-xs font-semibold text-zinc-900">
+                                  {c.name}
+                                </p>
+                                <p className="mt-0.5 text-[11px] text-zinc-600">
+                                  {formatVnd(c.price)}
+                                </p>
                                 <span className="mt-1.5 inline-flex items-center gap-0.5 text-[11px] font-semibold text-[#e30613] underline-offset-2 group-hover:underline">
                                   Chi tiết xe
                                   <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -219,11 +284,22 @@ export function AiChatPanel() {
                   </div>
                 </div>
               ))}
+
               {loading ? (
-                <p className="text-xs text-zinc-500">Đang trả lời…</p>
+                <div className="flex items-center gap-2">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-200/80">
+                    <Bot className="h-4 w-4 text-zinc-500" />
+                  </span>
+                  <span className="flex gap-1">
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-400 [animation-delay:0ms]" />
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-400 [animation-delay:150ms]" />
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-400 [animation-delay:300ms]" />
+                  </span>
+                </div>
               ) : null}
             </div>
 
+            {/* Input */}
             <div className="border-t border-zinc-100 bg-white p-3">
               <p className="mb-2 text-[11px] leading-snug text-zinc-500">
                 Gợi ý mang tính tham khảo; giá và chính sách có thể đổi — vui lòng xác nhận với showroom.
@@ -258,6 +334,7 @@ export function AiChatPanel() {
           </div>
         ) : null}
 
+        {/* Nút mở chat */}
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}

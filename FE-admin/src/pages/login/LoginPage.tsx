@@ -110,7 +110,7 @@ export function LoginPage() {
             <div className="flex items-center gap-3">
               <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500" />
               <div className="leading-tight">
-                <div className="text-lg font-semibold">Tên công ty</div>
+                <div className="text-lg font-semibold">CMC AUTOMOTIVE</div>
                 <div className="text-sm text-zinc-300">Admin Panel</div>
               </div>
             </div>

@@ -41,7 +41,7 @@ namespace LogicBusiness.Services.Customer
 
         public async Task<AiAdvisorChatResponseDto> GetReplyAsync(AiAdvisorChatRequestDto request)
         {
-
+            // Phát hiện số điện thoại Việt Nam trong tin nhắn
             var phoneMatch = Regex.Match(request.Message, @"\b0[35789]\d{8}\b");
 
             if (phoneMatch.Success)
@@ -51,15 +51,16 @@ namespace LogicBusiness.Services.Customer
                 // Kích hoạt Notification bắn ngay cho team Sales
                 await _notificationService.CreateNotificationAsync(
                     userId: null,
-                    showroomId: null, // Nếu ní có logic bắt ID showroom thì truyền vào, không thì để null bắn cho Sales tổng
-                    roleTarget: AppRoles.Sales, // Nhớ tạo file AppRoles như tin nhắn trước nhé
-                    title: "🚨 Khách hàng để lại SĐT qua AI Chat",
-                    content: $"SĐT: {phone}. Khách nhắn: \"{request.Message}\". Mau gọi chốt đơn!",
-                    actionUrl: "/admin/leads", // Ní sửa thành link trang quản lý khách hàng của UI Admin
+                    showroomId: null,
+                    roleTarget: AppRoles.Sales,
+                    title: "Khách hàng để lại SĐT qua AI Chat",
+                    content: $"SĐT: {phone}. Khách nhắn: \"{request.Message}\".",
+                    actionUrl: "/admin/leads",
                     type: "LEAD"
                 );
             }
 
+            // Validate provider
             var provider = (_config["AiAdvisor:Provider"] ?? "OpenAI").Trim();
             if (!provider.Equals("Gemini", StringComparison.OrdinalIgnoreCase)
                 && !provider.Equals("OpenAI", StringComparison.OrdinalIgnoreCase))
@@ -67,40 +68,55 @@ namespace LogicBusiness.Services.Customer
                 if (provider.StartsWith("AIza", StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException(
-                        "AiAdvisor:Provider phải là chữ Gemini hoặc OpenAI, không phải API key. Đặt khóa Google vào AiAdvisor:GeminiApiKey và \"Provider\": \"Gemini\".");
+                        "AiAdvisor:Provider phai la chu Gemini hoac OpenAI, khong phai API key. " +
+                        "Dat khoa Google vao AiAdvisor:GeminiApiKey va \"Provider\": \"Gemini\".");
                 }
 
                 throw new InvalidOperationException(
-                    $"AiAdvisor:Provider không hợp lệ ({provider}). Chỉ dùng \"Gemini\" hoặc \"OpenAI\".");
+                    $"AiAdvisor:Provider khong hop le ({provider}). Chi dung \"Gemini\" hoac \"OpenAI\".");
             }
 
-            var maxCars = Math.Clamp(int.TryParse(_config["AiAdvisor:MaxCatalogCars"], out var n) ? n : 60, 1, 100);
+            var maxCars = Math.Clamp(
+                int.TryParse(_config["AiAdvisor:MaxCatalogCars"], out var n) ? n : 60,
+                1, 100);
 
-            // Lấy toàn bộ dữ liệu tổng hợp thay vì chỉ xe
+            // Xây dựng KnowledgeBase JSON từ DB
             var knowledgeBaseJson = await BuildKnowledgeBaseAsync(maxCars);
 
-            // Cập nhật lại System Prompt để AI hiểu cấu trúc JSON mới
+            // System prompt với ràng buộc nghiệp vụ và quy ước AI_CAR_IDS
             var systemPrompt =
-                "Bạn là trợ lý tư vấn tại showroom ô tô, trả lời bằng tiếng Việt.\n" +
-                "Chỉ dựa trên thông tin trong khối JSON dưới đây khi tư vấn về: danh sách xe, giá cả, phiên bản, thông tin tồn kho, hệ thống showroom, và các bài viết/sự kiện mới nhất.\n" +
-                "LƯU Ý CỰC KỲ QUAN TRỌNG: Để biết xe có những phiên bản nào, hãy tìm 'carId' của xe đó trong mảng 'Cars', sau đó tìm tất cả các phiên bản có cùng 'carId' nằm trong mảng 'CarVersions'.\n" +
-                "Nếu không có thông tin trong dữ liệu, hãy nói rõ bạn không nắm thông tin đó và mời khách gọi hotline hoặc để lại liên hệ.\n" +
-                "Không được tự bịa số liệu, địa chỉ hay sự kiện. Giữ giọng điệu thân thiện, rõ ràng, chuyên nghiệp.\n\n" +
-                "DỮ LIỆU HỆ THỐNG (JSON chứa Cars, CarVersions, Showrooms, Articles):\n" +
+                "Ban la tro ly tu van tai showroom o to, tra loi bang tieng Viet.\n" +
+                "Chi dua tren thong tin trong khoi JSON duoi day khi tu van ve: " +
+                "danh sach xe, gia ca, phien ban, thong tin ton kho, he thong showroom, " +
+                "va cac bai viet/su kien moi nhat.\n" +
+                "LUU Y CUC KY QUAN TRONG: De biet xe co nhung phien ban nao, hay tim 'carId' " +
+                "cua xe do trong mang 'Cars', sau do tim tat ca cac phien ban co cung 'carId' " +
+                "nam trong mang 'CarVersions'.\n" +
+                "Neu khong co thong tin trong du lieu, hay noi ro ban khong nam thong tin do " +
+                "va moi khach goi hotline hoac de lai lien he.\n" +
+                "Khong duoc tu bia so lieu, dia chi hay su kien. " +
+                "Giu giong dieu than thien, ro rang, chuyen nghiep.\n\n" +
+                "DU LIEU HE THONG (JSON chua Cars, CarVersions, Showrooms, Articles):\n" +
                 knowledgeBaseJson +
-                "\n\nQUY ƯỚC MÁY ĐỌC (bắt buộc khi liệt kê xe cụ thể): Mỗi xe trong JSON có trường carId. " +
-                "Khi bạn đề xuất hoặc liệt kê các xe cụ thể từ JSON, thêm ĐÚNG một dòng tuyệt đối CUỐI cùng của tin nhắn, không có ký tự nào sau đó, định dạng: " +
-                "với các số là carId có trong JSON; tối đa 8 id, không trùng. Nếu không chắc carId thì không thêm dòng này.";
+                "\n\nQUY UOC MAY DOC (bat buoc khi liet ke xe cu the): " +
+                "Moi xe trong JSON co truong carId. " +
+                "Khi ban de xuat hoac liet ke cac xe cu the tu JSON, " +
+                "them DUNG mot dong tuyet doi CUOI CUNG cua tin nhan, " +
+                "khong co ky tu nao sau do, dinh dang: <!--AI_CAR_IDS:id1,id2--> " +
+                "voi cac so la carId co trong JSON; toi da 8 id, khong trung. " +
+                "Neu khong chac carId thi khong them dong nay.";
 
             if (provider.Equals("Gemini", StringComparison.OrdinalIgnoreCase))
             {
                 var geminiKey = _config["AiAdvisor:GeminiApiKey"];
                 var fallbackKey = _config["AiAdvisor:OpenAIApiKey"];
                 var apiKey = !string.IsNullOrWhiteSpace(geminiKey) ? geminiKey : fallbackKey;
+
                 if (string.IsNullOrWhiteSpace(apiKey))
                 {
                     throw new InvalidOperationException(
-                        "Chưa cấu hình AiAdvisor:GeminiApiKey (hoặc tạm dùng AiAdvisor:OpenAIApiKey). Thêm khóa Google AI vào User Secrets hoặc appsettings.");
+                        "Chua cau hinh AiAdvisor:GeminiApiKey. " +
+                        "Them khoa Google AI vao User Secrets hoac appsettings.");
                 }
 
                 var model = ResolveGeminiModel(_config["AiAdvisor:Model"]);
@@ -112,6 +128,10 @@ namespace LogicBusiness.Services.Customer
             return ApplySuggestedCarIds(openAiReply);
         }
 
+        // ─────────────────────────────────────────────
+        // Bóc tách suggestedCarIds từ dòng ẩn <!--AI_CAR_IDS:...-->
+        // ─────────────────────────────────────────────
+
         private static AiAdvisorChatResponseDto ApplySuggestedCarIds(AiAdvisorChatResponseDto dto)
         {
             var (text, ids) = ExtractSuggestedCarIds(dto.Reply);
@@ -120,25 +140,31 @@ namespace LogicBusiness.Services.Customer
             return dto;
         }
 
-        /// <summary>Bóc dòng do model thêm để client gọi API hiển thị thẻ xe.</summary>
+        /// <summary>
+        /// Bóc dòng <!--AI_CAR_IDS:id1,id2--> do model thêm,
+        /// trả về nội dung sạch và danh sách carId để FE render thẻ xe.
+        /// </summary>
         private static (string reply, List<int>? ids) ExtractSuggestedCarIds(string reply)
         {
             if (string.IsNullOrWhiteSpace(reply))
-            {
                 return (reply, null);
-            }
 
-            // Đã fix lại Regex để xóa triệt để ID ẩn
-            var match = Regex.Match(reply, @"", RegexOptions.CultureInvariant);
+            // Match dòng <!--AI_CAR_IDS:12,34-->
+            var match = Regex.Match(
+                reply,
+                @"<!--AI_CAR_IDS:([\d,]+)-->",
+                RegexOptions.CultureInvariant);
+
             if (!match.Success)
-            {
                 return (reply.TrimEnd(), null);
-            }
 
+            // Parse danh sách carId
             var ids = new List<int>();
-            foreach (var part in match.Groups[1].Value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            foreach (var part in match.Groups[1].Value.Split(',',
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
-                if (int.TryParse(part, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id) && id > 0)
+                if (int.TryParse(part, NumberStyles.Integer,
+                    CultureInfo.InvariantCulture, out var id) && id > 0)
                 {
                     ids.Add(id);
                 }
@@ -146,26 +172,35 @@ namespace LogicBusiness.Services.Customer
 
             ids = ids.Distinct().Take(8).ToList();
 
-            // Đã fix Regex để xóa dòng
-            var cleaned = Regex.Replace(reply, @"\s*\s*$", "", RegexOptions.CultureInvariant).TrimEnd();
+            // Xóa hoàn toàn dòng ẩn khỏi nội dung hiển thị
+            var cleaned = Regex.Replace(
+                reply,
+                @"\s*<!--AI_CAR_IDS:[\d,]+-->\s*$",
+                "",
+                RegexOptions.CultureInvariant).TrimEnd();
+
             return (cleaned, ids.Count > 0 ? ids : null);
         }
+
+        // ─────────────────────────────────────────────
+        // Resolve model name
+        // ─────────────────────────────────────────────
 
         private static string ResolveGeminiModel(string? configured)
         {
             var m = (configured ?? "").Trim();
             if (string.IsNullOrEmpty(m) || m.StartsWith("gpt-", StringComparison.OrdinalIgnoreCase))
-            {
                 return "gemini-2.5-flash";
-            }
 
             if (m.Contains("1.5", StringComparison.OrdinalIgnoreCase))
-            {
                 return "gemini-2.5-flash";
-            }
 
             return m;
         }
+
+        // ─────────────────────────────────────────────
+        // OpenAI
+        // ─────────────────────────────────────────────
 
         private async Task<AiAdvisorChatResponseDto> GetReplyOpenAiAsync(
             AiAdvisorChatRequestDto request,
@@ -175,7 +210,8 @@ namespace LogicBusiness.Services.Customer
             if (string.IsNullOrWhiteSpace(apiKey))
             {
                 throw new InvalidOperationException(
-                    "Chưa cấu hình AiAdvisor:OpenAIApiKey. Nếu dùng Gemini, đặt AiAdvisor:Provider thành Gemini và điền AiAdvisor:GeminiApiKey.");
+                    "Chua cau hinh AiAdvisor:OpenAIApiKey. " +
+                    "Neu dung Gemini, dat AiAdvisor:Provider thanh Gemini va dien AiAdvisor:GeminiApiKey.");
             }
 
             var model = _config["AiAdvisor:Model"] ?? "gpt-4o-mini";
@@ -203,20 +239,20 @@ namespace LogicBusiness.Services.Customer
             var responseText = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
-            {
                 throw new HttpRequestException($"OpenAI HTTP {(int)response.StatusCode}: {responseText}");
-            }
 
             using var doc = JsonDocument.Parse(responseText);
             var choices = doc.RootElement.GetProperty("choices");
             if (choices.GetArrayLength() == 0)
-            {
-                return new AiAdvisorChatResponseDto { Reply = "Xin lỗi, tôi không nhận được câu trả lời từ dịch vụ AI. Vui lòng thử lại." };
-            }
+                return new AiAdvisorChatResponseDto { Reply = "Xin loi, toi khong nhan duoc cau tra loi tu dich vu AI. Vui long thu lai." };
 
             var reply = choices[0].GetProperty("message").GetProperty("content").GetString() ?? "";
             return new AiAdvisorChatResponseDto { Reply = reply };
         }
+
+        // ─────────────────────────────────────────────
+        // Gemini
+        // ─────────────────────────────────────────────
 
         private async Task<AiAdvisorChatResponseDto> GetReplyGeminiAsync(
             AiAdvisorChatRequestDto request,
@@ -226,9 +262,7 @@ namespace LogicBusiness.Services.Customer
         {
             var apiVersion = (_config["AiAdvisor:GeminiApiVersion"] ?? "v1beta").Trim().Trim('/');
             if (apiVersion.Length == 0)
-            {
                 apiVersion = "v1beta";
-            }
 
             var contents = BuildGeminiContents(request);
             Dictionary<string, object?> payload;
@@ -249,7 +283,7 @@ namespace LogicBusiness.Services.Customer
                         {
                             new Dictionary<string, string>
                             {
-                                ["text"] = "Đã hiểu. Tôi sẽ tuân theo hướng dẫn và chỉ dùng dữ liệu JSON hệ thống bạn cung cấp khi tư vấn."
+                                ["text"] = "Da hieu. Toi se tuan theo huong dan va chi dung du lieu JSON he thong ban cung cap khi tu van."
                             }
                         }
                     }
@@ -275,9 +309,8 @@ namespace LogicBusiness.Services.Customer
             }
 
             var json = JsonSerializer.Serialize(payload);
-
-            var url =
-                $"https://generativelanguage.googleapis.com/{apiVersion}/models/{Uri.EscapeDataString(model)}:generateContent?key={Uri.EscapeDataString(apiKey)}";
+            var url = $"https://generativelanguage.googleapis.com/{apiVersion}/models/" +
+                      $"{Uri.EscapeDataString(model)}:generateContent?key={Uri.EscapeDataString(apiKey)}";
 
             var req = new HttpRequestMessage(HttpMethod.Post, url)
             {
@@ -289,11 +322,11 @@ namespace LogicBusiness.Services.Customer
             var responseText = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
-            {
                 throw new HttpRequestException($"Gemini HTTP {(int)response.StatusCode}: {responseText}");
-            }
 
             using var doc = JsonDocument.Parse(responseText);
+
+            // Kiểm tra nội dung bị block
             if (doc.RootElement.TryGetProperty("promptFeedback", out var pf) &&
                 pf.TryGetProperty("blockReason", out var br) &&
                 br.ValueKind == JsonValueKind.String &&
@@ -302,36 +335,44 @@ namespace LogicBusiness.Services.Customer
             {
                 return new AiAdvisorChatResponseDto
                 {
-                    Reply = $"Nội dung không được mô hình xử lý ({reason}). Bạn thử diễn đạt ngắn gọn hơn hoặc liên hệ hotline."
+                    Reply = $"Noi dung khong duoc mo hinh xu ly. Ban thu dien dat ngan gon hon hoac lien he hotline."
                 };
             }
 
             if (!doc.RootElement.TryGetProperty("candidates", out var candidates) ||
                 candidates.GetArrayLength() == 0)
             {
-                return new AiAdvisorChatResponseDto { Reply = "Xin lỗi, tôi không nhận được câu trả lời từ Gemini. Vui lòng thử lại." };
+                return new AiAdvisorChatResponseDto
+                {
+                    Reply = "Xin loi, toi khong nhan duoc cau tra loi tu Gemini. Vui long thu lai."
+                };
             }
 
             var content = candidates[0].GetProperty("content");
             if (!content.TryGetProperty("parts", out var partsEl) || partsEl.GetArrayLength() == 0)
             {
-                return new AiAdvisorChatResponseDto { Reply = "Xin lỗi, phản hồi từ Gemini không có nội dung văn bản." };
+                return new AiAdvisorChatResponseDto
+                {
+                    Reply = "Xin loi, phan hoi tu Gemini khong co noi dung van ban."
+                };
             }
 
             var sb = new StringBuilder();
             foreach (var part in partsEl.EnumerateArray())
             {
                 if (part.TryGetProperty("text", out var t) && t.GetString() is { } fragment)
-                {
                     sb.Append(fragment);
-                }
             }
 
             var reply = sb.ToString();
             return string.IsNullOrWhiteSpace(reply)
-                ? new AiAdvisorChatResponseDto { Reply = "Xin lỗi, tôi không nhận được câu trả lời từ Gemini. Vui lòng thử lại." }
+                ? new AiAdvisorChatResponseDto { Reply = "Xin loi, toi khong nhan duoc cau tra loi tu Gemini. Vui long thu lai." }
                 : new AiAdvisorChatResponseDto { Reply = reply };
         }
+
+        // ─────────────────────────────────────────────
+        // Build message lists
+        // ─────────────────────────────────────────────
 
         private static List<Dictionary<string, object?>> BuildGeminiContents(AiAdvisorChatRequestDto request)
         {
@@ -340,16 +381,17 @@ namespace LogicBusiness.Services.Customer
 
             if (request.History is { Count: > 0 })
             {
-                // TỐI ƯU TOKEN: Chỉ gửi 6 tin nhắn gần nhất thay vì 20
+                // Tối ưu token: chỉ gửi 6 tin nhắn gần nhất
                 foreach (var turn in request.History.TakeLast(6))
                 {
-                    if (skipLeadingAssistant && string.Equals(turn.Role, "assistant", StringComparison.OrdinalIgnoreCase))
-                    {
+                    if (skipLeadingAssistant &&
+                        string.Equals(turn.Role, "assistant", StringComparison.OrdinalIgnoreCase))
                         continue;
-                    }
 
                     skipLeadingAssistant = false;
-                    var role = string.Equals(turn.Role, "assistant", StringComparison.OrdinalIgnoreCase) ? "model" : "user";
+                    var role = string.Equals(turn.Role, "assistant", StringComparison.OrdinalIgnoreCase)
+                        ? "model" : "user";
+
                     list.Add(new Dictionary<string, object?>
                     {
                         ["role"] = role,
@@ -378,7 +420,7 @@ namespace LogicBusiness.Services.Customer
 
             if (request.History is { Count: > 0 })
             {
-                // TỐI ƯU TOKEN: Chỉ gửi 6 tin nhắn gần nhất thay vì 20
+                // Tối ưu token: chỉ gửi 6 tin nhắn gần nhất
                 foreach (var turn in request.History.TakeLast(6))
                 {
                     var role = turn.Role?.ToLowerInvariant() == "assistant" ? "assistant" : "user";
@@ -399,6 +441,10 @@ namespace LogicBusiness.Services.Customer
             return messages;
         }
 
+        // ─────────────────────────────────────────────
+        // Build KnowledgeBase JSON từ DB
+        // ─────────────────────────────────────────────
+
         private async Task<string> BuildKnowledgeBaseAsync(int maxCars)
         {
             object? cars = null;
@@ -409,12 +455,12 @@ namespace LogicBusiness.Services.Customer
             try
             {
                 var rawCars = await _carService.GetCarsAsync(
-                    search: null, brand: null, color: null, minPrice: null, maxPrice: null,
-                    status: null, transmission: null, bodyStyle: null, fuelType: null,
+                    search: null, brand: null, color: null,
+                    minPrice: null, maxPrice: null, status: null,
+                    transmission: null, bodyStyle: null, fuelType: null,
                     location: null, condition: null, minYear: null, maxYear: null,
                     sort: null, inStockOnly: false, page: 1, pageSize: maxCars);
 
-                // Tạm thời truyền nguyên list Cars để tránh lỗi cấu trúc của PagedResult.
                 cars = rawCars;
             }
             catch { }
@@ -423,7 +469,7 @@ namespace LogicBusiness.Services.Customer
             {
                 var rawShowrooms = await _showroomService.GetAllShowroomsAsync();
 
-                // TỐI ƯU TOKEN: Chỉ lấy Tên, Hotline, Địa chỉ thay vì lấy toàn bộ Object
+                // Tối ưu token: chỉ lấy các trường cần thiết
                 showrooms = rawShowrooms.Select(s => new
                 {
                     s.ShowroomId,
@@ -438,7 +484,6 @@ namespace LogicBusiness.Services.Customer
 
             try
             {
-                // TỐI ƯU TOKEN: Lấy dữ liệu bài viết (nếu cần gọt dũa, bạn có thể .Select thêm ở đây)
                 articles = await _articleService.GetArticlesAdminAsync(null, 1, 5, true);
             }
             catch { }
@@ -447,7 +492,7 @@ namespace LogicBusiness.Services.Customer
             {
                 var rawVersions = await _pricingAdminService.GetAllAsync(null, true);
 
-                // TỐI ƯU TOKEN: Chỉ lấy ID, Tên phiên bản và Giá
+                // Tối ưu token: chỉ lấy ID, tên phiên bản và giá
                 carVersions = rawVersions.Select(v => new
                 {
                     v.CarId,
