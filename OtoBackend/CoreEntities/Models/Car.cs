@@ -14,7 +14,6 @@ public partial class Car
     public int? Year { get; set; }
     public CarCondition Condition { get; set; }
     public decimal? Price { get; set; }
-    public string? Color { get; set; }
     public string? Description { get; set; }
     public string? Brand { get; set; }
     public decimal? Mileage { get; set; }
@@ -39,6 +38,7 @@ public partial class Car
     [NotMapped]
     public IFormFile? ImageFile { get; set; }
 
+    public virtual ICollection<CarColor> CarColors { get; set; } = new List<CarColor>();
     public virtual ICollection<Airecommendation> Airecommendations { get; set; } = new List<Airecommendation>();
     public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
     public virtual ICollection<CarImage> CarImages { get; set; } = new List<CarImage>();

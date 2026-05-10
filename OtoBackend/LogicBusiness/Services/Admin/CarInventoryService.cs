@@ -22,7 +22,7 @@ namespace LogicBusiness.Services.Admin
             _carRepo = carRepo;
         }
 
-        public async Task<(bool Success, string Message)> UpdateStockAsync(int carId, int showroomId, int newQuantity, string displayStatus, string? color = null)
+        public async Task<(bool Success, string Message)> UpdateStockAsync(int carId, int showroomId, int newQuantity, string displayStatus, int? carColorId = null)
         {
             if (newQuantity < 0) return (false, "Số lượng không được âm!");
 
@@ -32,9 +32,15 @@ namespace LogicBusiness.Services.Admin
 
             var car = await _carRepo.GetByIdAsync(carId);
             string carName = car != null ? $"{car.Brand} {car.Name}" : $"ID {carId}";
-            string colorLabel = !string.IsNullOrWhiteSpace(color) ? $" ({color})" : "";
 
-            var inventory = await _inventoryRepo.GetInventoryAsync(carId, showroomId, color);
+            string colorLabel = "";
+            if (carColorId.HasValue && car != null && car.CarColors != null)
+            {
+                var colorObj = car.CarColors.FirstOrDefault(c => c.CarColorId == carColorId.Value);
+                if (colorObj != null) colorLabel = $" (Màu {colorObj.ColorName})";
+            }
+
+            var inventory = await _inventoryRepo.GetInventoryAsync(carId, showroomId, carColorId);
             string finalStatus = newQuantity == 0 ? "Out of stock" : displayStatus;
 
             if (inventory == null)
@@ -45,7 +51,7 @@ namespace LogicBusiness.Services.Admin
                     ShowroomId = showroomId,
                     Quantity = newQuantity,
                     DisplayStatus = finalStatus,
-                    Color = string.IsNullOrWhiteSpace(color) ? null : color.Trim(),
+                    CarColorId = carColorId,
                     UpdatedAt = DateTime.UtcNow
                 });
                 return (true, $"Thêm mới kho{colorLabel} thành công!");
@@ -55,7 +61,7 @@ namespace LogicBusiness.Services.Admin
                 int oldQuantity = inventory.Quantity;
                 inventory.Quantity = newQuantity;
                 inventory.DisplayStatus = finalStatus;
-                inventory.Color = string.IsNullOrWhiteSpace(color) ? null : color.Trim();
+                inventory.CarColorId = carColorId;
                 inventory.UpdatedAt = DateTime.UtcNow;
                 await _inventoryRepo.UpdateInventoryAsync(inventory);
 

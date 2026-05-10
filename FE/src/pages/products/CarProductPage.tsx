@@ -38,7 +38,7 @@ type CustomerCarDetailDto = {
   model: string | null
   year: number | null
   price: number | null
-  color: string | null
+ colors: { carColorId: number; colorName: string; hexCode?: string; imageUrl?: string }[]
   mileage: number | null
   fuelType: string | null
   transmission: string | null
@@ -406,30 +406,38 @@ function OrderModal({
   const formatTime = (s: number) => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`
 
   const checkPaymentStatus = async () => {
-    if (!createdOrderCode || !formData?.phone) return
-    setCheckingPayment(true)
-    try {
-      if (createdOrderId) {
-        await axios.post(
-          `${env.VITE_API_BASE_URL}/api/Checkout/${createdOrderId}/confirm`,
-          {},
-          { headers: { 'ngrok-skip-browser-warning': 'true' } }
-        ).catch(() => {})
-      }
-      const res = await axios.get(
-        `${env.VITE_API_BASE_URL}/api/public/orders/lookup?phone=${encodeURIComponent(formData.phone)}&code=${encodeURIComponent(createdOrderCode)}`,
+  if (!createdOrderCode || !formData?.phone) return
+  
+  if (payosExpiry && Date.now() > payosExpiry) return
+
+  setCheckingPayment(true)
+  try {
+    if (createdOrderId) {
+      await axios.post(
+        `${env.VITE_API_BASE_URL}/api/Checkout/${createdOrderId}/confirm`,
+        {},
         { headers: { 'ngrok-skip-browser-warning': 'true' } }
-      )
-      const status = res.data?.paymentStatus ?? res.data?.data?.paymentStatus
-      if (status === 'Paid' || status === 'paid' || status === 'Deposited') {
+      ).catch(() => {})
+    }
+    const res = await axios.get(
+      `${env.VITE_API_BASE_URL}/api/public/orders/lookup?phone=${encodeURIComponent(formData.phone)}&code=${encodeURIComponent(createdOrderCode)}`,
+      { headers: { 'ngrok-skip-browser-warning': 'true' } }
+    )
+    const status = res.data?.paymentStatus ?? res.data?.data?.paymentStatus
+
+  
+    if (status === 'Paid' || status === 'paid' || status === 'Deposited') {
+      // ✅ Double check: link chưa expire mới được set paid
+      if (payosExpiry && Date.now() < payosExpiry) {
         setPaymentStatus('paid')
       }
-    } catch {
-      // silent
-    } finally {
-      setCheckingPayment(false)
     }
+  } catch {
+    
+  } finally {
+    setCheckingPayment(false)
   }
+}
 
   useEffect(() => {
     if (step !== 5 || paymentStatus !== 'pending' || !createdOrderCode) return
@@ -515,7 +523,7 @@ function OrderModal({
         phone: formData.phone,
         email: formData.email,
         customerNote: formData.customerNote,
-        promotionCode: formData.promotionCode,
+        promotionCode: promoMessage.type === 'success' ? formData.promotionCode : '',
         carId,
         pricingVersionId: selectedVersion?.pricingVersionId ?? null,
         showroomId: selectedShowroom?.showroomId ?? null, // ✅ gửi showroomId
@@ -715,9 +723,17 @@ function OrderModal({
                 <div className="flex gap-2">
                   <input
                     type="text" placeholder="VD: SALE2026"
+                    autoComplete="off"
                     className="flex-1 border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-800 bg-white uppercase focus:outline-none focus:border-[#0A2540]"
                     value={formData.promotionCode}
-                    onChange={(e) => setFormData({ ...formData, promotionCode: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, promotionCode: e.target.value })
+                      if (!e.target.value.trim()) {
+                        setDiscountPercent(0)
+                        setDiscountAmount(0)
+                        setPromoMessage({ type: '', text: '' })
+                      }
+                    }}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleApplyPromo() }}
                   />
                   <button
@@ -1630,7 +1646,11 @@ function CarApiLandingPage({ carId }: { carId: number }) {
 
         setMeta({
           name: carName, imageSrc, priceText,
-          features: payload.features ?? [],
+          features: (payload.features ?? []).map((f: any) => ({
+            ...f,
+            icon: toAbsoluteUrl(f.imageUrl ?? f.icon ?? ''),
+            imageUrl: toAbsoluteUrl(f.imageUrl ?? f.icon ?? '')
+          })),
           pricingVersions: payload.pricingVersions ?? [],
           content: {
             overviewIntro: payload.description ?? '', overviewHighlights: [],

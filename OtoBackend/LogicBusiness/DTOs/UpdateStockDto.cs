@@ -17,6 +17,6 @@ namespace LogicBusiness.DTOs
             ErrorMessage = "Trạng thái sai rồi! Chỉ được nhập: Available, OnDisplay, hoặc Out of stock")]
         public string DisplayStatus { get; set; } = "Available";
 
-        public string? Color { get; set; }
+        public int? CarColorId { get; set; }
     }
 }

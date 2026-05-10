@@ -170,7 +170,6 @@ namespace LogicBusiness.Services.Admin
                 car.Model,
                 car.Year,
                 car.Price,
-                car.Color,
                 car.Mileage,
                 car.FuelType,
                 TotalQuantity = allowedInventories != null ? allowedInventories.Sum(i => i.Quantity) : 0,
@@ -183,6 +182,13 @@ namespace LogicBusiness.Services.Admin
                 car.IsDeleted,
                 car.CreatedAt,
                 car.UpdatedAt,
+
+                Colors = car.CarColors?.Select(c => new {
+                    c.CarColorId,
+                    c.ColorName,
+                    c.HexCode,
+                    c.ImageUrl
+                }).ToList(),
 
                 // ✅ Tồn kho chi tiết đã lọc
                 ShowroomDetails = allowedInventories?.Select(inv => new {
@@ -325,7 +331,6 @@ namespace LogicBusiness.Services.Admin
                     oldCar.Brand = dto.Brand;
                     oldCar.Year = dto.Year;
                     oldCar.Model = dto.Model;
-                    oldCar.Color = dto.Color;
                     oldCar.FuelType = dto.FuelType;
                     oldCar.Mileage = (decimal)(dto.Mileage ?? 0);
                     oldCar.Description = dto.Description;
@@ -529,7 +534,7 @@ namespace LogicBusiness.Services.Admin
 
             // 2. LUỒNG XE CŨ HOẶC XE MỚI CHƯA CÓ MẪU: Tiến hành tạo bản ghi xe mới
             // Kiểm tra trùng lặp tin đăng (để tránh lính bấm nhầm 2 lần)
-            if (await _carRepo.CheckCarListingExistAsync(dto.Name, dto.Brand, dto.Year, dto.Color, (int)dto.Condition, (decimal)(dto.Mileage ?? 0)))
+            if (await _carRepo.CheckCarListingExistAsync(dto.Name, dto.Brand, dto.Year, (int)dto.Condition, (decimal)(dto.Mileage ?? 0)))
                 return (false, "Tin đăng này y hệt một cái khác đã có, ní kiểm tra lại coi!", null);
 
             var car = new Car
@@ -538,7 +543,6 @@ namespace LogicBusiness.Services.Admin
                 Brand = dto.Brand,
                 Year = dto.Year,
                 Model = dto.Model,
-                Color = dto.Color,
                 Condition = dto.Condition,
                 Price = dto.Price,
                 FuelType = dto.FuelType,
@@ -708,7 +712,7 @@ namespace LogicBusiness.Services.Admin
             }
 
             // Chặn trùng listing (giống CreateCarAsync)
-            if (await _carRepo.CheckCarListingExistAsync(dto.Name, dto.Brand, dto.Year, dto.Color ?? "", (int)dto.Condition, (decimal)(dto.Mileage ?? 0)))
+            if (await _carRepo.CheckCarListingExistAsync(dto.Name, dto.Brand, dto.Year, (int)dto.Condition, (decimal)(dto.Mileage ?? 0)))
                 return (false, "Tin đăng này y hệt một cái khác đã có, ní kiểm tra lại coi!", null);
 
             Car? createdCar = null;
@@ -723,7 +727,6 @@ namespace LogicBusiness.Services.Admin
                         Brand = dto.Brand,
                         Year = dto.Year,
                         Model = dto.Model,
-                        Color = dto.Color,
                         Condition = dto.Condition,
                         Price = dto.Price, // sẽ set lại bằng min pricing nếu có
                         FuelType = dto.FuelType,
@@ -985,7 +988,7 @@ namespace LogicBusiness.Services.Admin
             }
 
             // 7. Kiểm tra trùng lặp tin đăng chung (Dành cho xe cũ - check thêm màu sắc, ODO...)
-            if (await _carRepo.CheckCarListingExistAsync(car.Name, car.Brand, car.Year, dto.Color, (int)car.Condition, (decimal)car.Mileage, id))
+            if (await _carRepo.CheckCarListingExistAsync(car.Name, car.Brand, car.Year, (int)car.Condition, (decimal)car.Mileage, id))
             {
                 return (false, "Ní sửa gì mà nó trùng khít với một tin đăng khác vậy? Kiểm tra lại ODO hoặc màu sắc coi!", null);
             }
@@ -1370,7 +1373,6 @@ namespace LogicBusiness.Services.Admin
                 Model = oldCar.Model,
                 Year = oldCar.Year,
                 Price = oldCar.Price,
-                Color = oldCar.Color,
                 Mileage = oldCar.Mileage,
                 FuelType = oldCar.FuelType,
                 Transmission = oldCar.Transmission,
@@ -1386,6 +1388,17 @@ namespace LogicBusiness.Services.Admin
             };
 
             await _carRepo.AddCarAsync(newCar);
+
+            if (oldCar.CarColors != null && oldCar.CarColors.Any())
+            {
+                newCar.CarColors = oldCar.CarColors.Select(c => new CarColor
+                {
+                    ColorName = c.ColorName,
+                    HexCode = c.HexCode,
+                    ImageUrl = c.ImageUrl,
+                    IsActive = c.IsActive
+                }).ToList();
+            }
 
             // 4. Nhân bản thông số kỹ thuật (Specifications)
             if (oldCar.CarSpecifications != null && oldCar.CarSpecifications.Any())

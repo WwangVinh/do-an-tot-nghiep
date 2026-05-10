@@ -23,9 +23,7 @@ public class CarInventory
     [MaxLength(50)]
     public string DisplayStatus { get; set; } = "OnDisplay";
 
-    // Màu xe cụ thể của lô hàng này — nullable vì kho cũ chưa có màu
-    [MaxLength(100)]
-    public string? Color { get; set; }
+    public int? CarColorId { get; set; }
 
     public DateTime? UpdatedAt { get; set; } = DateTime.UtcNow;
 
@@ -34,4 +32,7 @@ public class CarInventory
 
     [ForeignKey("CarId")]
     public virtual Car? Car { get; set; }
+
+    // ✅ Navigation property nối sang class CarColor    [ForeignKey("CarColorId")]
+    public virtual CarColor? CarColor { get; set; }
 }

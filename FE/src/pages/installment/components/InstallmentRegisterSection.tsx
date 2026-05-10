@@ -20,15 +20,34 @@ const inputClassName =
   `h-[52px] w-full rounded-xl border border-slate-200 bg-white px-4 text-[15px] text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] placeholder:text-slate-400 outline-none transition ` +
   `hover:border-slate-300 focus:border-[#243A5E] focus:ring-2 focus:ring-[#243A5E]/20`
 
-type CarOption = { id: string; label: string }
+type CarOption = { id: string; label: string; image?: string; price?: string }
 
-type CustomerCarListDto = {
-  carId: number
-  name: string
+type CustomerCarListDto = { 
+  carId: number; 
+  name: string;
+  imageUrl?: string;
+  price?: number | string;
+}
+type PagedCarsResponse = { data: CustomerCarListDto[] }
+
+type ShowroomDto = {
+  showroomId: number
+  name?: string
+  showroomName?: string
+  fullAddress?: string
 }
 
-type PagedCarsResponse = {
-  data: CustomerCarListDto[]
+// Cập nhật payload theo mẫu từ QuoteRegisterCard
+type BookingCreatePayload = {
+  carId: number
+  showroomId: number
+  customerName: string
+  phone: string
+  bookingDate: string
+  bookingTime?: string
+  timeSpan?: string
+  note?: string
+  userId?: number
 }
 
 const carsApi = axios.create({
@@ -41,32 +60,73 @@ const bookingsApi = axios.create({
   timeout: 20_000,
 })
 
-type BookingCreatePayload = {
-  carId: number
-  showroomId: number
-  customerName: string
-  phone: string
-  bookingDate: string // YYYY-MM-DD (DateOnly)
-  bookingTime?: string
-  timeSpan?: string
-  note?: string
-}
-
 async function getCarOptions(): Promise<CarOption[]> {
   const res = await carsApi.get<PagedCarsResponse>('Cars', {
     params: { page: 1, pageSize: 200, inStockOnly: false },
   })
-
   const list = Array.isArray(res.data?.data) ? res.data.data : []
+  
   return list
-    .map((c) => ({ id: String(c.carId), label: c.name }))
+    .map((c) => {
+      const fullImageUrl = c.imageUrl 
+        ? new URL(c.imageUrl, env.VITE_API_BASE_URL).toString() 
+        : undefined;
+
+      const formattedPrice = typeof c.price === 'number' 
+        ? new Intl.NumberFormat('vi-VN').format(c.price) 
+        : c.price;
+
+      return { 
+        id: String(c.carId), 
+        label: c.name,
+        image: fullImageUrl,
+        price: formattedPrice ? String(formattedPrice) : undefined
+      }
+    })
     .filter((c) => c.label.trim().length > 0)
+}
+
+async function getCarDetails(carId: string) {
+  const res = await carsApi.get(`Cars/${carId}`)
+  const data = res.data?.data
+  return {
+    imageUrl: data?.imageUrl ? new URL(data.imageUrl, env.VITE_API_BASE_URL).toString() : null
+  }
+}
+
+async function getCarShowrooms(carId: string): Promise<ShowroomDto[]> {
+  try {
+    const res = await carsApi.get(`public/cars/${carId}/showrooms`, {
+      headers: { 'ngrok-skip-browser-warning': 'true' },
+    })
+    const data = res.data?.data ?? res.data
+    if (Array.isArray(data) && data.length > 0) return data
+  } catch { /* fallback */ }
+
+  try {
+    const res = await carsApi.get(`Cars/${carId}`)
+    const data = res.data?.data ?? res.data
+    const showroomDetails = data?.showroomDetails ?? data?.ShowroomDetails ?? []
+    if (Array.isArray(showroomDetails) && showroomDetails.length > 0) return showroomDetails
+  } catch { /* silent */ }
+
+  try {
+    const res = await carsApi.get('public/orders/showrooms', {
+      headers: { 'ngrok-skip-browser-warning': 'true' },
+    })
+    return res.data?.data ?? res.data ?? []
+  } catch { return [] }
+}
+
+function getShowroomName(s: ShowroomDto): string {
+  return s.name ?? s.showroomName ?? `Showroom #${s.showroomId}`
 }
 
 export function InstallmentRegisterSection() {
   const nameId = useId()
   const phoneId = useId()
-  const carId = useId()
+  const carSelectId = useId()
+  const showroomSelectId = useId()
 
   const { data: carOptionsApi = [], isLoading: isCarsLoading } = useQuery({
     queryKey: ['cars', 'select-options', 'installment'],
@@ -74,36 +134,77 @@ export function InstallmentRegisterSection() {
     staleTime: 5 * 60_000,
   })
 
-  const rootRef = useRef<HTMLDivElement | null>(null)
-  const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState('')
-  const [selectedCar, setSelectedCar] = useState<CarOption | null>(null)
-  const [touched, setTouched] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
   const carOptions = useMemo<CarOption[]>(() => {
     if (carOptionsApi.length > 0) return carOptionsApi
     return INSTALLMENT_CAR_OPTIONS
   }, [carOptionsApi])
 
+  const rootCarRef = useRef<HTMLDivElement | null>(null)
+  const [carOpen, setCarOpen] = useState(false)
+  const [carQuery, setCarQuery] = useState('')
+  const [selectedCar, setSelectedCar] = useState<CarOption | null>(null)
+  const [carTouched, setCarTouched] = useState(false)
+
   const filteredCars = useMemo(() => {
-    const q = query.trim().toLowerCase()
+    const q = carQuery.trim().toLowerCase()
     if (!q) return carOptions
     return carOptions.filter((c) => c.label.toLowerCase().includes(q))
-  }, [carOptions, query])
+  }, [carOptions, carQuery])
 
   useEffect(() => {
     function onPointerDown(e: MouseEvent) {
-      const el = rootRef.current
-      if (!el) return
-      if (e.target instanceof Node && !el.contains(e.target)) setOpen(false)
+      if (rootCarRef.current && e.target instanceof Node && !rootCarRef.current.contains(e.target))
+        setCarOpen(false)
     }
     document.addEventListener('mousedown', onPointerDown)
     return () => document.removeEventListener('mousedown', onPointerDown)
   }, [])
 
-  const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), [])
-  const SHOWROOM_ID = 1
+  const { data: carDetails, isFetching: isCarDetailsLoading } = useQuery({
+    queryKey: ['car-details-installment', selectedCar?.id],
+    queryFn: () => getCarDetails(selectedCar!.id),
+    enabled: !!selectedCar?.id,
+    staleTime: 5 * 60_000,
+  })
+
+  const carImageUrl = useMemo(() => {
+    if (carDetails?.imageUrl) return carDetails.imageUrl
+    if (selectedCar?.image) return selectedCar.image
+    return '/default-car.jpg' 
+  }, [carDetails, selectedCar])
+
+  const rootShowroomRef = useRef<HTMLDivElement | null>(null)
+  const [showroomOpen, setShowroomOpen] = useState(false)
+  const [selectedShowroomId, setSelectedShowroomId] = useState('')
+
+  const { data: showrooms = [], isFetching: isShowroomsLoading } = useQuery({
+    queryKey: ['car-showrooms-installment', selectedCar?.id],
+    queryFn: () => getCarShowrooms(selectedCar!.id),
+    enabled: !!selectedCar?.id,
+    staleTime: 5 * 60_000,
+  })
+
+  useEffect(() => {
+    setSelectedShowroomId('')
+    setShowroomOpen(false)
+  }, [selectedCar?.id])
+
+  useEffect(() => {
+    function onPointerDown(e: MouseEvent) {
+      if (rootShowroomRef.current && e.target instanceof Node && !rootShowroomRef.current.contains(e.target))
+        setShowroomOpen(false)
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    return () => document.removeEventListener('mousedown', onPointerDown)
+  }, [])
+
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [touched, setTouched] = useState(false)
+
+  const selectedShowroomName = useMemo(
+    () => showrooms.find((s) => String(s.showroomId) === selectedShowroomId),
+    [showrooms, selectedShowroomId],
+  )
 
   return (
     <section className="relative overflow-hidden bg-[#f0f2f7]">
@@ -122,10 +223,12 @@ export function InstallmentRegisterSection() {
 
       <div className="relative mx-auto w-full max-w-screen-2xl px-5 py-14 sm:px-6 sm:py-16 lg:px-8 lg:py-[4.5rem]">
         <div className="grid min-w-0 grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)] lg:items-center lg:gap-x-12 xl:gap-x-16">
+
+          {/* ── Cột trái ── */}
           <div className="relative min-w-0 pl-5 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:rounded-full before:bg-gradient-to-b before:from-[#243A5E] before:via-[#4a6494] before:to-[#8B1D1D] before:content-[''] before:shadow-[2px_0_12px_rgba(36,58,94,0.2)] sm:pl-7">
             <p className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/95 px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#243A5E] shadow-[0_2px_12px_rgba(36,58,94,0.08)] backdrop-blur-sm sm:text-[11px]">
               <span className="flex h-2 w-2 animate-pulse rounded-full bg-[#8B1D1D]" aria-hidden />
-              Tên công ty <span className="font-normal text-slate-300">•</span> Đại lý phân phối toàn quốc
+              CMC AUTOMOTIVE <span className="font-normal text-slate-300">•</span> Đại lý phân phối toàn quốc
             </p>
 
             <h1 className="mt-6 text-[1.85rem] font-extrabold leading-[1.15] tracking-tight sm:text-4xl lg:text-[2.45rem]">
@@ -134,90 +237,94 @@ export function InstallmentRegisterSection() {
                 trả góp
               </span>
             </h1>
-            <div
-              className="mt-3 h-1 w-16 rounded-full bg-gradient-to-r from-[#243A5E] to-[#8B1D1D] shadow-sm sm:w-20"
-              aria-hidden
-            />
+            <div className="mt-3 h-1 w-16 rounded-full bg-gradient-to-r from-[#243A5E] to-[#8B1D1D] shadow-sm sm:w-20" aria-hidden />
 
             <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-slate-600 sm:text-base">
-              Tư vấn gói vay phù hợp, thủ tục rõ ràng — đồng hành cùng bạn từ đăng ký đến khi nhận
-              xe.
+              Tư vấn gói vay phù hợp, thủ tục rõ ràng — đồng hành cùng bạn từ đăng ký đến khi nhận xe.
             </p>
 
             <div className="mt-6 flex flex-wrap gap-3 sm:gap-4">
-              <div className="flex min-w-[5.5rem] flex-1 flex-col rounded-xl border border-[#243A5E]/15 bg-gradient-to-br from-white to-slate-50/80 px-3 py-2.5 text-center shadow-[0_4px_14px_rgba(36,58,94,0.08)] sm:min-w-[6rem] sm:px-4 sm:py-3">
-                <span className="text-lg font-extrabold tabular-nums text-[#8B1D1D] sm:text-xl">85%</span>
-                <span className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-500 sm:text-[11px]">
-                  Tối đa vay
-                </span>
-              </div>
-              <div className="flex min-w-[5.5rem] flex-1 flex-col rounded-xl border border-[#243A5E]/15 bg-gradient-to-br from-white to-slate-50/80 px-3 py-2.5 text-center shadow-[0_4px_14px_rgba(36,58,94,0.08)] sm:min-w-[6rem] sm:px-4 sm:py-3">
-                <span className="text-lg font-extrabold tabular-nums text-[#243A5E] sm:text-xl">8</span>
-                <span className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-500 sm:text-[11px]">
-                  Năm vay
-                </span>
-              </div>
-              <div className="flex min-w-[5.5rem] flex-1 flex-col rounded-xl border border-[#243A5E]/15 bg-gradient-to-br from-white to-slate-50/80 px-3 py-2.5 text-center shadow-[0_4px_14px_rgba(36,58,94,0.08)] sm:min-w-[6rem] sm:px-4 sm:py-3">
-                <span className="text-lg font-extrabold tabular-nums text-[#243A5E] sm:text-xl">24h</span>
-                <span className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-500 sm:text-[11px]">
-                  Duyệt hồ sơ
-                </span>
-              </div>
+              {[
+                { value: '85%', label: 'Tối đa vay', color: FORM_TITLE_RED },
+                { value: '8', label: 'Năm vay', color: NAVY },
+                { value: '24h', label: 'Duyệt hồ sơ', color: NAVY },
+              ].map(({ value, label, color }) => (
+                <div key={label} className="flex min-w-[5.5rem] flex-1 flex-col rounded-xl border border-[#243A5E]/15 bg-gradient-to-br from-white to-slate-50/80 px-3 py-2.5 text-center shadow-[0_4px_14px_rgba(36,58,94,0.08)] sm:min-w-[6rem] sm:px-4 sm:py-3">
+                  <span className="text-lg font-extrabold tabular-nums sm:text-xl" style={{ color }}>{value}</span>
+                  <span className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-500 sm:text-[11px]">{label}</span>
+                </div>
+              ))}
             </div>
 
             <ul className="mt-7 flex flex-wrap gap-3">
               {featurePills.map(({ Icon, label, highlight }) => (
-                <li
-                  key={label}
-                  className={[
-                    'inline-flex items-center gap-2.5 rounded-full px-4 py-2.5 text-[13px] font-semibold transition sm:text-sm',
-                    highlight
-                      ? 'border-2 border-[#243A5E]/35 bg-gradient-to-r from-[#243A5E]/[0.08] to-[#8B1D1D]/[0.06] text-[#243A5E] shadow-[0_4px_16px_rgba(36,58,94,0.12)] ring-1 ring-[#243A5E]/10'
-                      : 'border border-slate-200 bg-white/95 text-slate-700 shadow-sm hover:border-slate-300 hover:shadow-md',
-                  ].join(' ')}
-                >
+                <li key={label} className={[
+                  'inline-flex items-center gap-2.5 rounded-full px-4 py-2.5 text-[13px] font-semibold transition sm:text-sm',
+                  highlight
+                    ? 'border-2 border-[#243A5E]/35 bg-gradient-to-r from-[#243A5E]/[0.08] to-[#8B1D1D]/[0.06] text-[#243A5E] shadow-[0_4px_16px_rgba(36,58,94,0.12)] ring-1 ring-[#243A5E]/10'
+                    : 'border border-slate-200 bg-white/95 text-slate-700 shadow-sm hover:border-slate-300 hover:shadow-md',
+                ].join(' ')}>
                   <Icon className="h-4 w-4 shrink-0 text-[#243A5E]" strokeWidth={2} aria-hidden />
                   {label}
                 </li>
               ))}
             </ul>
 
+            {selectedCar && (
+              <div className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_4px_20px_rgba(36,58,94,0.05)] transition-all duration-300">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Xe đang chọn lựa:</p>
+                <div className="flex flex-col sm:flex-row items-center gap-5">
+                  <div className="relative h-28 w-44 shrink-0 overflow-hidden rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center">
+                    {isCarDetailsLoading ? (
+                      <div className="flex items-center justify-center text-xs text-slate-400 animate-pulse">Đang tải ảnh...</div>
+                    ) : (
+                      <img
+                        src={carImageUrl}
+                        alt={selectedCar.label}
+                        className="h-full w-full object-contain p-2 transition-all duration-300"
+                        onError={(e) => {
+                          e.currentTarget.src = '/default-car.jpg'
+                        }}
+                      />
+                    )}
+                  </div>
+                  <div className="text-center sm:text-left">
+                    <h3 className="text-lg font-bold text-[#243A5E]">{selectedCar.label}</h3>
+                    {selectedCar.price && (
+                      <p className="mt-1 text-sm font-semibold text-[#8B1D1D]">Giá từ: {selectedCar.price} ₫</p>
+                    )}
+                    <p className="mt-1 text-xs text-slate-400">Hình ảnh được đồng bộ từ kho dữ liệu chi tiết xe.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="mt-9 max-w-[34rem] space-y-4 text-[15px] leading-[1.8] text-slate-600 sm:text-base">
               <p>
-                Là trả trước một phần tiền mua xe, phần còn thiếu sẽ vay ngân hàng rồi hàng tháng
-                trả dần cho ngân hàng cả gốc và lãi theo phương thức{' '}
+                Là trả trước một phần tiền mua xe, phần còn thiếu sẽ vay ngân hàng rồi hàng tháng trả dần cho ngân hàng cả gốc và lãi theo phương thức{' '}
                 <strong className="font-semibold text-slate-800">trừ lùi</strong> trong suốt thời gian trả góp.
               </p>
               <p>
                 Hỗ trợ tư vấn mua xe đại lý phân phối toàn quốc trả góp tới{' '}
                 <strong className="font-semibold text-[#8B1D1D]">85% giá trị xe</strong>, thời gian vay tối đa{' '}
-                <strong className="font-semibold text-[#243A5E]">8 năm</strong>. Thủ tục đơn giản nhanh gọn, thời
-                gian thẩm duyệt trong vòng{' '}
-                <strong className="rounded-md bg-[#243A5E]/[0.1] px-1.5 py-0.5 font-semibold text-[#243A5E]">
-                  24h
-                </strong>
-                , kể cả khách hàng ở tỉnh, bao đậu hồ sơ khó. Vui lòng liên hệ để được tư vấn chính
-                xác.
+                <strong className="font-semibold text-[#243A5E]">8 năm</strong>. Thủ tục đơn giản nhanh gọn, thời gian thẩm duyệt trong vòng{' '}
+                <strong className="rounded-md bg-[#243A5E]/[0.1] px-1.5 py-0.5 font-semibold text-[#243A5E]">24h</strong>
+                , kể cả khách hàng ở tỉnh, bao đậu hồ sơ khó. Vui lòng liên hệ để được tư vấn chính xác.
               </p>
             </div>
           </div>
 
+          {/* ── Cột phải: Form ── */}
           <div className="relative flex min-w-0 w-full justify-center lg:justify-end">
             <div
               className="pointer-events-none absolute left-1/2 top-1/2 -z-0 h-[min(100%,380px)] w-[min(100%,340px)] -translate-x-1/2 -translate-y-1/2 rounded-[2rem] bg-gradient-to-br from-[#243A5E]/25 via-[#8B1D1D]/10 to-transparent opacity-90 blur-2xl lg:left-auto lg:right-0 lg:translate-x-0"
               aria-hidden
             />
 
-            <div className="relative z-10 w-full max-w-[min(100%,480px)] overflow-hidden rounded-2xl border border-white/90 bg-white/95 shadow-[0_8px_40px_rgba(15,23,42,0.1),0_0_0_1px_rgba(36,58,94,0.06)] backdrop-blur-sm lg:max-w-none">
-              <div className="relative">
-                <div
-                  className="h-[6px] w-full bg-gradient-to-r from-[#243A5E] from-[5%] via-[#5a7199] via-50% to-[#8B1D1D] to-[98%]"
-                  aria-hidden
-                />
-                <div
-                  className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent"
-                  aria-hidden
-                />
+            <div className="relative z-10 w-full max-w-[min(100%,480px)] rounded-2xl border border-white/90 bg-white/95 shadow-[0_8px_40px_rgba(15,23,42,0.1),0_0_0_1px_rgba(36,58,94,0.06)] backdrop-blur-sm lg:max-w-none">
+              <div className="relative overflow-hidden rounded-t-2xl">
+                <div className="h-[6px] w-full bg-gradient-to-r from-[#243A5E] from-[5%] via-[#5a7199] via-50% to-[#8B1D1D] to-[98%]" aria-hidden />
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent" aria-hidden />
               </div>
 
               <div className="p-8 sm:p-9 lg:p-10">
@@ -241,40 +348,65 @@ export function InstallmentRegisterSection() {
                   onSubmit={async (e) => {
                     e.preventDefault()
                     setTouched(true)
-                    setOpen(false)
+                    setCarTouched(true)
+                    setCarOpen(false)
+                    setShowroomOpen(false)
+
                     if (!selectedCar?.id) {
                       toast.error('Vui lòng chọn xe muốn mua.')
+                      return
+                    }
+                    if (!selectedShowroomId) {
+                      toast.error('Vui lòng chọn showroom.')
                       return
                     }
 
                     const numericCarId = Number(selectedCar.id)
                     if (!Number.isFinite(numericCarId)) {
-                      toast.error('Mã xe không hợp lệ. Vui lòng chọn xe từ danh sách tải từ hệ thống.')
+                      toast.error('Mã xe không hợp lệ. Vui lòng chọn xe từ danh sách.')
                       return
                     }
 
                     const form = e.currentTarget
                     const fd = new FormData(form)
                     const customerName = String(fd.get('fullName') ?? '').trim()
-                    const phone = String(fd.get('phone') ?? '').trim()
+                    const rawPhone = String(fd.get('phone') ?? '').trim()
+                    
+                    // Xử lý Date & Time giống hệt QuoteRegisterCard
+                    const now = new Date()
+                    const bookingDate = now.toISOString().split('T')[0]
+                    const bookingTime = now.toTimeString().slice(0, 5)
+
+                    // Normalize số điện thoại: convert +84 -> 0
+                    const normalizedPhone = rawPhone.startsWith('+84')
+                      ? '0' + rawPhone.slice(3)
+                      : rawPhone
+
+                    const showroomNameStr = selectedShowroomName ? getShowroomName(selectedShowroomName) : ''
 
                     const payload: BookingCreatePayload = {
                       carId: numericCarId,
-                      showroomId: SHOWROOM_ID,
+                      showroomId: Number(selectedShowroomId),
                       customerName,
-                      phone,
-                      bookingDate: todayISO,
-                      note: 'Yêu cầu tư vấn mua trả góp',
+                      phone: normalizedPhone,
+                      bookingDate,
+                      bookingTime,
+                      timeSpan: '30 phút',
+                      note: `Tư vấn mua trả góp - ${selectedCar.label} - ${showroomNameStr}`,
+                      userId: 0, // Bổ sung userId giống trang báo giá
                     }
 
                     try {
                       setIsSubmitting(true)
-                      await bookingsApi.post('Bookings/public-create', payload)
+                      // Chuyển sang endpoint /create chuẩn
+                      await bookingsApi.post('Bookings/create', payload)
                       toast.success('Đã gửi yêu cầu. Chúng tôi sẽ liên hệ sớm.')
                       form.reset()
                       setSelectedCar(null)
-                      setQuery('')
+                      setCarQuery('')
+                      setCarTouched(false)
                       setTouched(false)
+                      setSelectedShowroomId('')
                     } catch (err) {
                       if (axios.isAxiosError(err)) {
                         const message =
@@ -290,10 +422,9 @@ export function InstallmentRegisterSection() {
                     }
                   }}
                 >
+                  {/* Họ tên */}
                   <div>
-                    <label htmlFor={nameId} className="sr-only">
-                      Họ và tên
-                    </label>
+                    <label htmlFor={nameId} className="sr-only">Họ và tên</label>
                     <input
                       id={nameId}
                       name="fullName"
@@ -303,80 +434,59 @@ export function InstallmentRegisterSection() {
                       className={inputClassName}
                     />
                   </div>
+
+                  {/* SĐT - Cập nhật regex và placeholder */}
                   <div>
-                    <label htmlFor={phoneId} className="sr-only">
-                      Số điện thoại
-                    </label>
+                    <label htmlFor={phoneId} className="sr-only">Số điện thoại</label>
                     <input
                       id={phoneId}
                       name="phone"
                       required
-                      inputMode="numeric"
-                      pattern="[0-9]{10}"
-                      maxLength={10}
-                      placeholder="Nhập số điện thoại (10 số)"
+                      inputMode="tel"
+                      pattern="^(\+84|0)[0-9]{9,10}$"
+                      maxLength={13}
+                      placeholder="Số điện thoại (VD: 09... hoặc +84...)"
                       autoComplete="tel"
                       className={inputClassName}
                     />
                   </div>
-                  <div ref={rootRef} className="relative">
-                    <label htmlFor={carId} className="sr-only">
-                      Xe muốn mua
-                    </label>
 
+                  {/* Chọn xe */}
+                  <div ref={rootCarRef} className="relative">
+                    <label htmlFor={carSelectId} className="sr-only">Xe muốn mua</label>
                     <input type="hidden" name="carId" value={selectedCar?.id ?? ''} />
-
                     <input
-                      id={carId}
+                      id={carSelectId}
                       name="carSearch"
                       role="combobox"
-                      aria-expanded={open}
-                      aria-controls={`${carId}-listbox`}
-                      required={false}
-                      placeholder={isCarsLoading ? 'Đang tải danh sách xe...' : 'Xe muốn mua'}
-                      value={open ? query : selectedCar?.label ?? ''}
-                      onFocus={() => {
-                        setOpen(true)
-                        setQuery(selectedCar?.label ?? '')
-                      }}
-                      onChange={(e) => {
-                        setOpen(true)
-                        setQuery(e.target.value)
-                        setTouched(true)
-                      }}
-                      onBlur={() => setTouched(true)}
+                      aria-expanded={carOpen}
+                      aria-controls={`${carSelectId}-listbox`}
+                      placeholder={isCarsLoading ? 'Đang tải danh sách xe...' : 'Chọn xe muốn mua'}
+                      value={carOpen ? carQuery : selectedCar?.label ?? ''}
+                      onFocus={() => { setCarOpen(true); setCarQuery(selectedCar?.label ?? '') }}
+                      onChange={(e) => { setCarOpen(true); setCarQuery(e.target.value); setCarTouched(true) }}
+                      onBlur={() => setCarTouched(true)}
                       className={[
                         inputClassName,
                         'cursor-pointer pr-11 text-slate-800',
-                        touched && !selectedCar?.id ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-400/20' : '',
+                        carTouched && !selectedCar?.id ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-400/20' : '',
                       ].join(' ')}
                       autoComplete="off"
                     />
-
                     <button
                       type="button"
                       className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1 text-slate-400 hover:text-slate-600"
-                      aria-label={open ? 'Đóng danh sách xe' : 'Mở danh sách xe'}
-                      onClick={() => {
-                        setTouched(true)
-                        setOpen((v) => !v)
-                        if (!open) setQuery(selectedCar?.label ?? '')
-                      }}
+                      aria-label={carOpen ? 'Đóng danh sách xe' : 'Mở danh sách xe'}
+                      onClick={() => { setCarTouched(true); setCarOpen((v) => !v); if (!carOpen) setCarQuery(selectedCar?.label ?? '') }}
                     >
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-                        <path
-                          d="M6 9l6 6 6-6"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
+                        <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </button>
 
-                    {open ? (
+                    {carOpen && (
                       <div
-                        id={`${carId}-listbox`}
+                        id={`${carSelectId}-listbox`}
                         role="listbox"
                         className="absolute z-20 mt-2 max-h-64 w-full overflow-auto rounded-xl border border-slate-200 bg-white py-1 text-sm shadow-lg"
                       >
@@ -393,29 +503,121 @@ export function InstallmentRegisterSection() {
                                 type="button"
                                 role="option"
                                 aria-selected={isSelected}
+                                onMouseDown={(e) => {
+                                  e.preventDefault()
+                                  setSelectedCar(c)
+                                  setCarQuery(c.label)
+                                  setCarOpen(false)
+                                  setCarTouched(true)
+                                }}
                                 className={[
-                                  'flex w-full items-center justify-between px-4 py-2 text-left',
+                                  'flex w-full items-center justify-between px-4 py-2.5 text-left',
                                   isSelected ? 'bg-slate-100 text-slate-900' : 'text-slate-700 hover:bg-slate-50',
                                 ].join(' ')}
-                                onClick={() => {
-                                  setSelectedCar(c)
-                                  setQuery(c.label)
-                                  setOpen(false)
-                                  setTouched(true)
-                                }}
                               >
-                                <span className="truncate">{c.label}</span>
-                                {isSelected ? (
-                                  <span className="ml-3 text-[11px] font-semibold text-[#243A5E]">Đã chọn</span>
-                                ) : null}
+                                {/* Thumbnail xe */}
+                                <div className="h-10 w-14 shrink-0 overflow-hidden rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center">
+                                  <img 
+                                    src={c.image || '/default-car.jpg'} 
+                                    alt={c.label} 
+                                    className="h-full w-full object-contain p-0.5 mix-blend-multiply"
+                                    onError={(e) => {
+                                      e.currentTarget.src = '/default-car.jpg'
+                                    }}
+                                  />
+                                </div>
+
+                                {/* Info xe */}
+                                <div className="flex flex-1 flex-col ml-3">
+                                  <span className={`font-semibold ${isSelected ? 'text-[#243A5E]' : 'text-slate-800'}`}>
+                                    {c.label}
+                                  </span>
+                                  {c.price && <span className="text-[12px] text-slate-500">Từ {c.price} ₫</span>}
+                                </div>
+
+                                {/* Icon checkmark khi chọn */}
+                                {isSelected && (
+                                  <svg className="h-5 w-5 shrink-0 text-[#8B1D1D]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
                               </button>
                             )
                           })
                         )}
                       </div>
-                    ) : null}
+                    )}
                   </div>
 
+                  {/* Chọn showroom — hiện sau khi chọn xe */}
+                  {selectedCar && (
+                    <div ref={rootShowroomRef} className="relative">
+                      <label htmlFor={showroomSelectId} className="sr-only">Showroom</label>
+                      <input type="hidden" name="showroomId" value={selectedShowroomId} />
+
+                      <button
+                        id={showroomSelectId}
+                        type="button"
+                        disabled={isShowroomsLoading}
+                        onClick={() => !isShowroomsLoading && setShowroomOpen((v) => !v)}
+                        className={[
+                          inputClassName,
+                          'flex items-center justify-between pr-11 text-left',
+                          !selectedShowroomId ? 'text-slate-400' : 'text-slate-900',
+                          touched && !selectedShowroomId ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-400/20' : '',
+                          isShowroomsLoading ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
+                        ].join(' ')}
+                      >
+                        <span className="truncate">
+                          {isShowroomsLoading
+                            ? 'Đang tải showroom...'
+                            : selectedShowroomName
+                            ? getShowroomName(selectedShowroomName)
+                            : 'Chọn showroom nhận xe'}
+                        </span>
+                        <svg className="absolute right-3.5 top-1/2 -translate-y-1/2 shrink-0 text-slate-400" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+                          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+
+                      {showroomOpen && (
+                        <div className="absolute z-20 mt-2 max-h-56 w-full overflow-auto rounded-xl border border-slate-200 bg-white py-1 text-sm shadow-lg">
+                          {showrooms.length === 0 ? (
+                            <div className="px-4 py-2 text-slate-500">Không có showroom nào.</div>
+                          ) : (
+                            showrooms.map((s) => {
+                              const isSelected = String(s.showroomId) === selectedShowroomId
+                              return (
+                                <button
+                                  key={s.showroomId}
+                                  type="button"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault()
+                                    setSelectedShowroomId(String(s.showroomId))
+                                    setShowroomOpen(false)
+                                  }}
+                                  className={[
+                                    'flex w-full flex-col px-4 py-2.5 text-left transition',
+                                    isSelected ? 'bg-slate-100 text-slate-900' : 'text-slate-700 hover:bg-slate-50',
+                                  ].join(' ')}
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="truncate font-medium">{getShowroomName(s)}</span>
+                                    {isSelected && <span className="shrink-0 text-[11px] font-semibold text-[#243A5E]">Đã chọn</span>}
+                                  </div>
+                                  {s.fullAddress && (
+                                    <span className="mt-0.5 truncate text-xs text-slate-400">{s.fullAddress}</span>
+                                  )}
+                                </button>
+                              )
+                            })
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Submit */}
                   <button
                     type="submit"
                     disabled={isSubmitting}

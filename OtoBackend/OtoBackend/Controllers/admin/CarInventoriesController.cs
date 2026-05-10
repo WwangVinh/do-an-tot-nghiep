@@ -34,7 +34,8 @@ namespace OtoBackend.Controllers.admin
                     Province = i.Showroom?.Province ?? "Chưa rõ",
                     i.Quantity,
                     i.DisplayStatus,
-                    i.Color
+                    CarcollorId = i.CarColorId,
+                    ColorName = i.CarColor?.ColorName ?? "Không xác định",
                 })
             });
         }
@@ -47,7 +48,7 @@ namespace OtoBackend.Controllers.admin
                 request.ShowroomId,
                 request.Quantity,
                 request.DisplayStatus,
-                request.Color
+                request.CarColorId
             );
 
             if (result.Success) return Ok(new { message = result.Message });

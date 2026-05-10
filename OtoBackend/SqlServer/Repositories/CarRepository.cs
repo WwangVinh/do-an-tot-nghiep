@@ -74,7 +74,8 @@ namespace SqlServer.Repositories
             // Bắt đầu với danh sách toàn bộ xe
             var query = _context.Cars
                                 .Include(c => c.CarInventories) 
-                                    .ThenInclude(i => i.Showroom) 
+                                    .ThenInclude(i => i.Showroom)
+                                .Include(c => c.CarColors)
                                 .AsQueryable();
 
             query = query.Where(c => c.IsDeleted == false);
@@ -118,7 +119,7 @@ namespace SqlServer.Repositories
             if (!string.IsNullOrWhiteSpace(color))
             {
                 var colorLower = color.Trim().ToLower();
-                query = query.Where(c => c.Color.ToLower() == colorLower);
+                query = query.Where(c => c.CarColors.Any(cc => cc.ColorName.ToLower() == colorLower));
             }
 
             // LỌC THEO KHOẢNG GIÁ (Giá min / Giá max)
@@ -192,6 +193,7 @@ namespace SqlServer.Repositories
             return await _context.Cars
                 .AsNoTracking()
                 .Include(c => c.CarImages)
+                .Include(c => c.CarColors)
                 .Include(c => c.CarSpecifications) 
                 .Include(c => c.CarFeatures)
                     .ThenInclude(cf => cf.Feature)
@@ -207,6 +209,7 @@ namespace SqlServer.Repositories
         {
             return await _context.Cars
                 .Include(c => c.CarImages)
+                .Include(c => c.CarColors)
                 .Include(c => c.CarSpecifications)
                 .Include(c => c.CarFeatures)
                     .ThenInclude(cf => cf.Feature)
@@ -237,7 +240,13 @@ namespace SqlServer.Repositories
 
             if (!string.IsNullOrWhiteSpace(search)) query = query.Where(c => c.Name.ToLower().Contains(search.Trim().ToLower()));
             if (!string.IsNullOrWhiteSpace(brand)) query = query.Where(c => c.Brand.ToUpper() == brand.Trim().ToUpper());
-            if (!string.IsNullOrWhiteSpace(color)) query = query.Where(c => c.Color.ToLower() == color.Trim().ToLower());
+
+            if (!string.IsNullOrWhiteSpace(color))
+            {
+                var colorLower = color.Trim().ToLower();
+                query = query.Where(c => c.CarColors.Any(cc => cc.ColorName.ToLower() == colorLower));
+            }
+
             if (minPrice.HasValue) query = query.Where(c => c.Price >= minPrice.Value);
             if (maxPrice.HasValue) query = query.Where(c => c.Price <= maxPrice.Value);
             if (!string.IsNullOrWhiteSpace(transmission)) query = query.Where(c => c.Transmission == transmission.Trim());
@@ -268,15 +277,14 @@ namespace SqlServer.Repositories
         {
             return await _context.Cars.FindAsync(id);
         }
-        public async Task<bool> CheckCarListingExistAsync(string name, string brand, int? year, string color, int condition, decimal? mileage, int? excludeId = null)
+        public async Task<bool> CheckCarListingExistAsync(string name, string brand, int? year, int condition, decimal? mileage, int? excludeId = null)
         {
             return await _context.Cars.AnyAsync(c =>
                 c.Name.ToLower().Trim() == name.ToLower().Trim() &&
                 c.Brand == brand &&
                 c.Year == year &&
-                c.Color == color &&
                 c.Condition == (CarCondition)condition &&
-                c.Mileage == (mileage ?? 0m) && 
+                c.Mileage == (mileage ?? 0m) &&
                 (excludeId == null || c.CarId != excludeId));
         }
 

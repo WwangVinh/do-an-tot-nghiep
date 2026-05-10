@@ -18,13 +18,12 @@ import { fetchDashboardSummary } from '../../services/dashboard/dashboard'
 type Trend = { value: number; direction: 'up' | 'down' }
 
 function formatCompactVnd(value: number) {
-  // Compact, readable for dashboard widgets (e.g. 1.2t, 850tr)
   const abs = Math.abs(value)
-  if (abs >= 1_000_000_000_000) return `${(value / 1_000_000_000_000).toFixed(1)}t`
-  if (abs >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}b`
-  if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}tr`
+  if (abs >= 1_000_000_000_000) return `${(value / 1_000_000_000_000).toFixed(1)} nghìn tỷ`
+  if (abs >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)} tỷ`  
+  if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(1)} tr`
   if (abs >= 1_000) return `${(value / 1_000).toFixed(1)}k`
-  return `${value}`
+  return `${value.toLocaleString('vi-VN')}`
 }
 
 function formatPercent(pct: number) {

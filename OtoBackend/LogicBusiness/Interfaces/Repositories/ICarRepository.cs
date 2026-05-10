@@ -29,7 +29,7 @@ namespace LogicBusiness.Interfaces.Repositories
 
         Task<Car> GetCarByIdAsync(int id);
 
-        Task<bool> CheckCarListingExistAsync(string name, string brand, int? year, string color, int condition, decimal? mileage, int? excludeId = null);
+        Task<bool> CheckCarListingExistAsync(string name, string brand, int? year, int condition, decimal? mileage, int? excludeId = null);
 
         Task<Car?> GetExistingNewCarAsync(string name, string brand, int year);
         Task AddCarAsync(Car car);

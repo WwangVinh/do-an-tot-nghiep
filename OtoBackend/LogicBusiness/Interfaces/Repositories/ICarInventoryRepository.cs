@@ -7,7 +7,7 @@ namespace LogicBusiness.Interfaces.Repositories
 {
     public interface ICarInventoryRepository
     {
-        Task<CarInventory?> GetInventoryAsync(int carId, int showroomId, string? color = null);
+        Task<CarInventory?> GetInventoryAsync(int carId, int showroomId, int? carColorId = null);
         Task<IEnumerable<CarInventory>> GetInventoriesByCarIdAsync(int carId);
         Task AddInventoryAsync(CarInventory inventory);
         Task UpdateInventoryAsync(CarInventory inventory);

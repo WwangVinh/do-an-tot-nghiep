@@ -80,6 +80,12 @@ namespace LogicBusiness.Services.Customer
                         c.Year,
                         Condition = c.Condition.ToString(),
                         c.Price,
+                        Colors = c.CarColors?.Select(cc => new {
+                            cc.CarColorId,
+                            cc.ColorName,
+                            cc.HexCode,
+                            cc.ImageUrl
+                        }).ToList(),
                         c.ImageUrl,
                         Status = statusStr,
                         c.Mileage,
@@ -124,7 +130,12 @@ namespace LogicBusiness.Services.Customer
                 car.Model,
                 car.Year,
                 car.Price,
-                car.Color,
+                Colors = car.CarColors?.Select(cc => new {
+                    cc.CarColorId,
+                    cc.ColorName,
+                    cc.HexCode,
+                    cc.ImageUrl
+                }).ToList(),
                 car.Mileage,
                 car.FuelType,
                 car.Transmission,

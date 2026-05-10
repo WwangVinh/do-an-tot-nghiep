@@ -21,15 +21,15 @@ namespace SqlServer.Repositories
         }
 
 
-        public async Task<CarInventory?> GetInventoryAsync(int carId, int showroomId, string? color = null)
+        public async Task<CarInventory?> GetInventoryAsync(int carId, int showroomId, int? carColorId = null)
         {
             var query = _context.CarInventories
                 .Where(i => i.CarId == carId && i.ShowroomId == showroomId);
 
-            if (!string.IsNullOrWhiteSpace(color))
-                query = query.Where(i => i.Color == color.Trim());
+            if (carColorId.HasValue)
+                query = query.Where(i => i.CarColorId == carColorId.Value);
             else
-                query = query.Where(i => i.Color == null);
+                query = query.Where(i => i.CarColorId == null);
 
             return await query.FirstOrDefaultAsync();
         }
@@ -39,6 +39,7 @@ namespace SqlServer.Repositories
             // Lấy tất cả các kho đang chứa con xe này, VÀ nối luôn bảng Showroom để lấy tên tỉnh
             return await _context.CarInventories
                 .Include(i => i.Showroom)
+                .Include(i => i.CarColor)
                 .Where(i => i.CarId == carId)
                 .ToListAsync();
         }
@@ -66,6 +67,7 @@ namespace SqlServer.Repositories
         {
             return await _context.CarInventories
          .Include(inv => inv.Car)
+         .Include(inv => inv.CarColor)
          .Where(inv => inv.ShowroomId == showroomId && inv.Quantity > 0)
          .ToListAsync();
         }

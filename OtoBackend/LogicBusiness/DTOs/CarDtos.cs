@@ -18,7 +18,7 @@ namespace LogicBusiness.DTOs
         [Required(ErrorMessage = "Vui lòng nhập tên hãng xe!")]
         public string Brand { get; set; } = null!;
         public string? Model { get; set; }
-        public string? Color { get; set; }
+        public string? ColorsJson { get; set; }
         [Range(0, double.MaxValue, ErrorMessage = "Giá xe phải lớn hơn hoặc bằng 0!")]
         public decimal Price { get; set; }
         [RegularExpression("^(Xăng|Điện|Dầu|Hybrid)$", ErrorMessage = "Nhiên liệu chỉ được nhập Xăng, Điện, Dầu hoặc Hybrid!")]
@@ -52,7 +52,7 @@ namespace LogicBusiness.DTOs
         [ValidYearAttribute]
         public int Year { get; set; }
         public string? Model { get; set; }
-        public string? Color { get; set; }
+        public string? ColorsJson { get; set; }
         public string? FuelType { get; set; }
         public double? Mileage { get; set; }
         public string? Description { get; set; }
@@ -103,7 +103,7 @@ namespace LogicBusiness.DTOs
         public int Quantity { get; set; }
         public string? DisplayStatus { get; set; }
         // Màu xe cụ thể của lô hàng này (nullable — kho cũ không có màu)
-        public string? Color { get; set; }
+        public int? CarColorId { get; set; }
     }
 
     // UpdateStockDto nằm ở UpdateStockDto.cs riêng — không define ở đây tránh ambiguity
@@ -128,7 +128,7 @@ namespace LogicBusiness.DTOs
         [Required(ErrorMessage = "Vui lòng nhập tên hãng xe!")]
         public string Brand { get; set; } = null!;
         public string? Model { get; set; }
-        public string? Color { get; set; }
+        public string? ColorsJson { get; set; }
         [Range(0, double.MaxValue, ErrorMessage = "Giá xe phải lớn hơn hoặc bằng 0!")]
         public decimal Price { get; set; }
         [RegularExpression("^(Xăng|Điện|Dầu|Hybrid)$", ErrorMessage = "Nhiên liệu chỉ được nhập Xăng, Điện, Dầu hoặc Hybrid!")]
@@ -152,6 +152,12 @@ namespace LogicBusiness.DTOs
         public CarStatus? Status { get; set; }
     }
 
+    public class CarColorCreateDto
+    {
+        public string ColorName { get; set; } = null!;
+        public string? HexCode { get; set; }
+        public string? ImageUrl { get; set; }
+    }
     public class CarFilterDto
     {
         public int PageNumber { get; set; } = 1;
