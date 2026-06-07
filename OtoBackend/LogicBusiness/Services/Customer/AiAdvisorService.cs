@@ -41,14 +41,13 @@ namespace LogicBusiness.Services.Customer
 
         public async Task<AiAdvisorChatResponseDto> GetReplyAsync(AiAdvisorChatRequestDto request)
         {
-            // Phát hiện số điện thoại Việt Nam trong tin nhắn
+            // Detect Vietnamese phone number
             var phoneMatch = Regex.Match(request.Message, @"\b0[35789]\d{8}\b");
 
             if (phoneMatch.Success)
             {
                 var phone = phoneMatch.Value;
 
-                // Kích hoạt Notification bắn ngay cho team Sales
                 await _notificationService.CreateNotificationAsync(
                     userId: null,
                     showroomId: null,
@@ -60,162 +59,214 @@ namespace LogicBusiness.Services.Customer
                 );
             }
 
-            // Validate provider
             var provider = (_config["AiAdvisor:Provider"] ?? "OpenAI").Trim();
+
             if (!provider.Equals("Gemini", StringComparison.OrdinalIgnoreCase)
                 && !provider.Equals("OpenAI", StringComparison.OrdinalIgnoreCase))
             {
-                if (provider.StartsWith("AIza", StringComparison.Ordinal))
-                {
-                    throw new InvalidOperationException(
-                        "AiAdvisor:Provider phai la chu Gemini hoac OpenAI, khong phai API key. " +
-                        "Dat khoa Google vao AiAdvisor:GeminiApiKey va \"Provider\": \"Gemini\".");
-                }
-
                 throw new InvalidOperationException(
-                    $"AiAdvisor:Provider khong hop le ({provider}). Chi dung \"Gemini\" hoac \"OpenAI\".");
+                    $"AiAdvisor:Provider không hợp lệ ({provider}).");
             }
 
             var maxCars = Math.Clamp(
                 int.TryParse(_config["AiAdvisor:MaxCatalogCars"], out var n) ? n : 60,
-                1, 100);
+                1,
+                100);
 
-            // Xây dựng KnowledgeBase JSON từ DB
             var knowledgeBaseJson = await BuildKnowledgeBaseAsync(maxCars);
 
-            // System prompt với ràng buộc nghiệp vụ và quy ước AI_CAR_IDS
+            // ==============================
+            // SUPER SALES SYSTEM PROMPT
+            // ==============================
+
             var systemPrompt =
-                "Ban la tro ly tu van tai showroom o to, tra loi bang tieng Viet.\n" +
-                "Chi dua tren thong tin trong khoi JSON duoi day khi tu van ve: " +
-                "danh sach xe, gia ca, phien ban, thong tin ton kho, he thong showroom, " +
-                "va cac bai viet/su kien moi nhat.\n" +
-                "LUU Y CUC KY QUAN TRONG: De biet xe co nhung phien ban nao, hay tim 'carId' " +
-                "cua xe do trong mang 'Cars', sau do tim tat ca cac phien ban co cung 'carId' " +
-                "nam trong mang 'CarVersions'.\n" +
-                "Neu khong co thong tin trong du lieu, hay noi ro ban khong nam thong tin do " +
-                "va moi khach goi hotline hoac de lai lien he.\n" +
-                "Khong duoc tu bia so lieu, dia chi hay su kien. " +
-                "Giu giong dieu than thien, ro rang, chuyen nghiep.\n\n" +
-                "DU LIEU HE THONG (JSON chua Cars, CarVersions, Showrooms, Articles):\n" +
-                knowledgeBaseJson +
-                "\n\nQUY UOC MAY DOC (bat buoc khi liet ke xe cu the): " +
-                "Moi xe trong JSON co truong carId. " +
-                "Khi ban de xuat hoac liet ke cac xe cu the tu JSON, " +
-                "them DUNG mot dong tuyet doi CUOI CUNG cua tin nhan, " +
-                "khong co ky tu nao sau do, dinh dang: <!--AI_CAR_IDS:id1,id2--> " +
-                "voi cac so la carId co trong JSON; toi da 8 id, khong trung. " +
-                "Neu khong chac carId thi khong them dong nay.";
+                "Ban la mot chuyen vien tu van ban xe o to cao cap chuyen nghiep tai showroom.\n" +
+                "Ban noi chuyen tu nhien, lich su, than thien, khong may moc.\n" +
+                "Muc tieu cua ban la tu van dung nhu cau va tao trai nghiem chuyen nghiep nhu nhan vien sales that.\n\n" +
+
+                "NGUYEN TAC TU VAN:\n" +
+                "- Luon phan tich nhu cau truoc khi de xuat xe.\n" +
+                "- Hoi va suy luan theo: ngan sach, muc dich su dung, so nguoi di, thich tiet kiem hay manh me.\n" +
+                "- Neu khach mua lan dau, giai thich de hieu.\n" +
+                "- Neu khach hieu ve xe, tu van sau hon nhu mot chuyen gia.\n" +
+                "- Neu khach phan van nhieu xe, hay so sanh ngan gon.\n" +
+                "- Neu co khuyen mai, nhan manh loi ich tai chinh.\n" +
+                "- Neu xe phu hop gia dinh, hay nhan manh rong rai, an toan, tiet kiem.\n" +
+                "- Neu xe phu hop nguoi tre, hay nhan manh cong nghe, the thao, trai nghiem lai.\n" +
+                "- Luon uu tien trai nghiem khach hang thay vi ep mua.\n" +
+                "- Khuyen khich khach dat lich lai thu neu phu hop.\n" +
+                "- Co kha nang nho so thich cua khach trong suot cuoc hoi thoai.\n\n" +
+
+                "CAC TINH NANG WEBSITE:\n" +
+                "- Dat lich lai thu.\n" +
+                "- Them vao gio hang.\n" +
+                "- Ky gui xe cu.\n" +
+                "- Xem danh gia.\n" +
+                "- Xem showroom.\n" +
+                "- Xem khuyen mai.\n\n" +
+
+                "LUU Y QUAN TRONG:\n" +
+                "1. Khong duoc tu bia thong tin.\n" +
+                "2. Chi dung du lieu trong JSON.\n" +
+                "3. Neu khong co thong tin, hay noi ro va moi khach de lai lien he.\n" +
+                "4. Neu nhac toi bat ky xe nao thi BAT BUOC phai tra ve [CAR_IDS:id]\n" +
+                "5. Dat [CAR_IDS] o CUOI cau tra loi.\n" +
+                "6. Toi da 8 xe.\n" +
+                "7. Khong duoc quen [CAR_IDS].\n\n" +
+
+                "QUY TAC PHIEN BAN:\n" +
+                "- Tim carId trong Cars.\n" +
+                "- Sau do doi chieu CarVersions theo carId.\n\n" +
+
+                "DU LIEU JSON:\n" +
+                knowledgeBaseJson;
+
+            // ==============================
+            // PROVIDER
+            // ==============================
 
             if (provider.Equals("Gemini", StringComparison.OrdinalIgnoreCase))
             {
                 var geminiKey = _config["AiAdvisor:GeminiApiKey"];
-                var fallbackKey = _config["AiAdvisor:OpenAIApiKey"];
-                var apiKey = !string.IsNullOrWhiteSpace(geminiKey) ? geminiKey : fallbackKey;
 
-                if (string.IsNullOrWhiteSpace(apiKey))
+                if (string.IsNullOrWhiteSpace(geminiKey))
                 {
-                    throw new InvalidOperationException(
-                        "Chua cau hinh AiAdvisor:GeminiApiKey. " +
-                        "Them khoa Google AI vao User Secrets hoac appsettings.");
+                    throw new InvalidOperationException("Thiếu Gemini API Key.");
                 }
 
                 var model = ResolveGeminiModel(_config["AiAdvisor:Model"]);
-                var geminiReply = await GetReplyGeminiAsync(request, systemPrompt, apiKey.Trim(), model);
+
+                var geminiReply = await GetReplyGeminiAsync(
+                    request,
+                    systemPrompt,
+                    geminiKey.Trim(),
+                    model);
+
                 return ApplySuggestedCarIds(geminiReply);
             }
 
             var openAiReply = await GetReplyOpenAiAsync(request, systemPrompt);
+
             return ApplySuggestedCarIds(openAiReply);
         }
 
-        // ─────────────────────────────────────────────
-        // Bóc tách suggestedCarIds từ dòng ẩn <!--AI_CAR_IDS:...-->
-        // ─────────────────────────────────────────────
+        // ==========================================
+        // APPLY CAR IDS
+        // ==========================================
 
         private static AiAdvisorChatResponseDto ApplySuggestedCarIds(AiAdvisorChatResponseDto dto)
         {
             var (text, ids) = ExtractSuggestedCarIds(dto.Reply);
+
             dto.Reply = text;
             dto.SuggestedCarIds = ids;
+
             return dto;
         }
 
-        /// <summary>
-        /// Bóc dòng <!--AI_CAR_IDS:id1,id2--> do model thêm,
-        /// trả về nội dung sạch và danh sách carId để FE render thẻ xe.
-        /// </summary>
         private static (string reply, List<int>? ids) ExtractSuggestedCarIds(string reply)
         {
             if (string.IsNullOrWhiteSpace(reply))
                 return (reply, null);
 
-            // Match dòng <!--AI_CAR_IDS:12,34-->
+            var ids = new List<int>();
+
+            // NEW FORMAT
             var match = Regex.Match(
                 reply,
-                @"<!--AI_CAR_IDS:([\d,]+)-->",
+                @"\[CAR_IDS:\s*([\d,\s]+)\s*\]",
                 RegexOptions.CultureInvariant);
 
-            if (!match.Success)
-                return (reply.TrimEnd(), null);
-
-            // Parse danh sách carId
-            var ids = new List<int>();
-            foreach (var part in match.Groups[1].Value.Split(',',
-                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            if (match.Success)
             {
-                if (int.TryParse(part, NumberStyles.Integer,
-                    CultureInfo.InvariantCulture, out var id) && id > 0)
+                var idStrings = match.Groups[1]
+                    .Value
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+                foreach (var part in idStrings)
                 {
-                    ids.Add(id);
+                    if (int.TryParse(part, out var id) && id > 0)
+                    {
+                        ids.Add(id);
+                    }
+                }
+            }
+
+            // OLD FORMAT SUPPORT
+            if (!match.Success)
+            {
+                match = Regex.Match(
+                    reply,
+                    @"\[CAR_ID:\s*(\d+)\s*\]",
+                    RegexOptions.CultureInvariant);
+
+                if (match.Success)
+                {
+                    if (int.TryParse(match.Groups[1].Value, out var singleId))
+                    {
+                        ids.Add(singleId);
+                    }
                 }
             }
 
             ids = ids.Distinct().Take(8).ToList();
 
-            // Xóa hoàn toàn dòng ẩn khỏi nội dung hiển thị
+            // CLEAN TAGS
             var cleaned = Regex.Replace(
                 reply,
-                @"\s*<!--AI_CAR_IDS:[\d,]+-->\s*$",
+                @"\[CAR_IDS:\s*[\d,\s]+\s*\]",
                 "",
-                RegexOptions.CultureInvariant).TrimEnd();
+                RegexOptions.CultureInvariant);
+
+            cleaned = Regex.Replace(
+                cleaned,
+                @"\[CAR_ID:\s*\d+\s*\]",
+                "",
+                RegexOptions.CultureInvariant);
+
+            cleaned = cleaned.Trim();
 
             return (cleaned, ids.Count > 0 ? ids : null);
         }
 
-        // ─────────────────────────────────────────────
-        // Resolve model name
-        // ─────────────────────────────────────────────
+        // ==========================================
+        // MODEL RESOLVER
+        // ==========================================
 
         private static string ResolveGeminiModel(string? configured)
         {
             var m = (configured ?? "").Trim();
-            if (string.IsNullOrEmpty(m) || m.StartsWith("gpt-", StringComparison.OrdinalIgnoreCase))
+
+            if (string.IsNullOrWhiteSpace(m))
                 return "gemini-2.5-flash";
 
-            if (m.Contains("1.5", StringComparison.OrdinalIgnoreCase))
+            if (m.StartsWith("gpt-", StringComparison.OrdinalIgnoreCase))
                 return "gemini-2.5-flash";
 
             return m;
         }
 
-        // ─────────────────────────────────────────────
-        // OpenAI
-        // ─────────────────────────────────────────────
+        // ==========================================
+        // OPENAI
+        // ==========================================
 
         private async Task<AiAdvisorChatResponseDto> GetReplyOpenAiAsync(
             AiAdvisorChatRequestDto request,
             string systemPrompt)
         {
             var apiKey = _config["AiAdvisor:OpenAIApiKey"];
+
             if (string.IsNullOrWhiteSpace(apiKey))
             {
-                throw new InvalidOperationException(
-                    "Chua cau hinh AiAdvisor:OpenAIApiKey. " +
-                    "Neu dung Gemini, dat AiAdvisor:Provider thanh Gemini va dien AiAdvisor:GeminiApiKey.");
+                throw new InvalidOperationException("Thiếu OpenAI API Key.");
             }
 
             var model = _config["AiAdvisor:Model"] ?? "gpt-4o-mini";
-            var baseUrl = (_config["AiAdvisor:BaseUrl"] ?? "https://api.openai.com/v1").TrimEnd('/');
+
+            var baseUrl = (_config["AiAdvisor:BaseUrl"]
+                ?? "https://api.openai.com/v1")
+                .TrimEnd('/');
+
             var messages = BuildOpenAiMessages(request, systemPrompt);
 
             var payload = new Dictionary<string, object?>
@@ -225,34 +276,48 @@ namespace LogicBusiness.Services.Customer
                 ["temperature"] = 0.55
             };
 
-            var req = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/chat/completions")
+            var req = new HttpRequestMessage(
+                HttpMethod.Post,
+                $"{baseUrl}/chat/completions")
             {
                 Content = new StringContent(
                     JsonSerializer.Serialize(payload),
                     Encoding.UTF8,
                     "application/json")
             };
-            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey.Trim());
+
+            req.Headers.Authorization =
+                new AuthenticationHeaderValue("Bearer", apiKey.Trim());
 
             _http.Timeout = TimeSpan.FromSeconds(90);
+
             var response = await _http.SendAsync(req);
+
             var responseText = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
-                throw new HttpRequestException($"OpenAI HTTP {(int)response.StatusCode}: {responseText}");
+            {
+                throw new HttpRequestException(
+                    $"OpenAI HTTP {(int)response.StatusCode}: {responseText}");
+            }
 
             using var doc = JsonDocument.Parse(responseText);
-            var choices = doc.RootElement.GetProperty("choices");
-            if (choices.GetArrayLength() == 0)
-                return new AiAdvisorChatResponseDto { Reply = "Xin loi, toi khong nhan duoc cau tra loi tu dich vu AI. Vui long thu lai." };
 
-            var reply = choices[0].GetProperty("message").GetProperty("content").GetString() ?? "";
-            return new AiAdvisorChatResponseDto { Reply = reply };
+            var reply = doc.RootElement
+                .GetProperty("choices")[0]
+                .GetProperty("message")
+                .GetProperty("content")
+                .GetString() ?? "";
+
+            return new AiAdvisorChatResponseDto
+            {
+                Reply = reply
+            };
         }
 
-        // ─────────────────────────────────────────────
-        // Gemini
-        // ─────────────────────────────────────────────
+        // ==========================================
+        // GEMINI
+        // ==========================================
 
         private async Task<AiAdvisorChatResponseDto> GetReplyGeminiAsync(
             AiAdvisorChatRequestDto request,
@@ -260,142 +325,106 @@ namespace LogicBusiness.Services.Customer
             string apiKey,
             string model)
         {
-            var apiVersion = (_config["AiAdvisor:GeminiApiVersion"] ?? "v1beta").Trim().Trim('/');
-            if (apiVersion.Length == 0)
-                apiVersion = "v1beta";
-
             var contents = BuildGeminiContents(request);
-            Dictionary<string, object?> payload;
 
-            if (apiVersion.Equals("v1", StringComparison.OrdinalIgnoreCase))
+            var payload = new Dictionary<string, object?>
             {
-                var withSystem = new List<Dictionary<string, object?>>
+                ["systemInstruction"] = new Dictionary<string, object?>
                 {
-                    new()
+                    ["parts"] = new object[]
                     {
-                        ["role"] = "user",
-                        ["parts"] = new object[] { new Dictionary<string, string> { ["text"] = systemPrompt } }
-                    },
-                    new()
-                    {
-                        ["role"] = "model",
-                        ["parts"] = new object[]
+                        new Dictionary<string, string>
                         {
-                            new Dictionary<string, string>
-                            {
-                                ["text"] = "Da hieu. Toi se tuan theo huong dan va chi dung du lieu JSON he thong ban cung cap khi tu van."
-                            }
+                            ["text"] = systemPrompt
                         }
                     }
-                };
-                withSystem.AddRange(contents);
-                payload = new Dictionary<string, object?>
+                },
+                ["contents"] = contents,
+                ["generationConfig"] = new Dictionary<string, object?>
                 {
-                    ["contents"] = withSystem,
-                    ["generationConfig"] = new Dictionary<string, object?> { ["temperature"] = 0.55d }
-                };
-            }
-            else
-            {
-                payload = new Dictionary<string, object?>
-                {
-                    ["systemInstruction"] = new Dictionary<string, object?>
-                    {
-                        ["parts"] = new object[] { new Dictionary<string, string> { ["text"] = systemPrompt } }
-                    },
-                    ["contents"] = contents,
-                    ["generationConfig"] = new Dictionary<string, object?> { ["temperature"] = 0.55d }
-                };
-            }
+                    ["temperature"] = 0.55d
+                }
+            };
 
             var json = JsonSerializer.Serialize(payload);
-            var url = $"https://generativelanguage.googleapis.com/{apiVersion}/models/" +
-                      $"{Uri.EscapeDataString(model)}:generateContent?key={Uri.EscapeDataString(apiKey)}";
+
+            var url =
+                $"https://generativelanguage.googleapis.com/v1beta/models/" +
+                $"{Uri.EscapeDataString(model)}:generateContent" +
+                $"?key={Uri.EscapeDataString(apiKey)}";
 
             var req = new HttpRequestMessage(HttpMethod.Post, url)
             {
-                Content = new StringContent(json, Encoding.UTF8, "application/json")
+                Content = new StringContent(
+                    json,
+                    Encoding.UTF8,
+                    "application/json")
             };
 
             _http.Timeout = TimeSpan.FromSeconds(90);
+
             var response = await _http.SendAsync(req);
+
             var responseText = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
-                throw new HttpRequestException($"Gemini HTTP {(int)response.StatusCode}: {responseText}");
+            {
+                throw new HttpRequestException(
+                    $"Gemini HTTP {(int)response.StatusCode}: {responseText}");
+            }
 
             using var doc = JsonDocument.Parse(responseText);
 
-            // Kiểm tra nội dung bị block
-            if (doc.RootElement.TryGetProperty("promptFeedback", out var pf) &&
-                pf.TryGetProperty("blockReason", out var br) &&
-                br.ValueKind == JsonValueKind.String &&
-                br.GetString() is { } reason &&
-                !string.IsNullOrEmpty(reason))
-            {
-                return new AiAdvisorChatResponseDto
-                {
-                    Reply = $"Noi dung khong duoc mo hinh xu ly. Ban thu dien dat ngan gon hon hoac lien he hotline."
-                };
-            }
+            var candidates = doc.RootElement.GetProperty("candidates");
 
-            if (!doc.RootElement.TryGetProperty("candidates", out var candidates) ||
-                candidates.GetArrayLength() == 0)
-            {
-                return new AiAdvisorChatResponseDto
-                {
-                    Reply = "Xin loi, toi khong nhan duoc cau tra loi tu Gemini. Vui long thu lai."
-                };
-            }
-
-            var content = candidates[0].GetProperty("content");
-            if (!content.TryGetProperty("parts", out var partsEl) || partsEl.GetArrayLength() == 0)
-            {
-                return new AiAdvisorChatResponseDto
-                {
-                    Reply = "Xin loi, phan hoi tu Gemini khong co noi dung van ban."
-                };
-            }
+            var parts = candidates[0]
+                .GetProperty("content")
+                .GetProperty("parts");
 
             var sb = new StringBuilder();
-            foreach (var part in partsEl.EnumerateArray())
+
+            foreach (var part in parts.EnumerateArray())
             {
-                if (part.TryGetProperty("text", out var t) && t.GetString() is { } fragment)
-                    sb.Append(fragment);
+                if (part.TryGetProperty("text", out var t))
+                {
+                    sb.Append(t.GetString());
+                }
             }
 
-            var reply = sb.ToString();
-            return string.IsNullOrWhiteSpace(reply)
-                ? new AiAdvisorChatResponseDto { Reply = "Xin loi, toi khong nhan duoc cau tra loi tu Gemini. Vui long thu lai." }
-                : new AiAdvisorChatResponseDto { Reply = reply };
+            return new AiAdvisorChatResponseDto
+            {
+                Reply = sb.ToString()
+            };
         }
 
-        // ─────────────────────────────────────────────
-        // Build message lists
-        // ─────────────────────────────────────────────
+        // ==========================================
+        // BUILD MESSAGES
+        // ==========================================
 
-        private static List<Dictionary<string, object?>> BuildGeminiContents(AiAdvisorChatRequestDto request)
+        private static List<Dictionary<string, object?>> BuildGeminiContents(
+            AiAdvisorChatRequestDto request)
         {
             var list = new List<Dictionary<string, object?>>();
-            var skipLeadingAssistant = true;
 
             if (request.History is { Count: > 0 })
             {
-                // Tối ưu token: chỉ gửi 6 tin nhắn gần nhất
-                foreach (var turn in request.History.TakeLast(6))
+                foreach (var turn in request.History.TakeLast(12))
                 {
-                    if (skipLeadingAssistant &&
-                        string.Equals(turn.Role, "assistant", StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    skipLeadingAssistant = false;
-                    var role = string.Equals(turn.Role, "assistant", StringComparison.OrdinalIgnoreCase)
-                        ? "model" : "user";
+                    var role =
+                        string.Equals(turn.Role, "assistant", StringComparison.OrdinalIgnoreCase)
+                        ? "model"
+                        : "user";
 
                     list.Add(new Dictionary<string, object?>
                     {
                         ["role"] = role,
-                        ["parts"] = new object[] { new Dictionary<string, string> { ["text"] = turn.Content ?? "" } }
+                        ["parts"] = new object[]
+                        {
+                            new Dictionary<string, string>
+                            {
+                                ["text"] = turn.Content ?? ""
+                            }
+                        }
                     });
                 }
             }
@@ -403,7 +432,13 @@ namespace LogicBusiness.Services.Customer
             list.Add(new Dictionary<string, object?>
             {
                 ["role"] = "user",
-                ["parts"] = new object[] { new Dictionary<string, string> { ["text"] = request.Message.Trim() } }
+                ["parts"] = new object[]
+                {
+                    new Dictionary<string, string>
+                    {
+                        ["text"] = request.Message.Trim()
+                    }
+                }
             });
 
             return list;
@@ -415,18 +450,24 @@ namespace LogicBusiness.Services.Customer
         {
             var messages = new List<Dictionary<string, string>>
             {
-                new() { ["role"] = "system", ["content"] = systemPrompt }
+                new()
+                {
+                    ["role"] = "system",
+                    ["content"] = systemPrompt
+                }
             };
 
             if (request.History is { Count: > 0 })
             {
-                // Tối ưu token: chỉ gửi 6 tin nhắn gần nhất
-                foreach (var turn in request.History.TakeLast(6))
+                foreach (var turn in request.History.TakeLast(12))
                 {
-                    var role = turn.Role?.ToLowerInvariant() == "assistant" ? "assistant" : "user";
                     messages.Add(new Dictionary<string, string>
                     {
-                        ["role"] = role,
+                        ["role"] =
+                            turn.Role?.ToLowerInvariant() == "assistant"
+                            ? "assistant"
+                            : "user",
+
                         ["content"] = turn.Content ?? ""
                     });
                 }
@@ -441,9 +482,9 @@ namespace LogicBusiness.Services.Customer
             return messages;
         }
 
-        // ─────────────────────────────────────────────
-        // Build KnowledgeBase JSON từ DB
-        // ─────────────────────────────────────────────
+        // ==========================================
+        // BUILD KNOWLEDGE BASE
+        // ==========================================
 
         private async Task<string> BuildKnowledgeBaseAsync(int maxCars)
         {
@@ -454,22 +495,32 @@ namespace LogicBusiness.Services.Customer
 
             try
             {
-                var rawCars = await _carService.GetCarsAsync(
-                    search: null, brand: null, color: null,
-                    minPrice: null, maxPrice: null, status: null,
-                    transmission: null, bodyStyle: null, fuelType: null,
-                    location: null, condition: null, minYear: null, maxYear: null,
-                    sort: null, inStockOnly: false, page: 1, pageSize: maxCars);
-
-                cars = rawCars;
+                cars = await _carService.GetCarsAsync(
+                    search: null,
+                    brand: null,
+                    color: null,
+                    minPrice: null,
+                    maxPrice: null,
+                    status: null,
+                    transmission: null,
+                    bodyStyle: null,
+                    fuelType: null,
+                    location: null,
+                    condition: null,
+                    minYear: null,
+                    maxYear: null,
+                    sort: null,
+                    inStockOnly: false,
+                    page: 1,
+                    pageSize: maxCars);
             }
             catch { }
 
             try
             {
-                var rawShowrooms = await _showroomService.GetAllShowroomsAsync();
+                var rawShowrooms =
+                    await _showroomService.GetAllShowroomsAsync();
 
-                // Tối ưu token: chỉ lấy các trường cần thiết
                 showrooms = rawShowrooms.Select(s => new
                 {
                     s.ShowroomId,
@@ -484,15 +535,20 @@ namespace LogicBusiness.Services.Customer
 
             try
             {
-                articles = await _articleService.GetArticlesAdminAsync(null, 1, 5, true);
+                articles =
+                    await _articleService.GetArticlesAdminAsync(
+                        null,
+                        1,
+                        5,
+                        true);
             }
             catch { }
 
             try
             {
-                var rawVersions = await _pricingAdminService.GetAllAsync(null, true);
+                var rawVersions =
+                    await _pricingAdminService.GetAllAsync(null, true);
 
-                // Tối ưu token: chỉ lấy ID, tên phiên bản và giá
                 carVersions = rawVersions.Select(v => new
                 {
                     v.CarId,
@@ -510,11 +566,14 @@ namespace LogicBusiness.Services.Customer
                 ArticlesAndEvents = articles
             };
 
-            return JsonSerializer.Serialize(finalKnowledge, new JsonSerializerOptions
-            {
-                WriteIndented = false,
-                ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles
-            });
+            return JsonSerializer.Serialize(
+                finalKnowledge,
+                new JsonSerializerOptions
+                {
+                    WriteIndented = false,
+                    ReferenceHandler =
+                        System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles
+                });
         }
     }
 }

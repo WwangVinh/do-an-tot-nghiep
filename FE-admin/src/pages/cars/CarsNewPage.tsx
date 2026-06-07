@@ -10,14 +10,29 @@ import { isInRole } from '../../app/auth/roles'
 
 type SpecRow = { category: string; specName: string; specValue: string }
 type PricingRow = { versionName: string; priceVnd: string; sortOrder: string; isActive: boolean }
-type InventoryRow = { showroomId: string; quantity: string; displayStatus: string; color: string }
+// ✨ NEW: Inventory giờ chứa carColorId thay vì color string
+type InventoryRow = { showroomId: string; quantity: string; displayStatus: string; carColorId: string }
 type GalleryMetaRow = { title: string; description: string; imageType: string; isMainImage: boolean }
-type GalleryType = 'Color' | 'Overview' | 'Exterior' | 'Interior' | 'Safety' | 'Performance' | 'Other'
+// ✨ FIX: Bỏ 'Color' khỏi gallery types — màu giờ là section riêng
+type GalleryType = 'Overview' | 'Exterior' | 'Interior' | 'Safety' | 'Performance' | 'Other'
 type GalleryGroupState = { files: File[]; metas: GalleryMetaRow[] }
 type GalleryErrorsByType = Partial<Record<GalleryType, Record<number, string>>>
 type ExistingGalleryImage = { carImageId: number; title: string; description: string; imageUrl: string; imageType: GalleryType }
-type CarSearchResult = { carId: number; name: string; brand: string; year: number; imageUrl: string; status: string; totalQuantity: number; color?: string }
+type CarSearchResult = { carId: number; name: string; brand: string; year: number; imageUrl: string; status: string; totalQuantity: number }
 type AdminShowroom = { showroomId: number; name: string }
+
+// ✨ NEW: Type cho Color row
+type ColorRow = {
+  // Local id để React key — không gửi lên server
+  localId: string
+  // Server id (chỉ có khi load từ chi tiết để edit)
+  carColorId?: number
+  colorName: string
+  hexCode: string
+  imageUrl: string // URL đã upload
+  imageFile?: File // File đang chờ upload
+  isActive: boolean
+}
 
 function toAbsoluteImageUrl(input: string): string {
   const s = String(input ?? '').trim()
@@ -27,8 +42,12 @@ function toAbsoluteImageUrl(input: string): string {
   return `${env.VITE_API_BASE_URL}/${s.replace(/^\/+/, '')}`
 }
 
-const GALLERY_GROUPS: Array<{ type: GalleryType; label: string; hint?: string; requireTitle?: boolean; defaultTitlePlaceholder?: string }> = [
-  { type: 'Color', label: 'Màu xe', hint: 'ImageType = Color. Mỗi ảnh tương ứng 1 màu; Title = tên màu.', requireTitle: true, defaultTitlePlaceholder: 'Tên màu (VD: Đỏ đô)' },
+function genLocalId(): string {
+  return `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+}
+
+// ✨ FIX: Bỏ group 'Color' — màu giờ là section riêng
+const GALLERY_GROUPS: Array<{ type: GalleryType; label: string; hint?: string }> = [
   { type: 'Overview', label: 'Tổng quan', hint: 'ImageType = Overview.' },
   { type: 'Exterior', label: 'Ngoại thất', hint: 'ImageType = Exterior.' },
   { type: 'Interior', label: 'Nội thất', hint: 'ImageType = Interior.' },
@@ -344,7 +363,7 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
   const [brand, setBrand] = useState('')
   const [year, setYear] = useState(new Date().getFullYear().toString())
   const [model, setModel] = useState('')
-  const [color, setColor] = useState('')
+  // ✨ FIX: Bỏ state `color: string` cũ — màu giờ trong `colors` array
   const [fuelType, setFuelType] = useState<'Xăng' | 'Điện' | 'Dầu' | 'Hybrid' | ''>('')
   const [mileage, setMileage] = useState('0')
   const [description, setDescription] = useState('')
@@ -367,12 +386,18 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
   const [featureSearch, setFeatureSearch] = useState('')
   const [mainImage, setMainImage] = useState<File | null>(null)
   const [existingMainImageUrl, setExistingMainImageUrl] = useState<string>('')
+
+  // ✨ NEW: State quản lý màu xe (tách riêng khỏi gallery)
+  const [colors, setColors] = useState<ColorRow[]>([])
+  const [uploadingColorIds, setUploadingColorIds] = useState<Set<string>>(new Set())
+
   const [existingGallery, setExistingGallery] = useState<Record<GalleryType, ExistingGalleryImage[]>>(() => ({
-    Color: [], Overview: [], Exterior: [], Interior: [], Safety: [], Performance: [], Other: [],
+    Overview: [], Exterior: [], Interior: [], Safety: [], Performance: [], Other: [],
   }))
   const [gallery, setGallery] = useState<Record<GalleryType, GalleryGroupState>>(() => ({
-    Color: { files: [], metas: [] }, Overview: { files: [], metas: [] }, Exterior: { files: [], metas: [] },
-    Interior: { files: [], metas: [] }, Safety: { files: [], metas: [] }, Performance: { files: [], metas: [] }, Other: { files: [], metas: [] },
+    Overview: { files: [], metas: [] }, Exterior: { files: [], metas: [] },
+    Interior: { files: [], metas: [] }, Safety: { files: [], metas: [] },
+    Performance: { files: [], metas: [] }, Other: { files: [], metas: [] },
   }))
   const [specs, setSpecs] = useState<SpecRow[]>([{ category: '', specName: '', specValue: '' }])
   const [pricing, setPricing] = useState<PricingRow[]>([])
@@ -385,14 +410,6 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
       if (validPrices.length > 0) setPrice(Math.min(...validPrices).toString())
     }
   }, [pricing])
-
-  useEffect(() => {
-    const colorGroup = gallery['Color']
-    if (colorGroup?.files.length > 0) {
-      const colorNames = colorGroup.metas.map((m) => m.title?.trim()).filter(Boolean)
-      setColor(Array.from(new Set(colorNames)).join(', '))
-    }
-  }, [gallery])
 
   useEffect(() => {
     async function loadFeatures() {
@@ -429,10 +446,9 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
     return items
   }, [showroomsQ.data])
 
-  // Set showroom mặc định theo user.showroomId khi options load xong
   useEffect(() => {
     if (!showroomOptions.length) return
-    if (showroomId) return // đã có rồi thì không ghi đè
+    if (showroomId) return
     if (user?.showroomId) {
       const found = showroomOptions.find((s) => s.showroomId === user.showroomId)
       if (found) { setShowroomId(String(found.showroomId)); return }
@@ -440,7 +456,6 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
     setShowroomId(String(showroomOptions[0].showroomId))
   }, [showroomOptions])
 
-  // Prefill từ query params (ký gửi xe navigate sang)
   useEffect(() => {
     if (mode !== 'create') return
     const b = searchParams.get('brand')
@@ -450,24 +465,44 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
     setYear(searchParams.get('year') ?? String(new Date().getFullYear()))
     setMileage(searchParams.get('mileage') ?? '0')
     setCondition((searchParams.get('condition') as CarCondition) ?? 'New')
-    setStep('create') // nhảy thẳng vào bước 2
+    setStep('create')
   }, [])
 
+  // Load chi tiết xe khi edit
   useEffect(() => {
     if (mode !== 'edit' || !detailQ.data) return
     const d = detailQ.data
     setName(String(d?.Name ?? d?.name ?? '')); setBrand(String(d?.Brand ?? d?.brand ?? ''))
     setYear(String(d?.Year ?? d?.year ?? new Date().getFullYear())); setModel(String(d?.Model ?? d?.model ?? ''))
-    setColor(String(d?.Color ?? d?.color ?? '')); setPrice(String(d?.Price ?? d?.price ?? ''))
+    setPrice(String(d?.Price ?? d?.price ?? ''))
     setFuelType((d?.FuelType ?? d?.fuelType ?? '') as any); setMileage(String(d?.Mileage ?? d?.mileage ?? 0))
     setDescription(String(d?.Description ?? d?.description ?? '')); setTransmission((d?.Transmission ?? d?.transmission ?? '') as any)
     setBodyStyle((d?.BodyStyle ?? d?.bodyStyle ?? '') as any)
     setCondition(((d?.Condition ?? d?.condition) === 'Used' ? 'Used' : 'New') as any)
     setStatus(((d?.Status ?? d?.status) ?? 'Available') as any)
     setExistingMainImageUrl(toAbsoluteImageUrl(String(d?.ImageUrl ?? d?.imageUrl ?? '')))
+
+    // ✨ NEW: Load Colors từ BE
+    const colorsData = (d?.Colors ?? d?.colors ?? []) as any[]
+    if (Array.isArray(colorsData) && colorsData.length) {
+      setColors(colorsData.map((c) => ({
+        localId: genLocalId(),
+        carColorId: Number(c?.CarColorId ?? c?.carColorId ?? 0) || undefined,
+        colorName: String(c?.ColorName ?? c?.colorName ?? ''),
+        hexCode: String(c?.HexCode ?? c?.hexCode ?? '#000000'),
+        imageUrl: String(c?.ImageUrl ?? c?.imageUrl ?? ''),
+        isActive: Boolean(c?.IsActive ?? c?.isActive ?? true),
+      })))
+    }
+
     const showroomDetails = (d?.ShowroomDetails ?? d?.showroomDetails ?? []) as any[]
     if (Array.isArray(showroomDetails) && showroomDetails.length) {
-      const mapped = showroomDetails.map((x) => ({ showroomId: String(x?.ShowroomId ?? x?.showroomId ?? ''), quantity: String(x?.Quantity ?? x?.quantity ?? 0), displayStatus: String(x?.DisplayStatus ?? x?.displayStatus ?? 'OnDisplay'), color: String(x?.Color ?? x?.color ?? '') })).filter((x) => Number(x.showroomId) > 0)
+      const mapped = showroomDetails.map((x) => ({
+        showroomId: String(x?.ShowroomId ?? x?.showroomId ?? ''),
+        quantity: String(x?.Quantity ?? x?.quantity ?? 0),
+        displayStatus: String(x?.DisplayStatus ?? x?.displayStatus ?? 'OnDisplay'),
+        carColorId: String(x?.CarColorId ?? x?.carColorId ?? ''),
+      })).filter((x) => Number(x.showroomId) > 0)
       setInventories(mapped)
       if (mapped[0]) { setShowroomId(mapped[0].showroomId); setQuantity(mapped[0].quantity) }
     }
@@ -495,10 +530,12 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
     }
     const galleryGroups = (d?.GalleryImages ?? d?.galleryImages ?? []) as any[]
     if (Array.isArray(galleryGroups)) {
-      const next: Record<GalleryType, ExistingGalleryImage[]> = { Color: [], Overview: [], Exterior: [], Interior: [], Safety: [], Performance: [], Other: [] }
-      const allowedTypes = new Set<GalleryType>(['Color', 'Overview', 'Exterior', 'Interior', 'Safety', 'Performance', 'Other'])
+      const next: Record<GalleryType, ExistingGalleryImage[]> = { Overview: [], Exterior: [], Interior: [], Safety: [], Performance: [], Other: [] }
+      const allowedTypes = new Set<GalleryType>(['Overview', 'Exterior', 'Interior', 'Safety', 'Performance', 'Other'])
       for (const g of galleryGroups) {
         const rawType = String(g?.Category ?? g?.category ?? '')
+        // BE cũ có thể vẫn trả về group "Color" — bỏ qua nó vì giờ tách riêng
+        if (rawType === 'Color') continue
         const imageType = (allowedTypes.has(rawType as GalleryType) ? rawType : 'Other') as GalleryType
         for (const im of (g?.Images ?? g?.images ?? []) as any[]) {
           const idNum = Number(im?.CarImageId ?? im?.carImageId ?? 0)
@@ -526,6 +563,70 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
     onError: (e) => toast.error(getErrorMessage(e)),
   })
 
+  // ============================================================
+  // ✨ NEW: COLOR HANDLERS
+  // ============================================================
+
+  function addColorRow() {
+    setColors((prev) => [...prev, {
+      localId: genLocalId(),
+      colorName: '',
+      hexCode: '#000000',
+      imageUrl: '',
+      isActive: true,
+    }])
+  }
+
+  function updateColor(localId: string, patch: Partial<ColorRow>) {
+    setColors((prev) => prev.map((c) => c.localId === localId ? { ...c, ...patch } : c))
+  }
+
+  function removeColor(localId: string) {
+    setColors((prev) => prev.filter((c) => c.localId !== localId))
+    // Đồng thời xóa khỏi inventory đang reference màu này
+    setInventories((prev) => prev.map((inv) => {
+      // Match theo carColorId nếu có
+      const ref = colors.find((c) => c.localId === localId)
+      if (ref?.carColorId && String(ref.carColorId) === inv.carColorId) {
+        return { ...inv, carColorId: '' }
+      }
+      return inv
+    }))
+  }
+
+  // ✨ Upload ảnh màu lên server, lấy URL về gán vô color row
+  // ⚠️ YÊU CẦU BE: phải có endpoint POST /api/admin/upload nhận FormData với field "file"
+  //    và trả về { url: "/uploads/..." }
+  // Nếu BE chưa có, tham khảo phần "Backend cần thêm" cuối hướng dẫn.
+  async function handleColorImageChange(localId: string, file: File | null) {
+    if (!file) return
+    setUploadingColorIds((prev) => new Set(prev).add(localId))
+    updateColor(localId, { imageFile: file })
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('subFolder', 'Cars/Colors')
+      const res = await http.post('/api/admin/upload', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      const url = String(res.data?.url ?? res.data?.imageUrl ?? '')
+      if (!url) throw new Error('Server không trả URL ảnh')
+      updateColor(localId, { imageUrl: url, imageFile: undefined })
+      toast.success('Đã tải ảnh màu lên')
+    } catch (e) {
+      toast.error('Tải ảnh thất bại: ' + getErrorMessage(e))
+      updateColor(localId, { imageFile: undefined })
+    } finally {
+      setUploadingColorIds((prev) => {
+        const next = new Set(prev)
+        next.delete(localId)
+        return next
+      })
+    }
+  }
+
+  // ============================================================
+
   const flattenedGallery = useMemo(() => {
     const files: File[] = []; const metas: GalleryMetaRow[] = []
     for (const g of GALLERY_GROUPS) {
@@ -539,15 +640,38 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
     return { files, metas }
   }, [gallery])
 
-  const galleryMetasJson = useMemo(() => JSON.stringify(flattenedGallery.metas.map((m) => {
-    let finalDescription = m.description?.trim() || null
-    if (m.imageType === 'Color' && !finalDescription) finalDescription = 'Màu xe'
-    return { title: m.title?.trim() || null, description: finalDescription, imageType: m.imageType || null, isMainImage: m.isMainImage || false }
-  })), [flattenedGallery.metas])
+  const galleryMetasJson = useMemo(() => JSON.stringify(flattenedGallery.metas.map((m) => ({
+    title: m.title?.trim() || null,
+    description: m.description?.trim() || null,
+    imageType: m.imageType || null,
+    isMainImage: m.isMainImage || false,
+  }))), [flattenedGallery.metas])
 
   const specificationsJson = useMemo(() => JSON.stringify(specs.filter((s) => s.category.trim() && s.specName.trim() && s.specValue.trim()).map((s) => ({ category: s.category.trim(), specName: s.specName.trim(), specValue: s.specValue.trim() }))), [specs])
   const pricingVersionsJson = useMemo(() => JSON.stringify(pricing.filter((p) => p.versionName.trim()).map((p, idx) => ({ versionName: p.versionName.trim(), priceVnd: Number(p.priceVnd || 0), sortOrder: Number(p.sortOrder || idx + 1), isActive: p.isActive }))), [pricing])
-  const inventoriesJson = useMemo(() => JSON.stringify(inventories.filter((i) => Number(i.showroomId) > 0).map((i) => ({ showroomId: Number(i.showroomId), quantity: Number(i.quantity || 0), displayStatus: i.displayStatus || null, color: i.color?.trim() || null }))), [inventories])
+
+  // ✨ NEW: Build colorsJson
+  const colorsJson = useMemo(() => JSON.stringify(
+    colors
+      .filter((c) => c.colorName.trim())
+      .map((c) => ({
+        colorName: c.colorName.trim(),
+        hexCode: c.hexCode?.trim() || null,
+        imageUrl: c.imageUrl?.trim() || null,
+      }))
+  ), [colors])
+
+  // ✨ NEW: Build inventoriesJson với carColorId
+  const inventoriesJson = useMemo(() => JSON.stringify(
+    inventories
+      .filter((i) => Number(i.showroomId) > 0)
+      .map((i) => ({
+        showroomId: Number(i.showroomId),
+        quantity: Number(i.quantity || 0),
+        displayStatus: i.displayStatus || null,
+        carColorId: i.carColorId && Number(i.carColorId) > 0 ? Number(i.carColorId) : null,
+      }))
+  ), [inventories])
 
   function setMetaFor(type: GalleryType, idx: number, patch: Partial<GalleryMetaRow>) {
     setGallery((prev) => ({ ...prev, [type]: { ...prev[type], metas: prev[type].metas.map((m, i) => (i === idx ? { ...m, ...patch, imageType: type } : m)) } }))
@@ -599,7 +723,9 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
   function buildFormData(overrideStatus?: CarStatus) {
     const fd = new FormData()
     fd.append('Name', name); fd.append('Brand', brand); fd.append('Year', year); fd.append('Model', model)
-    fd.append('Color', color); fd.append('Description', description.trim())
+    // ✨ FIX: Bỏ append 'Color' string cũ, thay bằng ColorsJson
+    fd.append('ColorsJson', colorsJson)
+    fd.append('Description', description.trim())
     if (price.trim()) fd.append('Price', price)
     if (fuelType) fd.append('FuelType', fuelType)
     if (mileage.trim()) fd.append('Mileage', mileage)
@@ -617,8 +743,34 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
     return fd
   }
 
+  // ✨ NEW: Validate trước khi submit
+  function validateBeforeSubmit(): string | null {
+    // Check: nếu có inventory gắn carColorId thì phải có màu đó trong colors
+    const colorIdsInColors = new Set(colors.filter(c => c.carColorId).map(c => String(c.carColorId)))
+    for (const inv of inventories) {
+      if (inv.carColorId && !colorIdsInColors.has(inv.carColorId)) {
+        // Nếu là màu vừa tạo (chưa có carColorId từ BE) → BE sẽ tự match khi xử lý
+        // Nếu là carColorId cũ → phải tồn tại
+        // → Cảnh báo nhẹ thôi, không block
+      }
+    }
+    // Check: tên màu không trùng nhau
+    const names = colors.map(c => c.colorName.trim().toLowerCase()).filter(Boolean)
+    if (new Set(names).size !== names.length) {
+      return 'Có tên màu xe bị trùng. Mỗi màu phải có tên khác nhau!'
+    }
+    // Check: đang upload ảnh màu mà bấm submit
+    if (uploadingColorIds.size > 0) {
+      return 'Đang tải ảnh màu lên server, vui lòng chờ một chút rồi bấm lại!'
+    }
+    return null
+  }
+
   const createM = useMutation({
     mutationFn: async (overrideStatus?: CarStatus) => {
+      const validationErr = validateBeforeSubmit()
+      if (validationErr) throw new Error(validationErr)
+
       setGalleryErrors({})
       const fd = buildFormData(overrideStatus)
       const url = mode === 'edit' ? `/api/admin/cars/full/${carId}` : '/api/admin/cars/full'
@@ -695,7 +847,7 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
                   <div><label className={ui.label}>Hãng</label><input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="VD: VinFast" className={ui.control} /></div>
                   <div><label className={ui.label}>Năm</label><input value={year} onChange={(e) => setYear(e.target.value)} inputMode="numeric" placeholder="VD: 2026" className={ui.control} /></div>
                   <div><label className={ui.label}>Model</label><input value={model} onChange={(e) => setModel(e.target.value)} placeholder="VD: VF7" className={ui.control} /></div>
-                  <div><label className={ui.label}>Màu</label><input value={color} onChange={(e) => setColor(e.target.value)} placeholder="VD: Trắng" className={ui.control} /></div>
+                  {/* ✨ FIX: BỎ ô "Màu" cũ — đã chuyển thành section riêng */}
                   <div><label className={ui.label}>ODO (km)</label><input value={mileage} onChange={(e) => setMileage(e.target.value)} inputMode="numeric" placeholder="VD: 0" className={ui.control} /></div>
                   <div><label className={ui.label}>Nhiên liệu</label><select value={fuelType} onChange={(e) => setFuelType(e.target.value as any)} className={ui.control}><option value="">--</option><option value="Xăng">Xăng</option><option value="Điện">Điện</option><option value="Dầu">Dầu</option><option value="Hybrid">Hybrid</option></select></div>
                   <div><label className={ui.label}>Hộp số</label><select value={transmission} onChange={(e) => setTransmission(e.target.value as any)} className={ui.control}><option value="">--</option><option value="Số sàn">Số sàn</option><option value="Số tự động">Số tự động</option></select></div>
@@ -714,16 +866,18 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
                       <div className="mt-2">
                         <div className="text-xs text-slate-500 dark:text-zinc-400">Ảnh hiện tại:</div>
                         <img src={existingMainImageUrl} alt="Current main" className="mt-2 h-28 w-auto max-w-full rounded-lg border border-slate-200/70 object-cover dark:border-zinc-800/80" />
-                        <div className="mt-1 text-xs text-slate-400 dark:text-zinc-500">Thêm ảnh màu đầu tiên bên dưới để thay ảnh chính.</div>
                       </div>
-                    ) : mainImage ? (
+                    ) : null}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setMainImage(e.target.files?.[0] || null)}
+                      className="mt-2 w-full text-xs text-slate-700 file:mr-2 file:rounded file:border-0 file:bg-indigo-100 file:px-3 file:py-2 file:text-indigo-700 file:font-semibold dark:text-zinc-300 dark:file:bg-indigo-900/50 dark:file:text-indigo-300"
+                    />
+                    {mainImage && (
                       <div className="mt-2 flex items-center gap-3">
                         <img src={URL.createObjectURL(mainImage)} alt="Main preview" className="h-20 w-28 rounded-lg border border-slate-200/70 object-cover dark:border-zinc-800/80" />
-                        <div className="text-xs text-emerald-600 dark:text-emerald-400">✓ Tự động lấy từ ảnh màu đầu tiên</div>
-                      </div>
-                    ) : (
-                      <div className={ui.control + ' bg-slate-50 text-slate-400 italic dark:bg-zinc-900 dark:text-zinc-500'}>
-                        Sẽ tự động lấy từ ảnh màu đầu tiên bên dưới
+                        <button type="button" onClick={() => setMainImage(null)} className={ui.btnDanger + ' py-1 px-2 text-xs'}>Bỏ chọn</button>
                       </div>
                     )}
                   </div>
@@ -766,9 +920,140 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
               </div>
             </section>
 
+            {/* ✨ NEW SECTION: MÀU XE */}
+            <section className={ui.card}>
+              <div className={ui.cardHeader}>
+                <div>
+                  <h2 className={ui.cardTitle}>Màu xe</h2>
+                  <div className={ui.cardSub}>Khai báo các màu xe có sẵn. Mỗi màu sẽ được dùng để phân kho theo màu ở phần "Tồn kho".</div>
+                </div>
+                <span className={ui.badge}>CarColors</span>
+              </div>
+              <div className={ui.cardBody}>
+                {colors.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center dark:border-zinc-700 dark:bg-zinc-900/40">
+                    <div className="text-sm text-slate-600 dark:text-zinc-300">Chưa có màu nào.</div>
+                    <div className="mt-1 text-xs text-slate-400 dark:text-zinc-500">Bấm "Thêm màu" để bắt đầu.</div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {colors.map((c) => {
+                      const isUploading = uploadingColorIds.has(c.localId)
+                      return (
+                        <div key={c.localId} className="rounded-lg border border-slate-200/70 bg-slate-50/40 p-3 dark:border-zinc-800 dark:bg-zinc-900/30">
+                          <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
+                            {/* Tên màu */}
+                            <div className="md:col-span-3">
+                              <label className={ui.label}>Tên màu</label>
+                              <input
+                                value={c.colorName}
+                                onChange={(e) => updateColor(c.localId, { colorName: e.target.value })}
+                                placeholder="VD: Đỏ đô"
+                                className={ui.control}
+                              />
+                            </div>
+
+                            {/* Hex picker */}
+                            <div className="md:col-span-3">
+                              <label className={ui.label}>Mã màu (Hex)</label>
+                              <div className="mt-2 flex gap-2">
+                                <input
+                                  type="color"
+                                  value={c.hexCode || '#000000'}
+                                  onChange={(e) => updateColor(c.localId, { hexCode: e.target.value })}
+                                  className="h-10 w-12 cursor-pointer rounded-lg border border-slate-200 dark:border-zinc-800"
+                                />
+                                <input
+                                  value={c.hexCode}
+                                  onChange={(e) => updateColor(c.localId, { hexCode: e.target.value })}
+                                  placeholder="#FF0000"
+                                  className={ui.control + ' mt-0 flex-1'}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Ảnh màu */}
+                            <div className="md:col-span-5">
+                              <label className={ui.label}>Ảnh xe màu này (tuỳ chọn)</label>
+                              <div className="mt-2 flex items-center gap-3">
+                                {c.imageUrl ? (
+                                  <img
+                                    src={toAbsoluteImageUrl(c.imageUrl)}
+                                    alt={c.colorName}
+                                    className="h-16 w-24 shrink-0 rounded-lg border border-slate-200 object-cover dark:border-zinc-800"
+                                  />
+                                ) : (
+                                  <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white text-xs text-slate-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-500">
+                                    Chưa có ảnh
+                                  </div>
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    disabled={isUploading}
+                                    onChange={(e) => handleColorImageChange(c.localId, e.target.files?.[0] ?? null)}
+                                    className="w-full text-xs text-slate-700 file:mr-2 file:rounded file:border-0 file:bg-indigo-100 file:px-2 file:py-1 file:text-indigo-700 file:font-semibold disabled:opacity-50 dark:text-zinc-300 dark:file:bg-indigo-900/50 dark:file:text-indigo-300"
+                                  />
+                                  {isUploading && <div className="mt-1 text-xs text-amber-600 dark:text-amber-400">Đang tải lên...</div>}
+                                  {c.imageUrl && !isUploading && (
+                                    <div className="mt-1 flex items-center gap-2">
+                                      <span className="text-xs text-emerald-600 dark:text-emerald-400">✓ Đã upload</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => updateColor(c.localId, { imageUrl: '' })}
+                                        className="text-xs text-red-500 hover:underline"
+                                      >
+                                        Xoá ảnh
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Xóa hàng */}
+                            <div className="md:col-span-1 flex items-end justify-end">
+                              <button
+                                type="button"
+                                onClick={() => removeColor(c.localId)}
+                                className={ui.btnDanger + ' w-full md:w-auto'}
+                                title="Xoá màu này"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Preview hex + tên */}
+                          <div className="mt-2 flex items-center gap-2 text-xs text-slate-500 dark:text-zinc-400">
+                            <span
+                              className="inline-block h-4 w-4 rounded-full border border-slate-300 dark:border-zinc-600"
+                              style={{ backgroundColor: c.hexCode || '#000000' }}
+                            />
+                            <span>{c.colorName || '(chưa đặt tên)'}</span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                <button type="button" onClick={addColorRow} className={'mt-4 ' + ui.btn}>
+                  + Thêm màu
+                </button>
+
+                {colors.length > 0 && (
+                  <p className="mt-3 text-xs text-slate-500 dark:text-zinc-400">
+                    💡 Mẹo: Sau khi tạo xe lần đầu, ní vô lại trang sửa để gán màu cụ thể cho từng lô tồn kho ở section "Tồn kho".
+                  </p>
+                )}
+              </div>
+            </section>
+
             {/* Tồn kho */}
             <section className={ui.card}>
-              <div className={ui.cardHeader}><div><h2 className={ui.cardTitle}>Tồn kho</h2><div className={ui.cardSub}>{isAdminOrManager ? 'Thiết lập kho mặc định hoặc thêm nhiều showroom.' : 'Số lượng nhập vào showroom của bạn.'}</div></div><span className={ui.badge}>CarInventories</span></div>
+              <div className={ui.cardHeader}><div><h2 className={ui.cardTitle}>Tồn kho</h2><div className={ui.cardSub}>{isAdminOrManager ? 'Thiết lập kho mặc định hoặc thêm nhiều showroom — phân theo màu nếu cần.' : 'Số lượng nhập vào showroom của bạn.'}</div></div><span className={ui.badge}>CarInventories</span></div>
               <div className={ui.cardBody}>
                 <div className={`grid grid-cols-1 gap-4 ${isAdminOrManager ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
                   <div>
@@ -791,10 +1076,69 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
                 {isAdminOrManager && (
                   <>
                     <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div><div className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Danh sách kho (tuỳ chọn)</div><div className="mt-1 text-xs text-slate-500 dark:text-zinc-400">Nếu để trống, backend có thể dùng kho mặc định.</div></div>
-                      <button type="button" onClick={() => setInventories((p) => [...p, { showroomId, quantity, displayStatus, color: '' }])} className={ui.btn}>+ Thêm kho</button>
+                      <div>
+                        <div className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Danh sách kho theo màu (tuỳ chọn)</div>
+                        <div className="mt-1 text-xs text-slate-500 dark:text-zinc-400">Mỗi dòng = 1 lô hàng. Có thể chọn màu cụ thể (chỉ có khi đã khai báo màu xe ở trên).</div>
+                      </div>
+                      <button type="button" onClick={() => setInventories((p) => [...p, { showroomId, quantity, displayStatus, carColorId: '' }])} className={ui.btn}>+ Thêm kho</button>
                     </div>
-                    {inventories.length > 0 && <div className="mt-4 space-y-2">{inventories.map((row, idx) => (<div key={idx} className="grid grid-cols-1 gap-2 rounded-lg border border-slate-200/70 bg-white p-3 md:grid-cols-12 dark:border-zinc-800/80 dark:bg-zinc-950"><select value={row.showroomId} onChange={(e) => setInventories((p) => p.map((x, i) => (i === idx ? { ...x, showroomId: e.target.value } : x)))} className={'md:col-span-3 ' + ui.control}>{showroomsQ.isLoading ? <option value={row.showroomId}>Đang tải...</option> : <option value="">-- Showroom --</option>}{showroomOptions.map((s) => <option key={s.showroomId} value={String(s.showroomId)}>{s.name}</option>)}</select><input value={row.color} onChange={(e) => setInventories((p) => p.map((x, i) => (i === idx ? { ...x, color: e.target.value } : x)))} placeholder="Màu (VD: Đỏ)" className={'md:col-span-3 ' + ui.control} /><input value={row.quantity} onChange={(e) => setInventories((p) => p.map((x, i) => (i === idx ? { ...x, quantity: e.target.value } : x)))} placeholder="Số lượng" inputMode="numeric" className={'md:col-span-2 ' + ui.control} /><input value={row.displayStatus} onChange={(e) => setInventories((p) => p.map((x, i) => (i === idx ? { ...x, displayStatus: e.target.value } : x)))} placeholder="DisplayStatus" className={'md:col-span-3 ' + ui.control} /><button type="button" onClick={() => setInventories((p) => p.filter((_, i) => i !== idx))} className={'md:col-span-1 ' + ui.btnGhost}>X</button></div>))}</div>}
+                    {inventories.length > 0 && (
+                      <div className="mt-4 space-y-2">
+                        {inventories.map((row, idx) => (
+                          <div key={idx} className="grid grid-cols-1 gap-2 rounded-lg border border-slate-200/70 bg-white p-3 md:grid-cols-12 dark:border-zinc-800/80 dark:bg-zinc-950">
+                            <select
+                              value={row.showroomId}
+                              onChange={(e) => setInventories((p) => p.map((x, i) => (i === idx ? { ...x, showroomId: e.target.value } : x)))}
+                              className={'md:col-span-3 ' + ui.control}
+                            >
+                              {showroomsQ.isLoading ? <option value={row.showroomId}>Đang tải...</option> : <option value="">-- Showroom --</option>}
+                              {showroomOptions.map((s) => <option key={s.showroomId} value={String(s.showroomId)}>{s.name}</option>)}
+                            </select>
+
+                            {/* ✨ Đổi từ input text "color" → select carColorId */}
+                            <select
+                              value={row.carColorId}
+                              onChange={(e) => setInventories((p) => p.map((x, i) => (i === idx ? { ...x, carColorId: e.target.value } : x)))}
+                              className={'md:col-span-3 ' + ui.control}
+                            >
+                              <option value="">-- Không phân màu --</option>
+                              {colors
+                                .filter((c) => c.carColorId && c.colorName.trim())
+                                .map((c) => (
+                                  <option key={c.carColorId} value={String(c.carColorId)}>
+                                    {c.colorName}
+                                  </option>
+                                ))}
+                            </select>
+
+                            <input
+                              value={row.quantity}
+                              onChange={(e) => setInventories((p) => p.map((x, i) => (i === idx ? { ...x, quantity: e.target.value } : x)))}
+                              placeholder="Số lượng"
+                              inputMode="numeric"
+                              className={'md:col-span-2 ' + ui.control}
+                            />
+                            <select
+                              value={row.displayStatus}
+                              onChange={(e) => setInventories((p) => p.map((x, i) => (i === idx ? { ...x, displayStatus: e.target.value } : x)))}
+                              className={'md:col-span-3 ' + ui.control}
+                            >
+                              <option value="OnDisplay">OnDisplay</option>
+                              <option value="Pending">Pending</option>
+                              <option value="Out of stock">Out of stock</option>
+                            </select>
+                            <button type="button" onClick={() => setInventories((p) => p.filter((_, i) => i !== idx))} className={'md:col-span-1 ' + ui.btnGhost}>X</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Cảnh báo: nếu có inventory chọn màu mà màu chưa save lên BE */}
+                    {inventories.some((i) => i.carColorId) && colors.some((c) => !c.carColorId) && mode === 'create' && (
+                      <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                        ⚠️ Khi tạo xe lần đầu, các màu mới chưa có ID. Hãy tạo xe trước, rồi vô sửa lại để gán màu cho lô hàng.
+                      </div>
+                    )}
                   </>
                 )}
               </div>
@@ -835,9 +1179,9 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
               </div>
             </section>
 
-            {/* Ảnh phụ */}
+            {/* Ảnh phụ — KHÔNG còn nhóm Color */}
             <section className={ui.card}>
-              <div className={ui.cardHeader}><div><h2 className={ui.cardTitle}>Ảnh phụ</h2><div className={ui.cardSub}>Thêm chi tiết mô tả cho từng hình ảnh.</div></div><span className={ui.badge}>CarImages</span></div>
+              <div className={ui.cardHeader}><div><h2 className={ui.cardTitle}>Ảnh phụ</h2><div className={ui.cardSub}>Ảnh chi tiết theo nhóm. (Ảnh màu xe đã chuyển sang section "Màu xe" ở trên.)</div></div><span className={ui.badge}>CarImages</span></div>
               <div className={ui.cardBody}>
                 <div className="space-y-6">
                   {GALLERY_GROUPS.map((group) => {
@@ -856,31 +1200,9 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
                                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                                   <div className="flex min-w-0 flex-1 gap-3">
                                     <img src={img.imageUrl} alt={img.title} className="h-20 w-28 flex-none rounded-md border border-slate-200/70 object-cover dark:border-zinc-800/80" />
-                                    <div className="min-w-0 flex-1"><div className="mt-1 grid grid-cols-1 gap-2 md:grid-cols-12"><input value={img.title} onChange={(e) => setExistingGallery((prev) => ({ ...prev, [group.type]: prev[group.type].map((x, i) => i === idx ? { ...x, title: e.target.value } : x) }))} placeholder={group.defaultTitlePlaceholder ?? 'Title'} className={'md:col-span-4 ' + ui.control} /><textarea value={img.description} onChange={(e) => setExistingGallery((prev) => ({ ...prev, [group.type]: prev[group.type].map((x, i) => i === idx ? { ...x, description: e.target.value } : x) }))} placeholder="Description" className={'md:col-span-8 ' + ui.textarea} /></div></div>
+                                    <div className="min-w-0 flex-1"><div className="mt-1 grid grid-cols-1 gap-2 md:grid-cols-12"><input value={img.title} onChange={(e) => setExistingGallery((prev) => ({ ...prev, [group.type]: prev[group.type].map((x, i) => i === idx ? { ...x, title: e.target.value } : x) }))} placeholder="Title" className={'md:col-span-4 ' + ui.control} /><textarea value={img.description} onChange={(e) => setExistingGallery((prev) => ({ ...prev, [group.type]: prev[group.type].map((x, i) => i === idx ? { ...x, description: e.target.value } : x) }))} placeholder="Description" className={'md:col-span-8 ' + ui.textarea} /></div></div>
                                   </div>
                                   <div className="flex flex-col gap-2">
-                                    {/* Nút đặt ảnh chính — chỉ hiện ở nhóm Color */}
-                                    {group.type === 'Color' && (
-                                      existingMainImageUrl === img.imageUrl ? (
-                                        <span className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
-                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                                          </svg>
-                                          Đang là ảnh chính
-                                        </span>
-                                      ) : (
-                                        <button
-                                          type="button"
-                                          onClick={() => setExistingMainImageUrl(img.imageUrl)}
-                                          className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-emerald-800 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-300"
-                                        >
-                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                          </svg>
-                                          Đặt làm ảnh chính
-                                        </button>
-                                      )
-                                    )}
                                     <button type="button" disabled={updateExistingImageM.isPending} onClick={() => updateExistingImageM.mutate({ imageId: img.carImageId, title: img.title, description: img.description })} className={ui.btnGhost + ' w-full justify-center'}>Lưu info</button>
                                     <button type="button" disabled={deleteExistingImageM.isPending} onClick={() => { deleteExistingImageM.mutate(img.carImageId, { onSuccess: () => setExistingGallery((prev) => ({ ...prev, [group.type]: prev[group.type].filter((x) => x.carImageId !== img.carImageId) })) }) }} className={ui.btnDanger + ' w-full justify-center'}>Xoá</button>
                                   </div>
@@ -895,7 +1217,7 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
                             {st.files.map((f, idx) => (
                               <div key={idx} className="rounded-lg border border-slate-200/70 bg-slate-50/70 p-3 dark:border-zinc-800/80 dark:bg-zinc-900/20">
                                 <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-200/70 dark:border-zinc-800/80">
-                                  <div className="text-sm font-medium text-indigo-700 dark:text-indigo-400 truncate pr-2">{f ? f.name : <input type="file" accept="image/*" onChange={(e) => { const file = e.target.files?.[0]; if (file) { setGallery((prev) => { const nextFiles = [...prev[group.type].files]; nextFiles[idx] = file; return { ...prev, [group.type]: { ...prev[group.type], files: nextFiles } } }); if (group.type === 'Color' && idx === 0) setMainImage(file) } }} className="w-full text-xs text-slate-900 dark:text-zinc-200" />}</div>
+                                  <div className="text-sm font-medium text-indigo-700 dark:text-indigo-400 truncate pr-2">{f ? f.name : <input type="file" accept="image/*" onChange={(e) => { const file = e.target.files?.[0]; if (file) { setGallery((prev) => { const nextFiles = [...prev[group.type].files]; nextFiles[idx] = file; return { ...prev, [group.type]: { ...prev[group.type], files: nextFiles } } }) } }} className="w-full text-xs text-slate-900 dark:text-zinc-200" />}</div>
                                   <button type="button" onClick={() => removeGalleryFile(group.type, idx)} className={ui.btnDanger + ' py-1 px-2 text-xs'}>Xoá ô này</button>
                                 </div>
                                 <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-12">
@@ -903,9 +1225,9 @@ export function CarsNewPage({ mode = 'create', carId }: { mode?: 'create' | 'edi
                                     <div className="md:col-span-11 rounded-lg border border-slate-200/70 bg-slate-100/50 px-3 py-2 text-sm text-slate-500 italic dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">Tự động lưu Tiêu đề & Mô tả là "Khác"</div>
                                   ) : (
                                     <>
-                                      <input value={st.metas[idx]?.title ?? ''} onChange={(e) => setMetaFor(group.type, idx, { title: e.target.value })} placeholder={group.defaultTitlePlaceholder ?? 'Title (tuỳ chọn)'} className={(errs[idx] ? ui.controlError : ui.control) + (group.type === 'Color' ? ' md:col-span-7' : ' md:col-span-3')} />
-                                      <div className={'rounded-lg border border-slate-200/70 bg-slate-100/50 px-3 py-2 text-sm text-slate-700 flex items-center dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300' + (group.type === 'Color' ? ' md:col-span-4' : ' md:col-span-3')}>{group.type}</div>
-                                      {group.type !== 'Color' && <textarea value={st.metas[idx]?.description ?? ''} onChange={(e) => setMetaFor(group.type, idx, { description: e.target.value })} placeholder="Description (hỗ trợ xuống dòng)" className={(errs[idx] ? ui.textareaError : ui.textarea) + ' md:col-span-5'} />}
+                                      <input value={st.metas[idx]?.title ?? ''} onChange={(e) => setMetaFor(group.type, idx, { title: e.target.value })} placeholder="Title (tuỳ chọn)" className={(errs[idx] ? ui.controlError : ui.control) + ' md:col-span-3'} />
+                                      <div className={'rounded-lg border border-slate-200/70 bg-slate-100/50 px-3 py-2 text-sm text-slate-700 flex items-center dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 md:col-span-3'}>{group.type}</div>
+                                      <textarea value={st.metas[idx]?.description ?? ''} onChange={(e) => setMetaFor(group.type, idx, { description: e.target.value })} placeholder="Description (hỗ trợ xuống dòng)" className={(errs[idx] ? ui.textareaError : ui.textarea) + ' md:col-span-5'} />
                                     </>
                                   )}
                                   <label className="md:col-span-1 flex items-center justify-center rounded-lg border border-slate-200/70 px-2 py-2 text-sm text-slate-800 cursor-pointer hover:bg-slate-50 transition-colors dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-900 mt-2"><input type="checkbox" checked={st.metas[idx]?.isMainImage ?? false} onChange={(e) => setMainImageFor(group.type, idx, e.target.checked)} title="Là ảnh chính" className="mr-1" /><span className="text-xs md:hidden">Main</span></label>

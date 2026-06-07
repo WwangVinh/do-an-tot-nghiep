@@ -24,7 +24,12 @@ namespace SqlServer.Repositories
                 .ThenBy(x => x.PricingVersionId)
                 .ToListAsync();
         }
-
+        public async Task<IEnumerable<CarPricingVersion>> GetVersionsByCarIdAsync(int carId)
+        {
+            return await _context.CarPricingVersions
+                .Where(v => v.CarId == carId && v.IsActive)
+                .ToListAsync();
+        }
         public async Task<List<CarPricingVersion>> GetAllAsync(int? carId = null, bool? isActive = null)
         {
             var query = _context.CarPricingVersions

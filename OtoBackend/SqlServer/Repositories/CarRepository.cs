@@ -2,7 +2,6 @@
 using LogicBusiness.DTOs;
 using LogicBusiness.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.VisualBasic.FileIO;
 using SqlServer.DBContext;
 
 namespace SqlServer.Repositories
@@ -11,11 +10,22 @@ namespace SqlServer.Repositories
     {
         private readonly OtoContext _context;
 
+        // Status được phép hiển thị cho khách hàng
+        private static readonly CarStatus[] AllowedCustomerStatuses = new[]
+        {
+            CarStatus.Available,
+            CarStatus.Out_of_stock,
+            CarStatus.COMING_SOON
+        };
+
         public CarRepository(OtoContext context)
         {
             _context = context;
         }
 
+        // ============================================================
+        // ADMIN — DANH SÁCH XE CƠ BẢN (theo CarFilterDto)
+        // ============================================================
         public async Task<List<Car>> GetFilteredCarsAsync(CarFilterDto filter, bool isAdmin = false)
         {
             var query = _context.Cars.AsQueryable();
@@ -23,7 +33,7 @@ namespace SqlServer.Repositories
             if (!isAdmin)
             {
                 // Khách hàng: Chỉ thấy xe đang Active và chưa bị xóa mềm
-                query = query.Where(c => c.Status == CoreEntities.Models.CarStatus.Available && c.IsDeleted == false);
+                query = query.Where(c => c.Status == CarStatus.Available && c.IsDeleted == false);
             }
             else
             {
@@ -32,11 +42,10 @@ namespace SqlServer.Repositories
                     query = query.Where(c => (int)c.Status == filter.Status.Value);
             }
 
-            // RÁP CÁC ĐIỀU KIỆN LỌC (Cái nào FE truyền lên mới lọc, không thì bỏ qua)
-
             if (!string.IsNullOrWhiteSpace(filter.Keyword))
             {
-                query = query.Where(c => c.Name.Contains(filter.Keyword) || c.Brand.Contains(filter.Keyword));
+                var kw = filter.Keyword.Trim();
+                query = query.Where(c => c.Name.Contains(kw) || (c.Brand != null && c.Brand.Contains(kw)));
             }
 
             if (!string.IsNullOrWhiteSpace(filter.Brand))
@@ -45,23 +54,20 @@ namespace SqlServer.Repositories
             }
 
             if (filter.MinPrice.HasValue)
-            {
                 query = query.Where(c => c.Price >= filter.MinPrice.Value);
-            }
 
             if (filter.MaxPrice.HasValue)
-            {
                 query = query.Where(c => c.Price <= filter.MaxPrice.Value);
-            }
 
             if (filter.Condition.HasValue)
-            {
                 query = query.Where(c => (int)c.Condition == filter.Condition.Value);
-            }
 
-            // Chốt đơn: Sắp xếp xe mới nhất lên đầu và lấy dữ liệu
             return await query.OrderByDescending(c => c.CreatedAt).ToListAsync();
         }
+
+        // ============================================================
+        // CUSTOMER — DANH SÁCH XE (có phân trang, filter, sort)
+        // ============================================================
         public async Task<(IEnumerable<Car> Cars, int TotalCount)> GetCustomerCarsAsync(
             string? search, string? brand, string? color,
             decimal? minPrice, decimal? maxPrice, CarStatus? status,
@@ -71,97 +77,85 @@ namespace SqlServer.Repositories
             string? sort, bool inStockOnly,
             int page, int pageSize)
         {
-            // Bắt đầu với danh sách toàn bộ xe
             var query = _context.Cars
-                                .Include(c => c.CarInventories) 
-                                    .ThenInclude(i => i.Showroom)
-                                .Include(c => c.CarColors)
-                                .AsQueryable();
+                .Include(c => c.CarInventories)
+                    .ThenInclude(i => i.Showroom)
+                .Include(c => c.CarColors)
+                .AsQueryable();
 
+            // ===== HARD FILTER cho customer =====
             query = query.Where(c => c.IsDeleted == false);
-            query = query.Where(c => c.Status != CarStatus.Draft);
 
+            // CHỈ HIỆN xe có Status thuộc danh sách cho phép (Available, Out_of_stock, COMING_SOON)
+            // Trước đây chỉ loại Draft → vẫn lọt Pending/Rejected/Inactive → khách thấy bậy
+            query = query.Where(c => c.Status.HasValue && AllowedCustomerStatuses.Contains(c.Status.Value));
+
+            // Nếu FE truyền status cụ thể (vd chỉ xem xe Available) thì filter thêm
             if (status.HasValue)
             {
                 query = query.Where(c => c.Status == status.Value);
             }
 
             if (condition.HasValue)
-            {
                 query = query.Where(c => c.Condition == condition.Value);
-            }
 
             if (minYear.HasValue)
-            {
                 query = query.Where(c => c.Year != null && c.Year.Value >= minYear.Value);
-            }
 
             if (maxYear.HasValue)
-            {
                 query = query.Where(c => c.Year != null && c.Year.Value <= maxYear.Value);
-            }
 
-            // LỌC THEO TỪ KHÓA (Tìm một phần của Tên xe)
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var kw = search.Trim().ToLower();
                 query = query.Where(c => c.Name.ToLower().Contains(kw));
             }
 
-            // LỌC THEO HÃNG XE
             if (!string.IsNullOrWhiteSpace(brand))
             {
                 var brandUpper = brand.Trim().ToUpper();
-                query = query.Where(c => c.Brand.ToUpper() == brandUpper);
+                query = query.Where(c => c.Brand != null && c.Brand.ToUpper() == brandUpper);
             }
 
-            // LỌC THEO MÀU SẮC
+            // LỌC THEO MÀU (qua bảng CarColors)
             if (!string.IsNullOrWhiteSpace(color))
             {
                 var colorLower = color.Trim().ToLower();
-                query = query.Where(c => c.CarColors.Any(cc => cc.ColorName.ToLower() == colorLower));
+                query = query.Where(c => c.CarColors.Any(cc =>
+                    cc.IsActive && cc.ColorName.ToLower() == colorLower));
             }
 
-            // LỌC THEO KHOẢNG GIÁ (Giá min / Giá max)
             if (minPrice.HasValue)
-            {
                 query = query.Where(c => c.Price >= minPrice.Value);
-            }
-            if (maxPrice.HasValue)
-            {
-                query = query.Where(c => c.Price <= maxPrice.Value);
-            }
-            // LỌC THEO HỘP SỐ
-            if (!string.IsNullOrWhiteSpace(transmission))
-            {
-                query = query.Where(c => c.Transmission == transmission.Trim());
-            }
 
-            // LỌC THEO KIỂU DÁNG (Sedan / SUV)
+            if (maxPrice.HasValue)
+                query = query.Where(c => c.Price <= maxPrice.Value);
+
+            if (!string.IsNullOrWhiteSpace(transmission))
+                query = query.Where(c => c.Transmission == transmission.Trim());
+
             if (!string.IsNullOrWhiteSpace(bodyStyle))
-            {
                 query = query.Where(c => c.BodyStyle == bodyStyle.Trim());
-            }
-            // LỌC THEO NHIÊN LIỆU (Xăng, Điện, Dầu...)
+
             if (!string.IsNullOrWhiteSpace(fuelType))
             {
-                query = query.Where(c => c.FuelType != null && c.FuelType.ToLower() == fuelType.Trim().ToLower());
+                var fuelLower = fuelType.Trim().ToLower();
+                query = query.Where(c => c.FuelType != null && c.FuelType.ToLower() == fuelLower);
             }
 
-            // LỌC THEO ĐỊA CHỈ (Tỉnh/Thành phố)
             if (!string.IsNullOrWhiteSpace(location))
             {
                 string loc = location.Trim().ToLower();
                 query = query.Where(c => c.CarInventories.Any(inv =>
                     inv.Quantity > 0 &&
                     inv.Showroom != null &&
-                    (inv.Showroom.Province.ToLower().Contains(loc) || inv.Showroom.District.ToLower().Contains(loc))
+                    ((inv.Showroom.Province != null && inv.Showroom.Province.ToLower().Contains(loc))
+                     || (inv.Showroom.District != null && inv.Showroom.District.ToLower().Contains(loc)))
                 ));
             }
 
             if (inStockOnly)
             {
-                // CHỈ HIỆN XE CÒN HÀNG (Quantity > 0)
                 query = query.Where(c => c.CarInventories.Any() && c.CarInventories.Sum(i => i.Quantity) > 0);
             }
 
@@ -187,24 +181,33 @@ namespace SqlServer.Repositories
             return (cars, totalCount);
         }
 
-        // CHI TIẾT XE DÀNH CHO KHÁCH HÀNG: Chỉ lấy xe chưa bị xóa và không phải là Draft, còn Admin thì có quyền xem tất cả
+        // ============================================================
+        // CUSTOMER — CHI TIẾT XE (Include CarColor cho ShowroomDetails)
+        // ============================================================
         public async Task<Car?> GetCarDetailForCustomerAsync(int id)
         {
             return await _context.Cars
                 .AsNoTracking()
                 .Include(c => c.CarImages)
                 .Include(c => c.CarColors)
-                .Include(c => c.CarSpecifications) 
+                .Include(c => c.CarSpecifications)
                 .Include(c => c.CarFeatures)
                     .ThenInclude(cf => cf.Feature)
                 .Include(c => c.CarPricingVersions)
                 .Include(c => c.CarInventories)
-                    .ThenInclude(inv => inv.Showroom) 
-                .FirstOrDefaultAsync(c => c.CarId == id && c.IsDeleted == false && c.Status != CarStatus.Draft);
+                    .ThenInclude(inv => inv.Showroom)
+                .Include(c => c.CarInventories)
+                    .ThenInclude(inv => inv.CarColor) // ← THÊM: để FE biết lô hàng đó là màu gì
+                .FirstOrDefaultAsync(c =>
+                    c.CarId == id
+                    && c.IsDeleted == false
+                    && c.Status.HasValue
+                    && AllowedCustomerStatuses.Contains(c.Status.Value));
         }
 
-
-        // CHI TIẾT XE DÀNH CHO ADMIN: Có quyền xem tất cả, kể cả xe bị xóa hoặc đang ở trạng thái Nháp
+        // ============================================================
+        // ADMIN — CHI TIẾT XE (xem tất cả, kể cả Draft / IsDeleted)
+        // ============================================================
         public async Task<Car?> GetCarDetailForAdminAsync(int id)
         {
             return await _context.Cars
@@ -216,11 +219,14 @@ namespace SqlServer.Repositories
                 .Include(c => c.CarPricingVersions)
                 .Include(c => c.CarInventories)
                     .ThenInclude(inv => inv.Showroom)
-        
+                .Include(c => c.CarInventories)
+                    .ThenInclude(inv => inv.CarColor)
                 .FirstOrDefaultAsync(c => c.CarId == id);
         }
 
-        // DANH SÁCH XE DÀNH CHO ADMIN: Có quyền xem tất cả, kể cả xe bị xóa hoặc đang ở trạng thái Nháp, và có thêm bộ lọc theo Showroom (Dành cho Admin của từng Showroom)
+        // ============================================================
+        // ADMIN — DANH SÁCH XE (xem tất cả, lọc theo showroom)
+        // ============================================================
         public async Task<(IEnumerable<Car> Cars, int TotalCount)> GetAdminCarsAsync(
              string? search, string? brand, string? color,
              decimal? minPrice, decimal? maxPrice, CarStatus? status,
@@ -229,17 +235,21 @@ namespace SqlServer.Repositories
              bool? isDeleted, int page, int pageSize, int? userShowroomId = null)
         {
             var query = _context.Cars
-                                .Include(c => c.CarInventories)
-                                    .ThenInclude(i => i.Showroom) 
-                                .AsQueryable();
+                .Include(c => c.CarInventories)
+                    .ThenInclude(i => i.Showroom)
+                .Include(c => c.CarColors) // ← THÊM: để filter color join được, và FE hiển thị
+                .AsQueryable();
 
             if (userShowroomId.HasValue)
             {
                 query = query.Where(c => c.CarInventories.Any(inv => inv.ShowroomId == userShowroomId.Value));
             }
 
-            if (!string.IsNullOrWhiteSpace(search)) query = query.Where(c => c.Name.ToLower().Contains(search.Trim().ToLower()));
-            if (!string.IsNullOrWhiteSpace(brand)) query = query.Where(c => c.Brand.ToUpper() == brand.Trim().ToUpper());
+            if (!string.IsNullOrWhiteSpace(search))
+                query = query.Where(c => c.Name.ToLower().Contains(search.Trim().ToLower()));
+
+            if (!string.IsNullOrWhiteSpace(brand))
+                query = query.Where(c => c.Brand != null && c.Brand.ToUpper() == brand.Trim().ToUpper());
 
             if (!string.IsNullOrWhiteSpace(color))
             {
@@ -251,14 +261,20 @@ namespace SqlServer.Repositories
             if (maxPrice.HasValue) query = query.Where(c => c.Price <= maxPrice.Value);
             if (!string.IsNullOrWhiteSpace(transmission)) query = query.Where(c => c.Transmission == transmission.Trim());
             if (!string.IsNullOrWhiteSpace(bodyStyle)) query = query.Where(c => c.BodyStyle == bodyStyle.Trim());
-            if (!string.IsNullOrWhiteSpace(fuelType)) query = query.Where(c => c.FuelType != null && c.FuelType.ToLower() == fuelType.Trim().ToLower());
+
+            if (!string.IsNullOrWhiteSpace(fuelType))
+            {
+                var fuelLower = fuelType.Trim().ToLower();
+                query = query.Where(c => c.FuelType != null && c.FuelType.ToLower() == fuelLower);
+            }
 
             if (!string.IsNullOrWhiteSpace(location))
             {
                 string loc = location.Trim().ToLower();
                 query = query.Where(c => c.CarInventories.Any(inv =>
                     inv.Showroom != null &&
-                    (inv.Showroom.Province.ToLower().Contains(loc) || inv.Showroom.District.ToLower().Contains(loc))
+                    ((inv.Showroom.Province != null && inv.Showroom.Province.ToLower().Contains(loc))
+                     || (inv.Showroom.District != null && inv.Showroom.District.ToLower().Contains(loc)))
                 ));
             }
 
@@ -266,25 +282,59 @@ namespace SqlServer.Repositories
             if (isDeleted.HasValue) query = query.Where(c => c.IsDeleted == isDeleted.Value);
 
             int totalCount = await query.CountAsync();
-            var cars = await query.OrderByDescending(c => c.CreatedAt)
-                .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+
+            var safePage = page <= 0 ? 1 : page;
+            var safePageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
+
+            var cars = await query
+                .OrderByDescending(c => c.CreatedAt)
+                .Skip((safePage - 1) * safePageSize)
+                .Take(safePageSize)
+                .ToListAsync();
 
             return (cars, totalCount);
         }
 
+        // ============================================================
+        // GET BY ID — Có 2 method với mục đích khác nhau
+        // ============================================================
 
-        public async Task<Car> GetCarByIdAsync(int id)
+        /// <summary>
+        /// GetByIdAsync — DÙNG CHO VALIDATION (vd CarInventoryService validate màu).
+        /// Có Include(CarColors) để service kiểm tra màu thuộc về xe.
+        /// </summary>
+        public async Task<Car?> GetByIdAsync(int id)
+        {
+            return await _context.Cars
+                .Include(c => c.CarColors)
+                .FirstOrDefaultAsync(c => c.CarId == id);
+        }
+
+        /// <summary>
+        /// GetCarByIdAsync — Lấy xe thô, không Include gì.
+        /// Dùng khi chỉ cần info cơ bản.
+        /// </summary>
+        public async Task<Car?> GetCarByIdAsync(int id)
         {
             return await _context.Cars.FindAsync(id);
         }
+
+        // ============================================================
+        // CHECK / SEARCH
+        // ============================================================
         public async Task<bool> CheckCarListingExistAsync(string name, string brand, int? year, int condition, decimal? mileage, int? excludeId = null)
         {
+            var nameNorm = name.ToLower().Trim();
+            var brandNorm = brand.Trim();
+            var carCondition = (CarCondition)condition;
+
             return await _context.Cars.AnyAsync(c =>
-                c.Name.ToLower().Trim() == name.ToLower().Trim() &&
-                c.Brand == brand &&
+                c.Name.ToLower().Trim() == nameNorm &&
+                c.Brand == brandNorm &&
                 c.Year == year &&
-                c.Condition == (CarCondition)condition &&
-                c.Mileage == (mileage ?? 0m) &&
+                c.Condition == carCondition &&
+                // FIX: so sánh nullable đúng cách — null khớp null, value khớp value
+                ((c.Mileage == null && mileage == null) || (c.Mileage == mileage)) &&
                 (excludeId == null || c.CarId != excludeId));
         }
 
@@ -295,68 +345,8 @@ namespace SqlServer.Repositories
                     c.Name == name &&
                     c.Brand == brand &&
                     c.Year == year &&
-                    c.Condition == CarCondition.New && 
+                    c.Condition == CarCondition.New &&
                     c.IsDeleted == false);
-        }
-
-        public async Task AddCarAsync(Car car)
-        {
-            _context.Cars.Add(car);
-            await _context.SaveChangesAsync();
-        }
-
-
-        public async Task UpdateCarAsync(Car car)
-        {
-            // Kiểm tra xem EF có đang "nhớ" (track) phiên bản cũ nào của chiếc xe này không
-            var trackedEntity = _context.Cars.Local.FirstOrDefault(c => c.CarId == car.CarId);
-
-            // Nếu có, ra lệnh cho EF "quên" phiên bản cũ đó đi (Detach)
-            if (trackedEntity != null)
-            {
-                _context.Entry(trackedEntity).State = EntityState.Detached;
-            }
-
-            // Bây giờ mới an toàn đưa phiên bản mới vào để cập nhật
-            _context.Entry(car).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task<Car?> GetByIdAsync(int id)
-        {
-            return await _context.Cars.FindAsync(id);
-        }
-
-        public async Task UpdateAsync(Car car)
-        {
-            _context.Cars.Update(car);
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task DeleteByCarIdAsync(int carId)
-        {
-            var features = await _context.CarFeatures.Where(x => x.CarId == carId).ToListAsync();
-            if (features.Any())
-            {
-                _context.CarFeatures.RemoveRange(features);
-                await _context.SaveChangesAsync();
-            }
-        }
-
-        public async Task<bool> DeleteCarAsync(int id)
-        {
-            // Tìm con xe trong Database
-            var car = await _context.Cars.FindAsync(id);
-
-            if (car != null)
-            {
-                // Xóa nó khỏi DB và lưu lại
-                _context.Cars.Remove(car);
-                await _context.SaveChangesAsync();
-                return true;
-            }
-
-            return false;
         }
 
         public bool CarExists(int id)
@@ -369,10 +359,77 @@ namespace SqlServer.Repositories
             return await _context.Cars
                 .Where(c => c.Condition == CarCondition.New &&
                             c.IsDeleted == false &&
-                            (c.Name.Contains(query) || c.Brand.Contains(query)))
+                            (c.Name.Contains(query) || (c.Brand != null && c.Brand.Contains(query))))
                 .ToListAsync();
         }
 
+        // ============================================================
+        // CUD
+        // ============================================================
+        public async Task AddCarAsync(Car car)
+        {
+            _context.Cars.Add(car);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task UpdateCarAsync(Car car)
+        {
+            // Detach phiên bản cũ EF đang track (nếu có)
+            var trackedEntity = _context.Cars.Local.FirstOrDefault(c => c.CarId == car.CarId);
+            if (trackedEntity != null)
+            {
+                _context.Entry(trackedEntity).State = EntityState.Detached;
+            }
+
+            // ⚠️ LƯU Ý: State = Modified sẽ update TOÀN BỘ field.
+            // Nếu service không gán đầy đủ field (vd quên CreatedByUserId, CreatedAt)
+            // thì các field đó sẽ bị overwrite về default!
+            // → Service phải load entity gốc trước, modify rồi mới gọi method này,
+            //   hoặc service nên dùng pattern attach + chỉ mark Modified field cần đổi.
+            _context.Entry(car).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task UpdateAsync(Car car)
+        {
+            _context.Cars.Update(car);
+            await _context.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// XÓA CarFeatures của một xe (không xóa Car).
+        /// ⚠️ Tên cũ "DeleteByCarIdAsync" gây hiểu nhầm là xóa Car.
+        /// Giữ tên cũ để backward compat nhưng có comment rõ.
+        /// </summary>
+        public async Task DeleteByCarIdAsync(int carId)
+        {
+            var features = await _context.CarFeatures.Where(x => x.CarId == carId).ToListAsync();
+            if (features.Any())
+            {
+                _context.CarFeatures.RemoveRange(features);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        /// <summary>
+        /// SOFT DELETE — đánh dấu IsDeleted = true thay vì xóa cứng.
+        /// Tránh vỡ FK với Bookings, Orders, OrderItems...
+        /// </summary>
+        public async Task<bool> DeleteCarAsync(int id)
+        {
+            var car = await _context.Cars.FindAsync(id);
+            if (car == null) return false;
+
+            // FIX: chuyển từ HARD delete sang SOFT delete để giữ tham chiếu lịch sử
+            car.IsDeleted = true;
+            car.DeletedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        // ============================================================
+        // CUSTOMER — XE MỚI NHẤT / BÁN CHẠY (đã filter Status hợp lệ)
+        // ============================================================
         public async Task<IEnumerable<Car>> GetLatestCustomerCarsAsync(int limit)
         {
             int take = limit <= 0 ? 6 : Math.Min(limit, 50);
@@ -380,7 +437,10 @@ namespace SqlServer.Repositories
             return await _context.Cars
                 .Include(c => c.CarInventories)
                     .ThenInclude(i => i.Showroom)
-                .Where(c => c.IsDeleted == false && c.Status != CarStatus.Draft)
+                .Include(c => c.CarColors)
+                .Where(c => c.IsDeleted == false
+                            && c.Status.HasValue
+                            && AllowedCustomerStatuses.Contains(c.Status.Value))
                 .OrderByDescending(c => c.CreatedAt)
                 .Take(take)
                 .ToListAsync();
@@ -390,8 +450,7 @@ namespace SqlServer.Repositories
         {
             int take = limit <= 0 ? 6 : Math.Min(limit, 50);
 
-            // Count "sold" by summing OrderItems.Quantity on paid orders
-            // NOTE: if your business rule differs, adjust PaymentStatus values here.
+            // Tính SoldQty từ OrderItems trên các đơn đã thanh toán
             var bestSellingCarIds = await _context.OrderItems
                 .Where(oi => oi.CarId != null && oi.Quantity != null)
                 .Join(
@@ -400,7 +459,9 @@ namespace SqlServer.Repositories
                     o => o.OrderId,
                     (oi, o) => new { oi.CarId, oi.Quantity, o.PaymentStatus }
                 )
-                .Where(x => x.PaymentStatus == "Paid" || x.PaymentStatus == "Completed" || x.PaymentStatus == "Success")
+                .Where(x => x.PaymentStatus == "Paid"
+                            || x.PaymentStatus == "Completed"
+                            || x.PaymentStatus == "Success")
                 .GroupBy(x => x.CarId!.Value)
                 .Select(g => new { CarId = g.Key, SoldQty = g.Sum(x => x.Quantity ?? 0) })
                 .OrderByDescending(x => x.SoldQty)
@@ -414,14 +475,26 @@ namespace SqlServer.Repositories
             var cars = await _context.Cars
                 .Include(c => c.CarInventories)
                     .ThenInclude(i => i.Showroom)
-                .Where(c => ids.Contains(c.CarId) && c.IsDeleted == false && c.Status != CarStatus.Draft)
+                .Include(c => c.CarColors)
+                .Where(c => ids.Contains(c.CarId)
+                            && c.IsDeleted == false
+                            && c.Status.HasValue
+                            && AllowedCustomerStatuses.Contains(c.Status.Value))
                 .ToListAsync();
 
-            // Preserve ranking order by sold qty
-            var rank = bestSellingCarIds.Select((x, idx) => new { x.CarId, idx }).ToDictionary(x => x.CarId, x => x.idx);
-            return cars.OrderBy(c => rank.TryGetValue(c.CarId, out var idx) ? idx : int.MaxValue).ToList();
+            // Giữ thứ tự rank theo sold qty
+            var rank = bestSellingCarIds
+                .Select((x, idx) => new { x.CarId, idx })
+                .ToDictionary(x => x.CarId, x => x.idx);
+
+            return cars
+                .OrderBy(c => rank.TryGetValue(c.CarId, out var idx) ? idx : int.MaxValue)
+                .ToList();
         }
 
+        // ============================================================
+        // PRICING
+        // ============================================================
         public async Task<IEnumerable<PricingCarBaseDto>> GetCarsForPricingAsync(string? brand = null)
         {
             var query = _context.Cars

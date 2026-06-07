@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LogicBusiness.DTOs
+namespace CoreEntities.Models
 {
     public class ArticleCar
     {

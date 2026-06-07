@@ -31,6 +31,13 @@ type GalleryGroupDto = {
   category: string
   images: { title: string | null; description: string | null; imageUrl: string }[]
 }
+// ✅ Type cho 1 màu xe
+type CarColorDto = {
+  carColorId: number
+  colorName: string
+  hexCode?: string
+  imageUrl?: string
+}
 type CustomerCarDetailDto = {
   carId: number
   name: string
@@ -38,7 +45,7 @@ type CustomerCarDetailDto = {
   model: string | null
   year: number | null
   price: number | null
- colors: { carColorId: number; colorName: string; hexCode?: string; imageUrl?: string }[]
+  colors: CarColorDto[]
   mileage: number | null
   fuelType: string | null
   transmission: string | null
@@ -68,7 +75,7 @@ interface Review {
   createdAt: string
 }
 
-// ✅ Showroom
+// ✅ Showroom — bổ sung carColorId optional (BE có thể trả về để FE filter client-side)
 interface ShowroomPickerDto {
   showroomId: number
   name: string
@@ -76,6 +83,8 @@ interface ShowroomPickerDto {
   district: string
   fullAddress: string
   hotline: string | null
+  carColorId?: number    // BE có thể trả về kèm để filter theo màu
+  quantity?: number      // số xe còn trong showroom này (theo màu, nếu có)
 }
 
 // ─────────────────────────────────────────────
@@ -220,7 +229,7 @@ function SectionNav({
 }
 
 // ─────────────────────────────────────────────
-// STEP INDICATOR — 5 bước (thêm Showroom ở bước 2)
+// STEP INDICATOR — 5 bước
 // ─────────────────────────────────────────────
 const ORDER_STEPS = [
   { step: 1, label: 'Thông tin' },
@@ -277,6 +286,113 @@ const PROVINCES_RC = [
   { label: 'Cần Thơ',          rate: 0.10, phiBien:   500_000 },
   { label: 'Các tỉnh khác',    rate: 0.10, phiBien:   500_000 },
 ]
+
+// ─────────────────────────────────────────────
+// COLOR PICKER — CẢI TIẾN: preview ảnh to, đẹp, có overlay tên màu
+// ─────────────────────────────────────────────
+function ColorPicker({
+  colors,
+  selectedColor,
+  onSelect,
+  carImageUrlFallback,
+}: {
+  colors: CarColorDto[]
+  selectedColor: CarColorDto | null
+  onSelect: (c: CarColorDto) => void
+  carImageUrlFallback?: string
+}) {
+  if (!colors || colors.length === 0) return null
+
+  // ✅ Ưu tiên ảnh của màu đã chọn, fallback về ảnh xe chung
+  const previewSrc = selectedColor
+    ? toAbsoluteUrl(selectedColor.imageUrl || carImageUrlFallback || '')
+    : toAbsoluteUrl(carImageUrlFallback || '')
+
+  return (
+    <div>
+      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+        Chọn màu xe <span className="text-red-500">*</span>
+        {selectedColor && (
+          <span className="ml-2 text-slate-700 font-semibold normal-case">— {selectedColor.colorName}</span>
+        )}
+      </label>
+
+      {/* ✅ PREVIEW ẢNH XE LỚN — đổi mượt theo màu */}
+      {previewSrc && (
+        <div className="mb-3 relative rounded-xl overflow-hidden border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100">
+          <img
+            key={selectedColor?.carColorId ?? 'default'}
+            src={previewSrc}
+            alt={selectedColor?.colorName || 'Xe preview'}
+            className="w-full h-56 object-contain transition-opacity duration-500"
+            style={{
+              animation: 'colorPickerFade 0.45s ease-out',
+            }}
+          />
+          {/* Overlay tên màu */}
+          {selectedColor && (
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent px-4 py-3 flex items-center gap-2">
+              <span
+                className="w-5 h-5 rounded-full border-2 border-white shadow-md flex-shrink-0"
+                style={{ backgroundColor: selectedColor.hexCode || '#ccc' }}
+              />
+              <span className="text-white text-sm font-bold drop-shadow">
+                {selectedColor.colorName}
+              </span>
+            </div>
+          )}
+          {/* Hint khi chưa chọn */}
+          {!selectedColor && (
+            <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2.5 py-1 rounded-full text-xs text-slate-500 font-medium shadow-sm">
+              👇 Chọn màu bên dưới
+            </div>
+          )}
+
+          {/* Keyframe inline để fade ảnh */}
+          <style>{`
+            @keyframes colorPickerFade {
+              from { opacity: 0; transform: scale(0.98); }
+              to   { opacity: 1; transform: scale(1); }
+            }
+          `}</style>
+        </div>
+      )}
+
+      {/* Danh sách màu */}
+      <div className="flex flex-wrap gap-2">
+        {colors.map((c) => {
+          const isSelected = selectedColor?.carColorId === c.carColorId
+          return (
+            <button
+              key={c.carColorId}
+              type="button"
+              onClick={() => onSelect(c)}
+              title={c.colorName}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all ${
+                isSelected
+                  ? 'border-[#0A2540] bg-blue-50 shadow-sm scale-[1.02]'
+                  : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+              }`}
+            >
+              <span
+                className={`w-5 h-5 rounded-full border flex-shrink-0 transition-all ${
+                  isSelected ? 'border-[#0A2540] ring-2 ring-[#0A2540]/30' : 'border-slate-300'
+                }`}
+                style={{ backgroundColor: c.hexCode || '#ccc' }}
+              />
+              <span className="text-xs font-medium text-slate-700">{c.colorName}</span>
+              {isSelected && (
+                <svg className="w-3.5 h-3.5 text-[#0A2540] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 function RollingCostToggle({ basePrice }: { basePrice: number }) {
   const [open, setOpen] = useState(false)
@@ -346,13 +462,15 @@ function RollingCostInline({ basePrice }: { basePrice: number }) {
 }
 
 // ─────────────────────────────────────────────
-// ORDER MODAL — 5 bước (thêm bước 2: chọn Showroom)
+// ORDER MODAL — 5 bước (Step 1 có chọn màu + preview ảnh đẹp)
 // ─────────────────────────────────────────────
 function OrderModal({
   open,
   onClose,
   carId,
   carName,
+  carImageUrl,
+  colors,
   pricingVersions,
   externalState,
 }: {
@@ -360,6 +478,8 @@ function OrderModal({
   onClose: () => void
   carId: number
   carName: string
+  carImageUrl?: string
+  colors: CarColorDto[]
   pricingVersions: PricingVersionDto[]
   externalState: any
 }) {
@@ -367,6 +487,7 @@ function OrderModal({
     step, setStep,
     formData, setFormData,
     selectedVersion, setSelectedVersion,
+    selectedColor, setSelectedColor,           // ✅ state màu
     discountPercent, setDiscountPercent,
     discountAmount, setDiscountAmount,
     promoMessage, setPromoMessage,
@@ -392,6 +513,9 @@ function OrderModal({
   const [payosExpiry, setPayosExpiry] = useState<number | null>(null)
   const [timeLeft, setTimeLeft] = useState<number>(0)
 
+  // Có dùng color picker hay không (xe có > 0 màu)
+  const hasColors = (colors?.length ?? 0) > 0
+
   // Countdown timer
   useEffect(() => {
     if (!payosExpiry) return
@@ -406,38 +530,35 @@ function OrderModal({
   const formatTime = (s: number) => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`
 
   const checkPaymentStatus = async () => {
-  if (!createdOrderCode || !formData?.phone) return
-  
-  if (payosExpiry && Date.now() > payosExpiry) return
+    if (!createdOrderCode || !formData?.phone) return
+    if (payosExpiry && Date.now() > payosExpiry) return
 
-  setCheckingPayment(true)
-  try {
-    if (createdOrderId) {
-      await axios.post(
-        `${env.VITE_API_BASE_URL}/api/Checkout/${createdOrderId}/confirm`,
-        {},
-        { headers: { 'ngrok-skip-browser-warning': 'true' } }
-      ).catch(() => {})
-    }
-    const res = await axios.get(
-      `${env.VITE_API_BASE_URL}/api/public/orders/lookup?phone=${encodeURIComponent(formData.phone)}&code=${encodeURIComponent(createdOrderCode)}`,
-      { headers: { 'ngrok-skip-browser-warning': 'true' } }
-    )
-    const status = res.data?.paymentStatus ?? res.data?.data?.paymentStatus
-
-  
-    if (status === 'Paid' || status === 'paid' || status === 'Deposited') {
-      // ✅ Double check: link chưa expire mới được set paid
-      if (payosExpiry && Date.now() < payosExpiry) {
-        setPaymentStatus('paid')
+    setCheckingPayment(true)
+    try {
+      if (createdOrderId) {
+        await axios.post(
+          `${env.VITE_API_BASE_URL}/api/Checkout/${createdOrderId}/confirm`,
+          {},
+          { headers: { 'ngrok-skip-browser-warning': 'true' } }
+        ).catch(() => {})
       }
+      const res = await axios.get(
+        `${env.VITE_API_BASE_URL}/api/public/orders/lookup?phone=${encodeURIComponent(formData.phone)}&code=${encodeURIComponent(createdOrderCode)}`,
+        { headers: { 'ngrok-skip-browser-warning': 'true' } }
+      )
+      const status = res.data?.paymentStatus ?? res.data?.data?.paymentStatus
+
+      if (status === 'Paid' || status === 'paid' || status === 'Deposited') {
+        if (payosExpiry && Date.now() < payosExpiry) {
+          setPaymentStatus('paid')
+        }
+      }
+    } catch {
+      // ignore
+    } finally {
+      setCheckingPayment(false)
     }
-  } catch {
-    
-  } finally {
-    setCheckingPayment(false)
   }
-}
 
   useEffect(() => {
     if (step !== 5 || paymentStatus !== 'pending' || !createdOrderCode) return
@@ -466,16 +587,36 @@ function OrderModal({
       .then((r) => setAccessoriesList(r.data?.data ?? r.data ?? []))
       .catch(() => setAccessoriesList([]))
       .finally(() => setAccessoriesLoading(false))
+  }, [open])
 
-    // ✅ Load showroom có xe này trong kho
+  // ✅ Load showroom — lọc theo màu đã chọn (nếu BE support query param colorId)
+  useEffect(() => {
+    if (!open) return
+    if (hasColors && !selectedColor) {
+      // Khi xe có nhiều màu mà chưa chọn → không load showroom vội
+      setShowroomList([])
+      return
+    }
+
     setShowroomLoading(true)
+    setSelectedShowroom(null) // reset khi đổi màu
+
+    const colorQuery = selectedColor?.carColorId ? `?colorId=${selectedColor.carColorId}` : ''
+
     axios
-      .get(`${env.VITE_API_BASE_URL}/api/public/cars/${carId}/showrooms`, {
+      .get(`${env.VITE_API_BASE_URL}/api/public/cars/${carId}/showrooms${colorQuery}`, {
         headers: { 'ngrok-skip-browser-warning': 'true' },
       })
-      .then((r) => setShowroomList(r.data?.data ?? r.data ?? []))
+      .then((r) => {
+        const list: ShowroomPickerDto[] = r.data?.data ?? r.data ?? []
+        // Defensive: nếu BE chưa filter theo colorId, FE filter lại client-side
+        const filtered = selectedColor?.carColorId
+          ? list.filter(s => !s.carColorId || s.carColorId === selectedColor.carColorId)
+          : list
+        setShowroomList(filtered)
+      })
       .catch(() => {
-        // fallback: lấy tất cả showroom nếu API theo carId chưa có
+        // Fallback: gọi API showroom chung
         axios
           .get(`${env.VITE_API_BASE_URL}/api/public/orders/showrooms`, {
             headers: { 'ngrok-skip-browser-warning': 'true' },
@@ -484,7 +625,7 @@ function OrderModal({
           .catch(() => setShowroomList([]))
       })
       .finally(() => setShowroomLoading(false))
-  }, [open])
+  }, [open, carId, selectedColor?.carColorId, hasColors])
 
   useEffect(() => {
     if (selectedVersion) {
@@ -526,7 +667,8 @@ function OrderModal({
         promotionCode: promoMessage.type === 'success' ? formData.promotionCode : '',
         carId,
         pricingVersionId: selectedVersion?.pricingVersionId ?? null,
-        showroomId: selectedShowroom?.showroomId ?? null, // ✅ gửi showroomId
+        carColorId: selectedColor?.carColorId ?? null,            // ✅ gửi carColorId
+        showroomId: selectedShowroom?.showroomId ?? null,
         rollingFees: includeRolling ? Math.round(rollingFees) : 0,
         accessoryIds: selectedAccessories.map((a: Accessory) => a.accessoryId),
       }
@@ -593,6 +735,13 @@ function OrderModal({
     : showroomList
   const uniqueProvinces = Array.from(new Set(showroomList.map(s => s.province))).sort()
 
+  // Validate Step 1
+  const canProceedStep1 =
+    formData.fullName.trim() &&
+    formData.phone.trim() &&
+    selectedVersion &&
+    (!hasColors || selectedColor)
+
   if (!open) return null
 
   return (
@@ -648,7 +797,7 @@ function OrderModal({
         <div className={`px-6 pt-6 pb-5 overflow-y-auto ${isExpanded ? 'h-[calc(100vh-64px)]' : 'max-h-[80vh]'}`}>
           <StepIndicator current={step} />
 
-          {/* ─── BƯỚC 1: Thông tin & mã giảm giá ─── */}
+          {/* ─── BƯỚC 1: Thông tin + Phiên bản + Màu + Mã giảm giá ─── */}
           {step === 1 && (
             <div className="space-y-4">
               <div>
@@ -669,6 +818,16 @@ function OrderModal({
                   ))}
                 </select>
               </div>
+
+              {/* ✅ COLOR PICKER với preview ảnh xe lớn */}
+              {hasColors && (
+                <ColorPicker
+                  colors={colors}
+                  selectedColor={selectedColor}
+                  onSelect={setSelectedColor}
+                  carImageUrlFallback={carImageUrl}
+                />
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -755,6 +914,18 @@ function OrderModal({
                   <span>Giá xe ({selectedVersion?.name}):</span>
                   <span>{new Intl.NumberFormat('vi-VN').format(selectedVersion?.priceVnd || 0)} đ</span>
                 </div>
+                {selectedColor && (
+                  <div className="flex justify-between text-slate-600">
+                    <span className="flex items-center gap-1.5">
+                      <span
+                        className="w-3 h-3 rounded-full border border-slate-300"
+                        style={{ backgroundColor: selectedColor.hexCode || '#ccc' }}
+                      />
+                      Màu:
+                    </span>
+                    <span className="font-medium text-slate-800">{selectedColor.colorName}</span>
+                  </div>
+                )}
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-green-600 font-semibold">
                     <span>Giảm giá ({discountPercent}%):</span>
@@ -768,11 +939,13 @@ function OrderModal({
               </div>
 
               <button
-                disabled={!formData.fullName.trim() || !formData.phone.trim()}
+                disabled={!canProceedStep1}
                 className="w-full bg-[#0A2540] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl hover:bg-[#0d345c] transition-all"
                 onClick={() => setStep(2)}
               >
-                Tiếp tục → Chọn showroom
+                {hasColors && !selectedColor
+                  ? 'Vui lòng chọn màu xe'
+                  : 'Tiếp tục → Chọn showroom'}
               </button>
             </div>
           )}
@@ -782,10 +955,31 @@ function OrderModal({
             <div className="space-y-4">
               <div>
                 <p className="text-sm font-bold text-slate-800 mb-1">Chọn showroom nhận xe</p>
-                <p className="text-xs text-slate-400 mb-4">
-                  Chỉ hiển thị showroom hiện có <span className="font-semibold text-[#0A2540]">{carName}</span> trong kho.
+                <p className="text-xs text-slate-400 mb-2">
+                  Chỉ hiển thị showroom hiện có <span className="font-semibold text-[#0A2540]">{carName}</span>
+                  {selectedColor && (
+                    <> màu <span className="font-semibold text-[#0A2540]">{selectedColor.colorName}</span></>
+                  )} trong kho.
                   Bạn có thể đến trực tiếp để xem xe và hoàn tất thủ tục.
                 </p>
+                {/* Banner màu đã chọn */}
+                {selectedColor && (
+                  <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mb-3">
+                    <span
+                      className="w-4 h-4 rounded-full border border-slate-300 flex-shrink-0"
+                      style={{ backgroundColor: selectedColor.hexCode || '#ccc' }}
+                    />
+                    <span className="text-xs text-slate-600">
+                      Tìm showroom có xe màu <strong className="text-[#0A2540]">{selectedColor.colorName}</strong>
+                    </span>
+                    <button
+                      onClick={() => setStep(1)}
+                      className="ml-auto text-xs text-[#0A2540] font-semibold hover:underline"
+                    >
+                      Đổi màu
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Lọc theo tỉnh */}
@@ -830,14 +1024,16 @@ function OrderModal({
                 ) : filteredShowrooms.length === 0 ? (
                   <div className="text-sm text-slate-400 text-center py-8 bg-slate-50 rounded-xl border border-slate-100">
                     <div className="text-2xl mb-2">🏪</div>
-                    Không tìm thấy showroom phù hợp.
+                    {selectedColor
+                      ? <>Hiện không có showroom nào có xe <strong>{selectedColor.colorName}</strong>. Vui lòng quay lại chọn màu khác.</>
+                      : <>Không tìm thấy showroom phù hợp.</>}
                   </div>
                 ) : (
                   filteredShowrooms.map((showroom) => {
                     const isSelected = selectedShowroom?.showroomId === showroom.showroomId
                     return (
                       <div
-                        key={showroom.showroomId}
+                        key={`${showroom.showroomId}-${showroom.carColorId ?? 'any'}`}
                         onClick={() => setSelectedShowroom(showroom)}
                         className={`flex items-start gap-4 px-4 py-4 rounded-xl border cursor-pointer transition-all select-none ${
                           isSelected
@@ -856,9 +1052,17 @@ function OrderModal({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <p className="font-bold text-slate-900 text-sm leading-tight">{showroom.name}</p>
-                            <span className="flex-shrink-0 text-xs font-semibold text-[#0A2540] bg-blue-100 px-2 py-0.5 rounded-full">
-                              {showroom.province}
-                            </span>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              {/* Số lượng còn trong kho (nếu BE trả về) */}
+                              {showroom.quantity != null && showroom.quantity > 0 && (
+                                <span className="text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+                                  Còn {showroom.quantity} xe
+                                </span>
+                              )}
+                              <span className="text-xs font-semibold text-[#0A2540] bg-blue-100 px-2 py-0.5 rounded-full">
+                                {showroom.province}
+                              </span>
+                            </div>
                           </div>
                           <p className="text-xs text-slate-500 mt-1 flex items-start gap-1.5">
                             <svg className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1003,6 +1207,37 @@ function OrderModal({
           {/* ─── BƯỚC 4: Xác nhận ─── */}
           {step === 4 && (
             <div className="space-y-4">
+              {/* ✅ Card preview xe + màu đã chọn — đẹp & nổi bật */}
+              {selectedColor && (selectedColor.imageUrl || carImageUrl) && (
+                <div className="rounded-xl overflow-hidden border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100">
+                  <div className="relative">
+                    <img
+                      src={toAbsoluteUrl(selectedColor.imageUrl || carImageUrl || '')}
+                      alt={`${carName} - ${selectedColor.colorName}`}
+                      className="w-full h-44 object-contain"
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent px-4 py-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-5 h-5 rounded-full border-2 border-white shadow-md flex-shrink-0"
+                          style={{ backgroundColor: selectedColor.hexCode || '#ccc' }}
+                        />
+                        <div>
+                          <p className="text-white text-sm font-bold drop-shadow leading-tight">{carName}</p>
+                          <p className="text-white/80 text-xs leading-tight">{selectedVersion?.name} • {selectedColor.colorName}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setStep(1)}
+                        className="text-xs text-white bg-white/20 hover:bg-white/30 backdrop-blur px-3 py-1.5 rounded-full font-semibold transition"
+                      >
+                        Đổi màu
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Thông tin khách */}
               <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm">
                 <p className="font-bold text-slate-800 mb-3">Thông tin đặt mua</p>
@@ -1019,6 +1254,19 @@ function OrderModal({
                   )}
                   <span className="text-slate-400 text-xs font-semibold uppercase">Phiên bản</span>
                   <span className="font-medium text-slate-800">{selectedVersion?.name}</span>
+                  {/* ✅ Hiển thị màu đã chọn */}
+                  {selectedColor && (
+                    <>
+                      <span className="text-slate-400 text-xs font-semibold uppercase">Màu xe</span>
+                      <span className="font-medium text-slate-800 flex items-center gap-2">
+                        <span
+                          className="w-4 h-4 rounded-full border border-slate-300"
+                          style={{ backgroundColor: selectedColor.hexCode || '#ccc' }}
+                        />
+                        {selectedColor.colorName}
+                      </span>
+                    </>
+                  )}
                   {formData.customerNote && (
                     <>
                       <span className="text-slate-400 text-xs font-semibold uppercase">Ghi chú</span>
@@ -1073,7 +1321,7 @@ function OrderModal({
                 </div>
                 <div className="px-4 py-3 space-y-2">
                   <div className="flex justify-between text-slate-600">
-                    <span>Xe {selectedVersion?.name}:</span>
+                    <span>Xe {selectedVersion?.name}{selectedColor ? ` — ${selectedColor.colorName}` : ''}:</span>
                     <span>{new Intl.NumberFormat('vi-VN').format(selectedVersion?.priceVnd || 0)} đ</span>
                   </div>
                   {discountAmount > 0 && (
@@ -1251,6 +1499,15 @@ function OrderModal({
                             <p className="text-xs text-slate-500">{selectedShowroom.fullAddress}</p>
                             {selectedShowroom.hotline && (
                               <p className="text-xs text-[#0A2540] font-semibold mt-1">{selectedShowroom.hotline}</p>
+                            )}
+                            {selectedColor && (
+                              <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
+                                <span
+                                  className="w-3 h-3 rounded-full border border-slate-300"
+                                  style={{ backgroundColor: selectedColor.hexCode || '#ccc' }}
+                                />
+                                Màu: <strong>{selectedColor.colorName}</strong>
+                              </p>
                             )}
                           </div>
                         )}
@@ -1579,7 +1836,15 @@ function CarApiLandingPage({ carId }: { carId: number }) {
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
-  const [meta, setMeta] = useState<(CarProductMeta & { features?: any[]; pricingVersions?: PricingVersionDto[] }) | null>(null)
+  // ✅ meta giờ chứa thêm colors + imageUrl gốc để truyền xuống OrderModal
+  const [meta, setMeta] = useState<
+    (CarProductMeta & {
+      features?: any[]
+      pricingVersions?: PricingVersionDto[]
+      colors?: CarColorDto[]
+      rawImageUrl?: string
+    }) | null
+  >(null)
   const [activeSection, setActiveSection] = useState<ActiveSection>('overview')
 
   const location = useLocation()
@@ -1596,11 +1861,12 @@ function CarApiLandingPage({ carId }: { carId: number }) {
     promotionCode: ''
   })
   const [orderSelectedVersion, setOrderSelectedVersion] = useState<PricingVersionDto | null>(null)
+  // ✅ State màu đã chọn
+  const [orderSelectedColor, setOrderSelectedColor] = useState<CarColorDto | null>(null)
   const [orderDiscountPercent, setOrderDiscountPercent] = useState(0)
   const [orderDiscountAmount, setOrderDiscountAmount] = useState(0)
   const [orderPromoMessage, setOrderPromoMessage] = useState({ type: '', text: '' })
   const [orderSelectedAccessories, setOrderSelectedAccessories] = useState<Accessory[]>([])
-  // ✅ State showroom
   const [orderSelectedShowroom, setOrderSelectedShowroom] = useState<ShowroomPickerDto | null>(null)
   const [orderPayosUrl, setOrderPayosUrl] = useState('')
   const [orderCreatedCode, setOrderCreatedCode] = useState('')
@@ -1636,10 +1902,28 @@ function CarApiLandingPage({ carId }: { carId: number }) {
             return { src, alt: title || carName, title: title || null, description: description || null }
           })
           .filter((i) => i.src.length > 0)
-        const colorImages = findGalleryGroup(payload.galleryImages, 'Color')
-        const colorGallery: CarProductColorGalleryItem[] = colorImages
-          .map((img, idx) => ({ id: `color-${idx}`, label: (img.title ?? '').trim() || `Màu ${idx + 1}`, imageSrc: toAbsoluteUrl(img.imageUrl ?? '') }))
-          .filter((c) => c.imageSrc.length > 0)
+
+        // ✅ Ưu tiên dùng colors từ API trước, fallback về galleryImages "Color"
+        let colorGallery: CarProductColorGalleryItem[] = []
+        if (payload.colors && payload.colors.length > 0) {
+          colorGallery = payload.colors
+            .map((c, idx) => ({
+              id: `color-${c.carColorId ?? idx}`,
+              label: c.colorName || `Màu ${idx + 1}`,
+              imageSrc: toAbsoluteUrl(c.imageUrl || payload.imageUrl || ''),
+            }))
+            .filter((c) => c.imageSrc.length > 0)
+        } else {
+          const colorImages = findGalleryGroup(payload.galleryImages, 'Color')
+          colorGallery = colorImages
+            .map((img, idx) => ({
+              id: `color-${idx}`,
+              label: (img.title ?? '').trim() || `Màu ${idx + 1}`,
+              imageSrc: toAbsoluteUrl(img.imageUrl ?? ''),
+            }))
+            .filter((c) => c.imageSrc.length > 0)
+        }
+
         const pricingRows = (payload.pricingVersions ?? [])
           .slice().sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
           .map((v) => ({ name: v.name?.trim() || 'Phiên bản', priceText: formatVnd(v.priceVnd) }))
@@ -1652,6 +1936,9 @@ function CarApiLandingPage({ carId }: { carId: number }) {
             imageUrl: toAbsoluteUrl(f.imageUrl ?? f.icon ?? '')
           })),
           pricingVersions: payload.pricingVersions ?? [],
+          // ✅ Lưu colors gốc và rawImageUrl để dùng trong OrderModal
+          colors: payload.colors ?? [],
+          rawImageUrl: payload.imageUrl ?? '',
           content: {
             overviewIntro: payload.description ?? '', overviewHighlights: [],
             exteriorIntro: '', exteriorBullets: [],
@@ -1715,17 +2002,20 @@ function CarApiLandingPage({ carId }: { carId: number }) {
         onClose={() => setOrderOpen(false)}
         carId={carId}
         carName={meta.name}
+        carImageUrl={meta.rawImageUrl}
+        colors={meta.colors ?? []}
         pricingVersions={meta.pricingVersions ?? []}
         externalState={{
           step: orderStep, setStep: setOrderStep,
           formData: orderFormData, setFormData: setOrderFormData,
           selectedVersion: orderSelectedVersion ?? meta.pricingVersions?.[0] ?? null,
           setSelectedVersion: setOrderSelectedVersion,
+          // ✅ Truyền state màu xuống modal
+          selectedColor: orderSelectedColor, setSelectedColor: setOrderSelectedColor,
           discountPercent: orderDiscountPercent, setDiscountPercent: setOrderDiscountPercent,
           discountAmount: orderDiscountAmount, setDiscountAmount: setOrderDiscountAmount,
           promoMessage: orderPromoMessage, setPromoMessage: setOrderPromoMessage,
           selectedAccessories: orderSelectedAccessories, setSelectedAccessories: setOrderSelectedAccessories,
-          // ✅ Truyền showroom state
           selectedShowroom: orderSelectedShowroom, setSelectedShowroom: setOrderSelectedShowroom,
           payosUrl: orderPayosUrl, setPayosUrl: setOrderPayosUrl,
           createdOrderCode: orderCreatedCode, setCreatedOrderCode: setOrderCreatedCode,

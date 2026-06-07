@@ -398,25 +398,41 @@ export function CarProductLanding({ name, imageSrc, priceText, content, features
         </div>
       </section>
 
-      {/* Tính năng */}
+      {/* ─── Tính năng — GRID 7 CỘT, icon nhỏ + tên ngang hàng ──────────────── */}
       <section id="car-tinh-nang" className="scroll-mt-14 border-b border-slate-100 bg-slate-50/80">
         <div className="mx-auto max-w-screen-2xl space-y-8 px-5 py-14 sm:px-6 lg:px-8 lg:py-16">
           <SectionHeading tag="02" title="Tính năng" intro="Các tính năng tiện ích được trang bị sẵn trên phiên bản này." />
           {features && features.length > 0 ? (
-            <div className="mt-8 relative w-full">
-              <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-6 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {features.map((feature: any) => (
-                  <div key={feature.featureId} className="shrink-0 w-[140px] sm:w-[160px] snap-start flex flex-col items-center justify-start p-5 border border-slate-200 rounded-xl bg-white text-center hover:shadow-md transition hover:-translate-y-1">
-                    <div className="h-16 w-16 mb-4 flex shrink-0 items-center justify-center rounded-full bg-slate-50 border border-slate-100 p-3 shadow-sm">
-                      <img src={feature.icon?.startsWith('http') || feature.icon?.startsWith('/') ? feature.icon : `https://localhost:7033${feature.icon}`} alt={feature.featureName} className="w-full h-full object-contain" onError={(e) => { e.currentTarget.src = '/fallback-icon.png' }} />
-                    </div>
-                    <span className="text-[13px] sm:text-sm font-semibold text-slate-700 leading-snug">{feature.featureName}</span>
+            <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+              {features.map((feature: any) => {
+                const iconSrc =
+                  feature.icon?.startsWith('http') || feature.icon?.startsWith('/')
+                    ? feature.icon
+                    : `https://localhost:7033${feature.icon}`
+                return (
+                  <div
+                    key={feature.featureId}
+                    className="flex items-center gap-2.5 px-3 py-2.5 border border-slate-200 rounded-lg bg-white hover:shadow-sm hover:border-slate-300 transition"
+                    title={feature.featureName}
+                  >
+                    <img
+                      src={iconSrc}
+                      alt=""
+                      aria-hidden
+                      className="w-6 h-6 shrink-0 object-contain"
+                      onError={(e) => { e.currentTarget.src = '/fallback-icon.png' }}
+                    />
+                    <span className="text-[13px] font-medium text-slate-700 leading-tight line-clamp-2 min-w-0">
+                      {feature.featureName}
+                    </span>
                   </div>
-                ))}
-              </div>
+                )
+              })}
             </div>
           ) : (
-            <p className="text-sm text-slate-500 mt-4 rounded-lg border border-dashed border-slate-300 bg-white px-4 py-8 text-center">Chưa có thông tin về tính năng cho phiên bản này.</p>
+            <p className="text-sm text-slate-500 mt-4 rounded-lg border border-dashed border-slate-300 bg-white px-4 py-8 text-center">
+              Chưa có thông tin về tính năng cho phiên bản này.
+            </p>
           )}
         </div>
       </section>

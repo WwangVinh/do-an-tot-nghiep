@@ -8,11 +8,23 @@ namespace LogicBusiness.Services.Customer
     {
         private readonly ICarRepository _carRepo;
 
+        // Status được phép hiển thị cho khách hàng.
+        // Repo đã filter ở SQL — đây là lớp defense-in-depth phòng khi Repo bị sửa.
+        private static readonly CarStatus[] AllowedCustomerStatuses = new[]
+        {
+            CarStatus.Available,
+            CarStatus.Out_of_stock,
+            CarStatus.COMING_SOON
+        };
+
         public CarService(ICarRepository carRepo)
         {
             _carRepo = carRepo;
         }
 
+        // ==========================================================
+        // GET LIST (search/filter/paginate)
+        // ==========================================================
         public async Task<object> GetCarsAsync(
             string? search, string? brand, string? color,
             decimal? minPrice, decimal? maxPrice, CarStatus? status,
@@ -22,8 +34,7 @@ namespace LogicBusiness.Services.Customer
             string? sort, bool inStockOnly,
             int page, int pageSize)
         {
-            // LƯU Ý: Ní nên bổ sung logic lọc Status 2,3,4 bên trong CarRepository 
-            // để kết quả phân trang (TotalCount) được chính xác nhất.
+            // Repo đã handle filter Status, color, paging chuẩn → TotalCount chính xác
             var result = await _carRepo.GetCustomerCarsAsync(
                 search, brand, color,
                 minPrice, maxPrice, status,
@@ -33,91 +44,34 @@ namespace LogicBusiness.Services.Customer
                 sort, inStockOnly,
                 page, pageSize);
 
-            // Chỉ lấy những xe có Status là Available (2), Out_of_stock (3), COMING_SOON (4)
-            var allowedStatuses = new[] { CarStatus.Available, CarStatus.Out_of_stock, CarStatus.COMING_SOON };
-
+            // Defense-in-depth: lọc lại 1 lần nữa ở Service phòng Repo bug
             var cleanCars = result.Cars
-                .Where(c => allowedStatuses.Contains(c.Status ?? (CarStatus)(-1)))
-                .Select(c => {
+                .Where(c => c.Status.HasValue && AllowedCustomerStatuses.Contains(c.Status.Value))
+                .Select(MapToCustomerListDto);
 
-                    int totalQty = c.CarInventories != null ? c.CarInventories.Sum(i => i.Quantity) : 0;
-                    string displayLocation = "";
-                    string statusStr = c.Status?.ToString() ?? "";
-
-                    // Logic hiển thị vị trí dựa trên trạng thái
-                    if (statusStr == "COMING_SOON")
-                    {
-                        displayLocation = "Sắp về";
-                    }
-                    else if (statusStr == "Out_of_stock" || totalQty == 0)
-                    {
-                        displayLocation = "Hết hàng";
-                    }
-                    else if (c.CarInventories != null)
-                    {
-                        var activeLocations = c.CarInventories
-                            .Where(inv => inv.Quantity > 0 && inv.Showroom != null && !string.IsNullOrWhiteSpace(inv.Showroom.Province))
-                            .Select(inv => inv.Showroom.Province)
-                            .Distinct()
-                            .ToList();
-
-                        if (activeLocations.Any())
-                        {
-                            displayLocation = string.Join(", ", activeLocations.Take(2));
-                            if (activeLocations.Count > 2) displayLocation += ", ...";
-                        }
-                        else
-                        {
-                            displayLocation = "Đang cập nhật vị trí";
-                        }
-                    }
-
-                    return new
-                    {
-                        c.CarId,
-                        c.Name,
-                        c.Brand,
-                        c.Year,
-                        Condition = c.Condition.ToString(),
-                        c.Price,
-                        Colors = c.CarColors?.Select(cc => new {
-                            cc.CarColorId,
-                            cc.ColorName,
-                            cc.HexCode,
-                            cc.ImageUrl
-                        }).ToList(),
-                        c.ImageUrl,
-                        Status = statusStr,
-                        c.Mileage,
-                        c.FuelType,
-                        c.Transmission,
-                        c.BodyStyle,
-                        TotalQuantity = totalQty,
-                        Showrooms = displayLocation
-                    };
-                });
+            int safePageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
 
             return new
             {
                 TotalItems = result.TotalCount,
                 CurrentPage = page <= 0 ? 1 : page,
-                PageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100),
-                // Lưu ý: Nếu ní lọc ở đây thì TotalPages có thể bị lệch nhẹ nếu trong Repo ní chưa lọc.
-                TotalPages = (int)Math.Ceiling(result.TotalCount / (double)(pageSize <= 0 ? 10 : Math.Min(pageSize, 100))),
+                PageSize = safePageSize,
+                TotalPages = (int)Math.Ceiling(result.TotalCount / (double)safePageSize),
                 Data = cleanCars
             };
         }
 
-        // XEM CHI TIẾT
+        // ==========================================================
+        // GET DETAIL
+        // ==========================================================
         public async Task<object?> GetCarDetailAsync(int id)
         {
             var car = await _carRepo.GetCarDetailForCustomerAsync(id);
 
-            // CHẶN CỨNG: Nếu không thấy xe HOẶC xe có Status không được phép (0, 1, 5) -> Trả về null
-            if (car == null ||
-                (car.Status != CarStatus.Available &&
-                 car.Status != CarStatus.Out_of_stock &&
-                 car.Status != CarStatus.COMING_SOON))
+            // Repo đã filter sẵn nhưng vẫn check defensive
+            if (car == null
+                || !car.Status.HasValue
+                || !AllowedCustomerStatuses.Contains(car.Status.Value))
             {
                 return null;
             }
@@ -130,31 +84,43 @@ namespace LogicBusiness.Services.Customer
                 car.Model,
                 car.Year,
                 car.Price,
-                Colors = car.CarColors?.Select(cc => new {
-                    cc.CarColorId,
-                    cc.ColorName,
-                    cc.HexCode,
-                    cc.ImageUrl
-                }).ToList(),
+
+                // Chỉ trả màu đang active, fallback ảnh màu → ảnh chính nếu null
+                Colors = car.CarColors?
+                    .Where(cc => cc.IsActive)
+                    .Select(cc => new
+                    {
+                        cc.CarColorId,
+                        cc.ColorName,
+                        cc.HexCode,
+                        ImageUrl = string.IsNullOrWhiteSpace(cc.ImageUrl) ? car.ImageUrl : cc.ImageUrl
+                    }).ToList(),
+
                 car.Mileage,
                 car.FuelType,
                 car.Transmission,
                 car.BodyStyle,
-                TotalQuantity = car.CarInventories != null ? car.CarInventories.Sum(i => i.Quantity) : 0,
+                TotalQuantity = car.CarInventories?.Sum(i => i.Quantity) ?? 0,
 
+                // Trả thêm CarColorId/ColorName cho mỗi lô hàng để FE hiện
+                // "Đỏ — 3 chiếc tại Hà Nội", "Đen — 1 chiếc tại HCM"
                 ShowroomDetails = car.CarInventories?
                     .Where(inv => inv.Quantity > 0)
-                    .Select(inv => new {
-                        ShowroomId = inv.ShowroomId, // Thêm ID để Frontend gửi Booking chuẩn
+                    .Select(inv => new
+                    {
+                        ShowroomId = inv.ShowroomId,
                         ShowroomName = inv.Showroom?.Name,
                         ShowroomAddress = inv.Showroom?.FullAddress,
-                        Quantity = inv.Quantity
+                        Quantity = inv.Quantity,
+                        CarColorId = inv.CarColorId,
+                        ColorName = inv.CarColor?.ColorName,
+                        HexCode = inv.CarColor?.HexCode
                     }).ToList(),
 
                 car.Description,
                 car.ImageUrl,
                 Condition = car.Condition.ToString(),
-                Status = car.Status.ToString(),
+                Status = car.Status?.ToString() ?? "",
 
                 PricingVersions = (car.CarPricingVersions ?? new List<CarPricingVersion>())
                     .Where(v => v.IsActive)
@@ -169,13 +135,15 @@ namespace LogicBusiness.Services.Customer
 
                 Specifications = car.CarSpecifications
                     .GroupBy(s => s.Category)
-                    .Select(group => new {
+                    .Select(group => new
+                    {
                         Category = group.Key,
                         Items = group.Select(i => new { i.SpecName, i.SpecValue }).ToList()
                     }).ToList(),
 
                 Features = car.CarFeatures
-                    .Select(cf => new {
+                    .Select(cf => new
+                    {
                         cf.FeatureId,
                         FeatureName = cf.Feature?.FeatureName,
                         Icon = cf.Feature?.Icon
@@ -184,7 +152,8 @@ namespace LogicBusiness.Services.Customer
                 GalleryImages = car.CarImages
                     .Where(img => img.Is360Degree == false)
                     .GroupBy(img => img.ImageType)
-                    .Select(group => new {
+                    .Select(group => new
+                    {
                         Category = group.Key,
                         Images = group.Select(i => new { i.Title, i.Description, i.ImageUrl }).ToList()
                     }).ToList(),
@@ -196,96 +165,120 @@ namespace LogicBusiness.Services.Customer
             };
         }
 
+        // ==========================================================
+        // GET LATEST
+        // ==========================================================
         public async Task<IEnumerable<object>> GetLatestCarsAsync(int limit)
         {
             var cars = await _carRepo.GetLatestCustomerCarsAsync(limit);
-            var allowedStatuses = new[] { CarStatus.Available, CarStatus.Out_of_stock, CarStatus.COMING_SOON };
-
             return cars
-                .Where(c => allowedStatuses.Contains(c.Status ?? (CarStatus)(-1)))
-                .Select(c =>
-                {
-                    int totalQty = c.CarInventories != null ? c.CarInventories.Sum(i => i.Quantity) : 0;
-                    string displayLocation = "";
-                    string statusStr = c.Status?.ToString() ?? "";
-
-                    if (statusStr == "COMING_SOON") displayLocation = "Sắp về";
-                    else if (statusStr == "Out_of_stock" || totalQty == 0) displayLocation = "Hết hàng";
-                    else if (c.CarInventories != null)
-                    {
-                        var provinces = c.CarInventories
-                            .Where(inv => inv.Quantity > 0 && inv.Showroom != null)
-                            .Select(inv => inv.Showroom.Province)
-                            .Distinct().ToList();
-                        displayLocation = string.Join(", ", provinces.Take(2));
-                        if (provinces.Count > 2) displayLocation += ", ...";
-                    }
-
-                    return new
-                    {
-                        c.CarId,
-                        c.Name,
-                        c.Brand,
-                        c.Year,
-                        Condition = c.Condition.ToString(),
-                        c.Price,
-                        c.ImageUrl,
-                        Status = statusStr,
-                        c.Mileage,
-                        c.FuelType,
-                        c.Transmission,
-                        c.BodyStyle,
-                        TotalQuantity = totalQty,
-                        Showrooms = displayLocation,
-                        c.CreatedAt
-                    };
-                });
+                .Where(c => c.Status.HasValue && AllowedCustomerStatuses.Contains(c.Status.Value))
+                .Select(MapToCustomerListDtoWithCreatedAt);
         }
 
+        // ==========================================================
+        // GET BEST SELLING
+        // ==========================================================
         public async Task<IEnumerable<object>> GetBestSellingCarsAsync(int limit)
         {
             var cars = await _carRepo.GetBestSellingCustomerCarsAsync(limit);
-            var allowedStatuses = new[] { CarStatus.Available, CarStatus.Out_of_stock, CarStatus.COMING_SOON };
-
             return cars
-                .Where(c => allowedStatuses.Contains(c.Status ?? (CarStatus)(-1)))
-                .Select(c =>
-                {
-                    int totalQty = c.CarInventories != null ? c.CarInventories.Sum(i => i.Quantity) : 0;
-                    string displayLocation = "";
-                    string statusStr = c.Status?.ToString() ?? "";
+                .Where(c => c.Status.HasValue && AllowedCustomerStatuses.Contains(c.Status.Value))
+                .Select(MapToCustomerListDtoWithCreatedAt);
+        }
 
-                    if (statusStr == "COMING_SOON") displayLocation = "Sắp về";
-                    else if (statusStr == "Out_of_stock" || totalQty == 0) displayLocation = "Hết hàng";
-                    else if (c.CarInventories != null)
-                    {
-                        var provinces = c.CarInventories
-                            .Where(inv => inv.Quantity > 0 && inv.Showroom != null)
-                            .Select(inv => inv.Showroom.Province)
-                            .Distinct().ToList();
-                        displayLocation = string.Join(", ", provinces.Take(2));
-                        if (provinces.Count > 2) displayLocation += ", ...";
-                    }
+        // ==========================================================
+        // PRIVATE HELPERS
+        // ==========================================================
 
-                    return new
+        /// <summary>
+        /// Build chuỗi hiển thị vị trí (Sắp về / Hết hàng / Hà Nội, HCM, ...).
+        /// </summary>
+        private static string BuildDisplayLocation(Car c, int totalQty)
+        {
+            if (c.Status == CarStatus.COMING_SOON) return "Sắp về";
+            if (c.Status == CarStatus.Out_of_stock || totalQty == 0) return "Hết hàng";
+
+            if (c.CarInventories == null) return "Đang cập nhật vị trí";
+
+            var activeLocations = c.CarInventories
+                .Where(inv => inv.Quantity > 0
+                              && inv.Showroom != null
+                              && !string.IsNullOrWhiteSpace(inv.Showroom.Province))
+                .Select(inv => inv.Showroom.Province)
+                .Distinct()
+                .ToList();
+
+            if (!activeLocations.Any()) return "Đang cập nhật vị trí";
+
+            string result = string.Join(", ", activeLocations.Take(2));
+            if (activeLocations.Count > 2) result += ", ...";
+            return result;
+        }
+
+        /// <summary>Map cho list view chính (search/filter) — không có CreatedAt.</summary>
+        private static object MapToCustomerListDto(Car c)
+        {
+            int totalQty = c.CarInventories?.Sum(i => i.Quantity) ?? 0;
+            return new
+            {
+                c.CarId,
+                c.Name,
+                c.Brand,
+                c.Year,
+                Condition = c.Condition.ToString(),
+                c.Price,
+                Colors = c.CarColors?
+                    .Where(cc => cc.IsActive)
+                    .Select(cc => new
                     {
-                        c.CarId,
-                        c.Name,
-                        c.Brand,
-                        c.Year,
-                        Condition = c.Condition.ToString(),
-                        c.Price,
-                        c.ImageUrl,
-                        Status = statusStr,
-                        c.Mileage,
-                        c.FuelType,
-                        c.Transmission,
-                        c.BodyStyle,
-                        TotalQuantity = totalQty,
-                        Showrooms = displayLocation,
-                        c.CreatedAt
-                    };
-                });
+                        cc.CarColorId,
+                        cc.ColorName,
+                        cc.HexCode,
+                        ImageUrl = string.IsNullOrWhiteSpace(cc.ImageUrl) ? c.ImageUrl : cc.ImageUrl
+                    }).ToList(),
+                c.ImageUrl,
+                Status = c.Status?.ToString() ?? "",
+                c.Mileage,
+                c.FuelType,
+                c.Transmission,
+                c.BodyStyle,
+                TotalQuantity = totalQty,
+                Showrooms = BuildDisplayLocation(c, totalQty)
+            };
+        }
+
+        /// <summary>Map cho Latest/BestSelling — có thêm CreatedAt.</summary>
+        private static object MapToCustomerListDtoWithCreatedAt(Car c)
+        {
+            int totalQty = c.CarInventories?.Sum(i => i.Quantity) ?? 0;
+            return new
+            {
+                c.CarId,
+                c.Name,
+                c.Brand,
+                c.Year,
+                Condition = c.Condition.ToString(),
+                c.Price,
+                Colors = c.CarColors?
+                    .Where(cc => cc.IsActive)
+                    .Select(cc => new
+                    {
+                        cc.CarColorId,
+                        cc.ColorName,
+                        cc.HexCode,
+                        ImageUrl = string.IsNullOrWhiteSpace(cc.ImageUrl) ? c.ImageUrl : cc.ImageUrl
+                    }).ToList(),
+                c.ImageUrl,
+                Status = c.Status?.ToString() ?? "",
+                c.Mileage,
+                c.FuelType,
+                c.Transmission,
+                c.BodyStyle,
+                TotalQuantity = totalQty,
+                Showrooms = BuildDisplayLocation(c, totalQty),
+                c.CreatedAt
+            };
         }
     }
 }

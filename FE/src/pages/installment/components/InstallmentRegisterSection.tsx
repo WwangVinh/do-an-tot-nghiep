@@ -16,17 +16,28 @@ const featurePills = [
   { Icon: ShieldCheck, label: 'Duyệt hồ sơ nhanh', highlight: false },
 ] as const
 
+const LOAN_TERM_OPTIONS = [
+  { value: 12, label: '12 tháng (1 năm)' },
+  { value: 24, label: '24 tháng (2 năm)' },
+  { value: 36, label: '36 tháng (3 năm)' },
+  { value: 48, label: '48 tháng (4 năm)' },
+  { value: 60, label: '60 tháng (5 năm)' },
+  { value: 72, label: '72 tháng (6 năm)' },
+  { value: 84, label: '84 tháng (7 năm)' },
+  { value: 96, label: '96 tháng (8 năm)' },
+] as const
+
 const inputClassName =
   `h-[52px] w-full rounded-xl border border-slate-200 bg-white px-4 text-[15px] text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] placeholder:text-slate-400 outline-none transition ` +
   `hover:border-slate-300 focus:border-[#243A5E] focus:ring-2 focus:ring-[#243A5E]/20`
 
 type CarOption = { id: string; label: string; image?: string; price?: string }
 
-type CustomerCarListDto = { 
-  carId: number; 
-  name: string;
-  imageUrl?: string;
-  price?: number | string;
+type CustomerCarListDto = {
+  carId: number
+  name: string
+  imageUrl?: string
+  price?: number | string
 }
 type PagedCarsResponse = { data: CustomerCarListDto[] }
 
@@ -37,17 +48,34 @@ type ShowroomDto = {
   fullAddress?: string
 }
 
-// Cập nhật payload theo mẫu từ QuoteRegisterCard
-type BookingCreatePayload = {
+// ✨ Type cho phiên bản và màu xe
+type PricingVersionDto = {
+  pricingVersionId: number
+  versionName: string
+  priceVnd: number
+  isActive?: boolean
+}
+
+type CarColorDto = {
+  carColorId: number
+  colorName: string
+  hexCode?: string
+  imageUrl?: string
+  isActive?: boolean
+}
+
+type ConsultRequestCreatePayload = {
   carId: number
   showroomId: number
   customerName: string
   phone: string
-  bookingDate: string
-  bookingTime?: string
-  timeSpan?: string
-  note?: string
-  userId?: number
+  requestType: 'Installment'
+  customerNote?: string
+  monthlyIncome: number
+  downPayment: number
+  loanTermMonths: number
+  carPricingVersionId?: number
+  carColorId?: number
 }
 
 const carsApi = axios.create({
@@ -55,7 +83,7 @@ const carsApi = axios.create({
   timeout: 20_000,
 })
 
-const bookingsApi = axios.create({
+const consultApi = axios.create({
   baseURL: new URL('/api/', env.VITE_API_BASE_URL).toString(),
   timeout: 20_000,
 })
@@ -65,22 +93,22 @@ async function getCarOptions(): Promise<CarOption[]> {
     params: { page: 1, pageSize: 200, inStockOnly: false },
   })
   const list = Array.isArray(res.data?.data) ? res.data.data : []
-  
+
   return list
     .map((c) => {
-      const fullImageUrl = c.imageUrl 
-        ? new URL(c.imageUrl, env.VITE_API_BASE_URL).toString() 
-        : undefined;
+      const fullImageUrl = c.imageUrl
+        ? new URL(c.imageUrl, env.VITE_API_BASE_URL).toString()
+        : undefined
 
-      const formattedPrice = typeof c.price === 'number' 
-        ? new Intl.NumberFormat('vi-VN').format(c.price) 
-        : c.price;
+      const formattedPrice = typeof c.price === 'number'
+        ? new Intl.NumberFormat('vi-VN').format(c.price)
+        : c.price
 
-      return { 
-        id: String(c.carId), 
+      return {
+        id: String(c.carId),
         label: c.name,
         image: fullImageUrl,
-        price: formattedPrice ? String(formattedPrice) : undefined
+        price: formattedPrice ? String(formattedPrice) : undefined,
       }
     })
     .filter((c) => c.label.trim().length > 0)
@@ -90,7 +118,7 @@ async function getCarDetails(carId: string) {
   const res = await carsApi.get(`Cars/${carId}`)
   const data = res.data?.data
   return {
-    imageUrl: data?.imageUrl ? new URL(data.imageUrl, env.VITE_API_BASE_URL).toString() : null
+    imageUrl: data?.imageUrl ? new URL(data.imageUrl, env.VITE_API_BASE_URL).toString() : null,
   }
 }
 
@@ -118,8 +146,71 @@ async function getCarShowrooms(carId: string): Promise<ShowroomDto[]> {
   } catch { return [] }
 }
 
+// ✨ Lấy phiên bản từ /Cars/{id} (BE đã trả pricingVersions trong response)
+async function getCarPricingVersions(carId: string): Promise<PricingVersionDto[]> {
+  try {
+    const res = await carsApi.get(`Cars/${carId}`)
+    const data = res.data?.data ?? res.data
+    const versions =
+      data?.pricingVersions ??
+      data?.PricingVersions ??
+      data?.carPricingVersions ??
+      data?.CarPricingVersions ??
+      []
+    if (Array.isArray(versions)) {
+      return versions
+        .filter((v: any) => v && (v.isActive === undefined || v.isActive === true))
+        .map((v: any) => ({
+          pricingVersionId: v.pricingVersionId ?? v.PricingVersionId,
+          versionName: v.versionName ?? v.VersionName ?? '',
+          priceVnd: v.priceVnd ?? v.PriceVnd ?? 0,
+          isActive: v.isActive ?? v.IsActive ?? true,
+        }))
+        .sort((a, b) => a.priceVnd - b.priceVnd)
+    }
+  } catch { /* silent */ }
+  return []
+}
+
+// ✨ Lấy danh sách màu từ /Cars/{id}
+async function getCarColors(carId: string): Promise<CarColorDto[]> {
+  try {
+    const res = await carsApi.get(`Cars/${carId}`)
+    const data = res.data?.data ?? res.data
+    const colors =
+      data?.colors ??
+      data?.Colors ??
+      data?.carColors ??
+      data?.CarColors ??
+      []
+    if (Array.isArray(colors)) {
+      return colors
+        .filter((c: any) => c && (c.isActive === undefined || c.isActive === true))
+        .map((c: any) => ({
+          carColorId: c.carColorId ?? c.CarColorId,
+          colorName: c.colorName ?? c.ColorName ?? '',
+          hexCode: c.hexCode ?? c.HexCode,
+          imageUrl: c.imageUrl ?? c.ImageUrl,
+          isActive: c.isActive ?? c.IsActive ?? true,
+        }))
+    }
+  } catch { /* silent */ }
+  return []
+}
+
 function getShowroomName(s: ShowroomDto): string {
   return s.name ?? s.showroomName ?? `Showroom #${s.showroomId}`
+}
+
+function parseMoney(input: string): number {
+  const digits = input.replace(/[^\d]/g, '')
+  return digits ? Number(digits) : 0
+}
+
+function formatMoney(value: number | string): string {
+  const num = typeof value === 'number' ? value : parseMoney(value)
+  if (!num) return ''
+  return new Intl.NumberFormat('vi-VN').format(num)
 }
 
 export function InstallmentRegisterSection() {
@@ -127,6 +218,11 @@ export function InstallmentRegisterSection() {
   const phoneId = useId()
   const carSelectId = useId()
   const showroomSelectId = useId()
+  const versionId = useId()
+  const colorId = useId()
+  const incomeId = useId()
+  const downPaymentId = useId()
+  const loanTermId = useId()
 
   const { data: carOptionsApi = [], isLoading: isCarsLoading } = useQuery({
     queryKey: ['cars', 'select-options', 'installment'],
@@ -170,7 +266,7 @@ export function InstallmentRegisterSection() {
   const carImageUrl = useMemo(() => {
     if (carDetails?.imageUrl) return carDetails.imageUrl
     if (selectedCar?.image) return selectedCar.image
-    return '/default-car.jpg' 
+    return '/default-car.jpg'
   }, [carDetails, selectedCar])
 
   const rootShowroomRef = useRef<HTMLDivElement | null>(null)
@@ -184,10 +280,44 @@ export function InstallmentRegisterSection() {
     staleTime: 5 * 60_000,
   })
 
+  // ✨ Query phiên bản & màu xe theo xe đã chọn
+  const { data: pricingVersions = [], isFetching: isVersionsLoading } = useQuery({
+    queryKey: ['car-pricing-versions', selectedCar?.id],
+    queryFn: () => getCarPricingVersions(selectedCar!.id),
+    enabled: !!selectedCar?.id,
+    staleTime: 5 * 60_000,
+  })
+
+  const { data: carColors = [], isFetching: isColorsLoading } = useQuery({
+    queryKey: ['car-colors', selectedCar?.id],
+    queryFn: () => getCarColors(selectedCar!.id),
+    enabled: !!selectedCar?.id,
+    staleTime: 5 * 60_000,
+  })
+
+  const [selectedVersionId, setSelectedVersionId] = useState<number | ''>('')
+  const [selectedColorId, setSelectedColorId] = useState<number | ''>('')
+
+  // Reset khi đổi xe
   useEffect(() => {
     setSelectedShowroomId('')
     setShowroomOpen(false)
+    setSelectedVersionId('')
+    setSelectedColorId('')
   }, [selectedCar?.id])
+
+  // Auto-select phiên bản rẻ nhất + màu đầu khi xe vừa load xong
+  useEffect(() => {
+    if (pricingVersions.length > 0 && !selectedVersionId) {
+      setSelectedVersionId(pricingVersions[0].pricingVersionId)
+    }
+  }, [pricingVersions, selectedVersionId])
+
+  useEffect(() => {
+    if (carColors.length > 0 && !selectedColorId) {
+      setSelectedColorId(carColors[0].carColorId)
+    }
+  }, [carColors, selectedColorId])
 
   useEffect(() => {
     function onPointerDown(e: MouseEvent) {
@@ -198,12 +328,26 @@ export function InstallmentRegisterSection() {
     return () => document.removeEventListener('mousedown', onPointerDown)
   }, [])
 
+  const [monthlyIncomeInput, setMonthlyIncomeInput] = useState('')
+  const [downPaymentInput, setDownPaymentInput] = useState('')
+  const [loanTermMonths, setLoanTermMonths] = useState<number | ''>('')
+
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [touched, setTouched] = useState(false)
 
   const selectedShowroomName = useMemo(
     () => showrooms.find((s) => String(s.showroomId) === selectedShowroomId),
     [showrooms, selectedShowroomId],
+  )
+
+  const selectedVersion = useMemo(
+    () => pricingVersions.find((v) => v.pricingVersionId === selectedVersionId),
+    [pricingVersions, selectedVersionId],
+  )
+
+  const selectedColor = useMemo(
+    () => carColors.find((c) => c.carColorId === selectedColorId),
+    [carColors, selectedColorId],
   )
 
   return (
@@ -290,10 +434,23 @@ export function InstallmentRegisterSection() {
                   </div>
                   <div className="text-center sm:text-left">
                     <h3 className="text-lg font-bold text-[#243A5E]">{selectedCar.label}</h3>
-                    {selectedCar.price && (
-                      <p className="mt-1 text-sm font-semibold text-[#8B1D1D]">Giá từ: {selectedCar.price} ₫</p>
+                    {selectedVersion && (
+                      <p className="mt-1 text-sm font-semibold text-[#8B1D1D]">
+                        Bản {selectedVersion.versionName}: {formatMoney(selectedVersion.priceVnd)} ₫
+                      </p>
                     )}
-                    <p className="mt-1 text-xs text-slate-400">Hình ảnh được đồng bộ từ kho dữ liệu chi tiết xe.</p>
+                    {selectedColor && (
+                      <p className="mt-1 flex items-center justify-center gap-1.5 text-xs text-slate-600 sm:justify-start">
+                        Màu:
+                        {selectedColor.hexCode && (
+                          <span
+                            className="inline-block h-3.5 w-3.5 rounded-full border border-slate-300"
+                            style={{ backgroundColor: selectedColor.hexCode }}
+                          />
+                        )}
+                        <span className="font-medium">{selectedColor.colorName}</span>
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -340,7 +497,7 @@ export function InstallmentRegisterSection() {
                   Đăng ký mua trả góp
                 </h2>
                 <p className="mx-auto mt-3 text-center text-sm leading-relaxed text-slate-500">
-                  Điền thông tin — chúng tôi gọi lại tư vấn trong thời gian sớm nhất.
+                  Điền thông tin — chúng tôi gọi lại tư vấn gói vay phù hợp trong thời gian sớm nhất.
                 </p>
 
                 <form
@@ -367,46 +524,68 @@ export function InstallmentRegisterSection() {
                       return
                     }
 
+                    const monthlyIncome = parseMoney(monthlyIncomeInput)
+                    const downPayment = parseMoney(downPaymentInput)
+
+                    if (!monthlyIncome || monthlyIncome <= 0) {
+                      toast.error('Vui lòng nhập thu nhập hàng tháng để tư vấn gói vay phù hợp.')
+                      return
+                    }
+                    if (downPayment < 0) {
+                      toast.error('Số tiền trả trước không hợp lệ.')
+                      return
+                    }
+                    if (!loanTermMonths || loanTermMonths <= 0) {
+                      toast.error('Vui lòng chọn kỳ hạn vay mong muốn.')
+                      return
+                    }
+
                     const form = e.currentTarget
                     const fd = new FormData(form)
                     const customerName = String(fd.get('fullName') ?? '').trim()
                     const rawPhone = String(fd.get('phone') ?? '').trim()
-                    
-                    // Xử lý Date & Time giống hệt QuoteRegisterCard
-                    const now = new Date()
-                    const bookingDate = now.toISOString().split('T')[0]
-                    const bookingTime = now.toTimeString().slice(0, 5)
 
-                    // Normalize số điện thoại: convert +84 -> 0
                     const normalizedPhone = rawPhone.startsWith('+84')
                       ? '0' + rawPhone.slice(3)
                       : rawPhone
 
                     const showroomNameStr = selectedShowroomName ? getShowroomName(selectedShowroomName) : ''
 
-                    const payload: BookingCreatePayload = {
+                    // Build note có thêm thông tin phiên bản + màu để Sales tiện theo dõi
+                    const noteParts = [`Quan tâm xe ${selectedCar.label}`]
+                    if (selectedVersion) noteParts.push(`bản ${selectedVersion.versionName}`)
+                    if (selectedColor) noteParts.push(`màu ${selectedColor.colorName}`)
+                    noteParts.push(`tại ${showroomNameStr}`)
+
+                    const payload: ConsultRequestCreatePayload = {
                       carId: numericCarId,
                       showroomId: Number(selectedShowroomId),
                       customerName,
                       phone: normalizedPhone,
-                      bookingDate,
-                      bookingTime,
-                      timeSpan: '30 phút',
-                      note: `Tư vấn mua trả góp - ${selectedCar.label} - ${showroomNameStr}`,
-                      userId: 0, // Bổ sung userId giống trang báo giá
+                      requestType: 'Installment',
+                      customerNote: noteParts.join(' - '),
+                      monthlyIncome,
+                      downPayment,
+                      loanTermMonths: Number(loanTermMonths),
+                      carPricingVersionId: selectedVersionId || undefined,
+                      carColorId: selectedColorId || undefined,
                     }
 
                     try {
                       setIsSubmitting(true)
-                      // Chuyển sang endpoint /create chuẩn
-                      await bookingsApi.post('Bookings/create', payload)
-                      toast.success('Đã gửi yêu cầu. Chúng tôi sẽ liên hệ sớm.')
+                      await consultApi.post('consult-requests', payload)
+                      toast.success('Đã gửi yêu cầu mua trả góp! Nhân viên sẽ liên hệ tư vấn gói vay sớm.')
                       form.reset()
                       setSelectedCar(null)
                       setCarQuery('')
                       setCarTouched(false)
                       setTouched(false)
                       setSelectedShowroomId('')
+                      setSelectedVersionId('')
+                      setSelectedColorId('')
+                      setMonthlyIncomeInput('')
+                      setDownPaymentInput('')
+                      setLoanTermMonths('')
                     } catch (err) {
                       if (axios.isAxiosError(err)) {
                         const message =
@@ -435,7 +614,7 @@ export function InstallmentRegisterSection() {
                     />
                   </div>
 
-                  {/* SĐT - Cập nhật regex và placeholder */}
+                  {/* SĐT */}
                   <div>
                     <label htmlFor={phoneId} className="sr-only">Số điện thoại</label>
                     <input
@@ -515,11 +694,10 @@ export function InstallmentRegisterSection() {
                                   isSelected ? 'bg-slate-100 text-slate-900' : 'text-slate-700 hover:bg-slate-50',
                                 ].join(' ')}
                               >
-                                {/* Thumbnail xe */}
                                 <div className="h-10 w-14 shrink-0 overflow-hidden rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center">
-                                  <img 
-                                    src={c.image || '/default-car.jpg'} 
-                                    alt={c.label} 
+                                  <img
+                                    src={c.image || '/default-car.jpg'}
+                                    alt={c.label}
                                     className="h-full w-full object-contain p-0.5 mix-blend-multiply"
                                     onError={(e) => {
                                       e.currentTarget.src = '/default-car.jpg'
@@ -527,7 +705,6 @@ export function InstallmentRegisterSection() {
                                   />
                                 </div>
 
-                                {/* Info xe */}
                                 <div className="flex flex-1 flex-col ml-3">
                                   <span className={`font-semibold ${isSelected ? 'text-[#243A5E]' : 'text-slate-800'}`}>
                                     {c.label}
@@ -535,7 +712,6 @@ export function InstallmentRegisterSection() {
                                   {c.price && <span className="text-[12px] text-slate-500">Từ {c.price} ₫</span>}
                                 </div>
 
-                                {/* Icon checkmark khi chọn */}
                                 {isSelected && (
                                   <svg className="h-5 w-5 shrink-0 text-[#8B1D1D]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -548,6 +724,76 @@ export function InstallmentRegisterSection() {
                       </div>
                     )}
                   </div>
+
+                  {/* ✨ Chọn phiên bản — hiện sau khi chọn xe */}
+                  {selectedCar && (
+                    <div className="relative">
+                      <label htmlFor={versionId} className="sr-only">Phiên bản</label>
+                      <select
+                        id={versionId}
+                        value={selectedVersionId}
+                        onChange={(e) => setSelectedVersionId(e.target.value ? Number(e.target.value) : '')}
+                        disabled={isVersionsLoading}
+                        className={[
+                          inputClassName,
+                          'appearance-none pr-11 cursor-pointer',
+                          !selectedVersionId ? 'text-slate-400' : 'text-slate-900',
+                          isVersionsLoading ? 'cursor-not-allowed opacity-60' : '',
+                        ].join(' ')}
+                      >
+                        <option value="">
+                          {isVersionsLoading
+                            ? 'Đang tải phiên bản...'
+                            : pricingVersions.length === 0
+                            ? 'Chưa có phiên bản'
+                            : 'Chọn phiên bản'}
+                        </option>
+                        {pricingVersions.map((v) => (
+                          <option key={v.pricingVersionId} value={v.pricingVersionId}>
+                            {v.versionName} — {formatMoney(v.priceVnd)} ₫
+                          </option>
+                        ))}
+                      </select>
+                      <svg className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+                        <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                  )}
+
+                  {/* ✨ Chọn màu — hiện sau khi chọn xe */}
+                  {selectedCar && (
+                    <div className="relative">
+                      <label htmlFor={colorId} className="sr-only">Màu xe</label>
+                      <select
+                        id={colorId}
+                        value={selectedColorId}
+                        onChange={(e) => setSelectedColorId(e.target.value ? Number(e.target.value) : '')}
+                        disabled={isColorsLoading}
+                        className={[
+                          inputClassName,
+                          'appearance-none pr-11 cursor-pointer',
+                          !selectedColorId ? 'text-slate-400' : 'text-slate-900',
+                          isColorsLoading ? 'cursor-not-allowed opacity-60' : '',
+                        ].join(' ')}
+                      >
+                        <option value="">
+                          {isColorsLoading
+                            ? 'Đang tải màu xe...'
+                            : carColors.length === 0
+                            ? 'Chưa có màu'
+                            : 'Chọn màu xe'}
+                        </option>
+                        {carColors.map((c) => (
+                          <option key={c.carColorId} value={c.carColorId}>
+                            {c.colorName}
+                          </option>
+                        ))}
+                      </select>
+                      <svg className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+                        <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                  )}
 
                   {/* Chọn showroom — hiện sau khi chọn xe */}
                   {selectedCar && (
@@ -617,7 +863,82 @@ export function InstallmentRegisterSection() {
                     </div>
                   )}
 
-                  {/* Submit */}
+                  {/* Thông tin tài chính */}
+                  <div className="pt-2">
+                    <div className="mb-3 flex items-center gap-2 px-1">
+                      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-300 to-transparent" aria-hidden />
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                        Thông tin tài chính
+                      </span>
+                      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-300 to-transparent" aria-hidden />
+                    </div>
+
+                    <div className="relative">
+                      <label htmlFor={incomeId} className="sr-only">Thu nhập hàng tháng</label>
+                      <input
+                        id={incomeId}
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="Thu nhập hàng tháng (VND)"
+                        value={monthlyIncomeInput}
+                        onChange={(e) => {
+                          const num = parseMoney(e.target.value)
+                          setMonthlyIncomeInput(num ? formatMoney(num) : '')
+                        }}
+                        className={[
+                          inputClassName,
+                          'pr-14',
+                          touched && !parseMoney(monthlyIncomeInput) ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-400/20' : '',
+                        ].join(' ')}
+                      />
+                      <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">₫</span>
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    <label htmlFor={downPaymentId} className="sr-only">Số tiền trả trước</label>
+                    <input
+                      id={downPaymentId}
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="Số tiền trả trước dự kiến (VND)"
+                      value={downPaymentInput}
+                      onChange={(e) => {
+                        const num = parseMoney(e.target.value)
+                        setDownPaymentInput(num ? formatMoney(num) : '')
+                      }}
+                      className={[
+                        inputClassName,
+                        'pr-14',
+                        touched && parseMoney(downPaymentInput) <= 0 ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-400/20' : '',
+                      ].join(' ')}
+                    />
+                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">₫</span>
+                  </div>
+
+                  <div className="relative">
+                    <label htmlFor={loanTermId} className="sr-only">Kỳ hạn vay</label>
+                    <select
+                      id={loanTermId}
+                      value={loanTermMonths}
+                      onChange={(e) => setLoanTermMonths(e.target.value ? Number(e.target.value) : '')}
+                      className={[
+                        inputClassName,
+                        'appearance-none pr-11 cursor-pointer',
+                        !loanTermMonths ? 'text-slate-400' : 'text-slate-900',
+                        touched && !loanTermMonths ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-400/20' : '',
+                      ].join(' ')}
+                    >
+                      <option value="">Chọn kỳ hạn vay mong muốn</option>
+                      {LOAN_TERM_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                    <svg className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+
                   <button
                     type="submit"
                     disabled={isSubmitting}

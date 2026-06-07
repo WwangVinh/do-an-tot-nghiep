@@ -14,6 +14,13 @@ export type QuoteRegisterCardValues = {
   phone: string
   carId: string
   carName: string
+  showroomId: string
+  carPricingVersionId: string
+  carColorId: string
+  customerNote: string
+  monthlyIncome: number
+  downPayment: number
+  loanTermMonths: number
 }
 
 export type QuoteRegisterCarOption = {
@@ -35,6 +42,24 @@ type ShowroomDto = {
   showroomName: string
 }
 
+type PricingVersionDto = {
+  carPricingVersionId: number
+  versionName: string
+  price?: number
+}
+
+type ColorDto = {
+  carColorId: number
+  colorName: string
+  hexCode?: string
+}
+
+type CarDetailDto = {
+  showroomDetails?: ShowroomDto[]
+  pricingVersions?: PricingVersionDto[]
+  colors?: ColorDto[]
+}
+
 const carsApi = axios.create({
   baseURL: new URL('/api/', env.VITE_API_BASE_URL).toString(),
   timeout: 20_000,
@@ -50,10 +75,21 @@ async function getCarOptions(): Promise<QuoteRegisterCarOption[]> {
     .filter((c) => c.label.trim().length > 0)
 }
 
-async function getCarShowrooms(carId: string): Promise<ShowroomDto[]> {
+async function getCarDetails(carId: string): Promise<CarDetailDto> {
   const res = await carsApi.get(`Cars/${carId}`)
-  const data = res.data?.data
-  return (data?.showroomDetails as ShowroomDto[]) || []
+  return (res.data?.data ?? {}) as CarDetailDto
+}
+
+// Format số có dấu chấm phân cách hàng nghìn
+function formatNumber(value: number | string): string {
+  const num = typeof value === 'string' ? Number(value.replace(/\D/g, '')) : value
+  if (!num || Number.isNaN(num)) return ''
+  return num.toLocaleString('vi-VN')
+}
+
+function parseNumber(value: string): number {
+  const n = Number(String(value).replace(/\D/g, ''))
+  return Number.isFinite(n) ? n : 0
 }
 
 export type QuoteRegisterCardProps = {
@@ -78,10 +114,26 @@ export function QuoteRegisterCard({
   const modeInstallmentId = useId()
   const modeFullId = useId()
   const carSelectId = useId()
+  const noteId = useId()
+  const incomeId = useId()
+  const downPaymentId = useId()
+  const loanTermId = useId()
 
   const [submitting, setSubmitting] = useState(false)
+  const [mode, setMode] = useState<QuoteRegisterMode>(defaultMode)
+
+  // Showroom / Version / Color states
   const [selectedShowroomId, setSelectedShowroomId] = useState('')
   const [showroomOpen, setShowroomOpen] = useState(false)
+  const [selectedVersionId, setSelectedVersionId] = useState('')
+  const [versionOpen, setVersionOpen] = useState(false)
+  const [selectedColorId, setSelectedColorId] = useState('')
+  const [colorOpen, setColorOpen] = useState(false)
+
+  // Installment fields
+  const [monthlyIncome, setMonthlyIncome] = useState('')
+  const [downPayment, setDownPayment] = useState('')
+  const [loanTermMonths, setLoanTermMonths] = useState('')
 
   const { data: carsApiOptions = [], isLoading: isCarsLoading } = useQuery({
     queryKey: ['cars', 'select-options', 'quote-register'],
@@ -95,23 +147,35 @@ export function QuoteRegisterCard({
   )
 
   const rootCarRef = useRef<HTMLDivElement | null>(null)
+  const rootShowroomRef = useRef<HTMLDivElement | null>(null)
+  const rootVersionRef = useRef<HTMLDivElement | null>(null)
+  const rootColorRef = useRef<HTMLDivElement | null>(null)
+
   const [carOpen, setCarOpen] = useState(false)
   const [carQuery, setCarQuery] = useState('')
   const [selectedCar, setSelectedCar] = useState<QuoteRegisterCarOption | null>(null)
   const [carTouched, setCarTouched] = useState(false)
 
-  // Fetch showrooms khi chọn xe
-  const { data: showrooms = [], isFetching: isShowroomsLoading } = useQuery({
-    queryKey: ['car-showrooms', selectedCar?.id],
-    queryFn: () => getCarShowrooms(selectedCar!.id),
+  // Fetch chi tiết xe (showrooms + versions + colors)
+  const { data: carDetail, isFetching: isDetailLoading } = useQuery({
+    queryKey: ['car-detail', selectedCar?.id],
+    queryFn: () => getCarDetails(selectedCar!.id),
     enabled: !!selectedCar?.id,
     staleTime: 5 * 60_000,
   })
 
-  // Reset showroom khi đổi xe
+  const showrooms = carDetail?.showroomDetails ?? []
+  const versions = carDetail?.pricingVersions ?? []
+  const colors = carDetail?.colors ?? []
+
+  // Reset các select phụ khi đổi xe
   useEffect(() => {
     setSelectedShowroomId('')
+    setSelectedVersionId('')
+    setSelectedColorId('')
     setShowroomOpen(false)
+    setVersionOpen(false)
+    setColorOpen(false)
   }, [selectedCar?.id])
 
   useEffect(() => {
@@ -127,14 +191,25 @@ export function QuoteRegisterCard({
     return resolvedCars.filter((c) => c.label.toLowerCase().includes(q))
   }, [resolvedCars, carQuery])
 
+  // Close dropdowns on outside click
   useEffect(() => {
     function onPointerDown(e: MouseEvent) {
-      if (rootCarRef.current && e.target instanceof Node && !rootCarRef.current.contains(e.target))
-        setCarOpen(false)
+      if (!(e.target instanceof Node)) return
+      if (rootCarRef.current && !rootCarRef.current.contains(e.target)) setCarOpen(false)
+      if (rootShowroomRef.current && !rootShowroomRef.current.contains(e.target)) setShowroomOpen(false)
+      if (rootVersionRef.current && !rootVersionRef.current.contains(e.target)) setVersionOpen(false)
+      if (rootColorRef.current && !rootColorRef.current.contains(e.target)) setColorOpen(false)
     }
     document.addEventListener('mousedown', onPointerDown)
     return () => document.removeEventListener('mousedown', onPointerDown)
   }, [])
+
+  const selectedShowroomName =
+    showrooms.find((s) => String(s.showroomId) === selectedShowroomId)?.showroomName ?? ''
+  const selectedVersionName =
+    versions.find((v) => String(v.carPricingVersionId) === selectedVersionId)?.versionName ?? ''
+  const selectedColorName =
+    colors.find((c) => String(c.carColorId) === selectedColorId)?.colorName ?? ''
 
   return (
     <section
@@ -164,43 +239,86 @@ export function QuoteRegisterCard({
               toast.error('Vui lòng chọn showroom.')
               return
             }
+            if (!selectedVersionId) {
+              toast.error('Vui lòng chọn phiên bản xe.')
+              return
+            }
+            if (!selectedColorId) {
+              toast.error('Vui lòng chọn màu xe.')
+              return
+            }
 
             const fd = new FormData(e.currentTarget)
             const fullName = String(fd.get('fullName') ?? '').trim()
             const phone = String(fd.get('phone') ?? '').trim()
-            const mode = String(fd.get('mode') ?? defaultMode) as QuoteRegisterMode
+            const customerNote = String(fd.get('customerNote') ?? '').trim()
 
-            onSubmit?.({ mode, fullName, phone, carId: selectedCar.id, carName: selectedCar.label })
+            // Validate trả góp
+            const incomeNum = parseNumber(monthlyIncome)
+            const downNum = parseNumber(downPayment)
+            const termNum = parseNumber(loanTermMonths)
 
-            const now = new Date()
-            const bookingDate = now.toISOString().split('T')[0]
-            const bookingTime = now.toTimeString().slice(0, 5)
-            const modeLabel = mode === 'installment' ? 'Trả góp' : 'Trả thẳng'
-            const showroomName = showrooms.find(s => String(s.showroomId) === selectedShowroomId)?.showroomName ?? ''
-            const note = `Tư vấn báo giá xe ${selectedCar.label} - ${modeLabel} - ${showroomName}`
+            if (mode === 'installment') {
+              if (!incomeNum) {
+                toast.error('Vui lòng nhập thu nhập hàng tháng.')
+                return
+              }
+              if (!downNum) {
+                toast.error('Vui lòng nhập số tiền trả trước.')
+                return
+              }
+              if (!termNum) {
+                toast.error('Vui lòng chọn kỳ hạn vay.')
+                return
+              }
+            }
 
-            const normalizedPhone = phone.startsWith('+84')
-              ? '0' + phone.slice(3)
-              : phone
+            const normalizedPhone = phone.startsWith('+84') ? '0' + phone.slice(3) : phone
+
+            const payload = {
+              carId: Number(selectedCar.id),
+              showroomId: Number(selectedShowroomId),
+              customerName: fullName,
+              phone: normalizedPhone,
+              requestType: mode === 'installment' ? 'Trả góp' : 'Trả thẳng',
+              customerNote,
+              monthlyIncome: mode === 'installment' ? incomeNum : 0,
+              downPayment: mode === 'installment' ? downNum : 0,
+              loanTermMonths: mode === 'installment' ? termNum : 0,
+              carPricingVersionId: Number(selectedVersionId),
+              carColorId: Number(selectedColorId),
+            }
+
+            onSubmit?.({
+              mode,
+              fullName,
+              phone: normalizedPhone,
+              carId: selectedCar.id,
+              carName: selectedCar.label,
+              showroomId: selectedShowroomId,
+              carPricingVersionId: selectedVersionId,
+              carColorId: selectedColorId,
+              customerNote,
+              monthlyIncome: payload.monthlyIncome,
+              downPayment: payload.downPayment,
+              loanTermMonths: payload.loanTermMonths,
+            })
 
             try {
               setSubmitting(true)
-              await http.post('/api/Bookings/create', {
-                carId: Number(selectedCar.id),
-                showroomId: Number(selectedShowroomId),
-                customerName: fullName,
-                phone: normalizedPhone,
-                bookingDate,
-                bookingTime,
-                timeSpan: '30 phút',
-                note,
-                userId: 0,
-              })
+              await http.post('/api/consult-requests', payload)
               toast.success('Đăng ký thành công! Nhân viên sẽ liên hệ tư vấn cho bạn sớm nhất.')
+
+              // Reset form
               setSelectedCar(null)
               setCarQuery('')
               setCarTouched(false)
               setSelectedShowroomId('')
+              setSelectedVersionId('')
+              setSelectedColorId('')
+              setMonthlyIncome('')
+              setDownPayment('')
+              setLoanTermMonths('')
               ;(e.target as HTMLFormElement).reset()
             } catch {
               toast.error('Có lỗi xảy ra, vui lòng thử lại hoặc liên hệ hotline.')
@@ -218,7 +336,8 @@ export function QuoteRegisterCard({
                 type="radio"
                 name="mode"
                 value="installment"
-                defaultChecked={defaultMode === 'installment'}
+                checked={mode === 'installment'}
+                onChange={() => setMode('installment')}
                 className="h-4 w-4 accent-rose-500"
               />
               Trả góp
@@ -229,7 +348,8 @@ export function QuoteRegisterCard({
                 type="radio"
                 name="mode"
                 value="full"
-                defaultChecked={defaultMode === 'full'}
+                checked={mode === 'full'}
+                onChange={() => setMode('full')}
                 className="h-4 w-4 accent-rose-500"
               />
               Trả thẳng
@@ -337,24 +457,22 @@ export function QuoteRegisterCard({
             </div>
           </div>
 
-          {/* Chọn Showroom — hiện ra sau khi chọn xe, dropdown mở lên trên */}
+          {/* Chọn Showroom */}
           {selectedCar && (
-            <div className="relative">
+            <div ref={rootShowroomRef} className="relative">
               <button
                 type="button"
-                onClick={() => !isShowroomsLoading && setShowroomOpen(v => !v)}
+                onClick={() => !isDetailLoading && setShowroomOpen((v) => !v)}
                 className={[
                   'h-11 w-full rounded-lg border bg-white px-3 pr-11 text-sm shadow-sm outline-none transition text-left',
                   !selectedShowroomId ? 'text-slate-400' : 'text-slate-900',
                   'border-slate-200 focus-visible:border-rose-300 focus-visible:ring-2 focus-visible:ring-rose-400/40',
-                  isShowroomsLoading ? 'opacity-60 cursor-not-allowed' : '',
+                  isDetailLoading ? 'opacity-60 cursor-not-allowed' : '',
                 ].join(' ')}
               >
-                {isShowroomsLoading
+                {isDetailLoading
                   ? 'Đang tải showroom...'
-                  : selectedShowroomId
-                  ? showrooms.find(s => String(s.showroomId) === selectedShowroomId)?.showroomName ?? '== Chọn showroom =='
-                  : '== Chọn showroom =='}
+                  : selectedShowroomName || '== Chọn showroom =='}
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
                     <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -364,27 +482,216 @@ export function QuoteRegisterCard({
 
               {showroomOpen && (
                 <div className="absolute bottom-full mb-2 z-50 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 text-sm shadow-lg max-h-48">
-                  {showrooms.map((s) => {
-                    const isSelected = String(s.showroomId) === selectedShowroomId
-                    return (
-                      <button
-                        key={s.showroomId}
-                        type="button"
-                        className={[
-                          'flex w-full items-center justify-between px-3 py-2 text-left',
-                          isSelected ? 'bg-slate-100 text-slate-900' : 'text-slate-700 hover:bg-slate-50',
-                        ].join(' ')}
-                        onClick={() => { setSelectedShowroomId(String(s.showroomId)); setShowroomOpen(false) }}
-                      >
-                        <span className="truncate">{s.showroomName}</span>
-                        {isSelected && <span className="ml-3 text-[11px] font-semibold text-rose-500">Đã chọn</span>}
-                      </button>
-                    )
-                  })}
+                  {showrooms.length === 0 ? (
+                    <div className="px-3 py-2 text-slate-500">Không có showroom.</div>
+                  ) : (
+                    showrooms.map((s) => {
+                      const isSelected = String(s.showroomId) === selectedShowroomId
+                      return (
+                        <button
+                          key={s.showroomId}
+                          type="button"
+                          className={[
+                            'flex w-full items-center justify-between px-3 py-2 text-left',
+                            isSelected ? 'bg-slate-100 text-slate-900' : 'text-slate-700 hover:bg-slate-50',
+                          ].join(' ')}
+                          onClick={() => { setSelectedShowroomId(String(s.showroomId)); setShowroomOpen(false) }}
+                        >
+                          <span className="truncate">{s.showroomName}</span>
+                          {isSelected && <span className="ml-3 text-[11px] font-semibold text-rose-500">Đã chọn</span>}
+                        </button>
+                      )
+                    })
+                  )}
                 </div>
               )}
             </div>
           )}
+
+          {/* Chọn Phiên bản */}
+          {selectedCar && (
+            <div ref={rootVersionRef} className="relative">
+              <button
+                type="button"
+                onClick={() => !isDetailLoading && setVersionOpen((v) => !v)}
+                className={[
+                  'h-11 w-full rounded-lg border bg-white px-3 pr-11 text-sm shadow-sm outline-none transition text-left',
+                  !selectedVersionId ? 'text-slate-400' : 'text-slate-900',
+                  'border-slate-200 focus-visible:border-rose-300 focus-visible:ring-2 focus-visible:ring-rose-400/40',
+                  isDetailLoading ? 'opacity-60 cursor-not-allowed' : '',
+                ].join(' ')}
+              >
+                {isDetailLoading
+                  ? 'Đang tải phiên bản...'
+                  : selectedVersionName || '== Chọn phiên bản =='}
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+              </button>
+
+              {versionOpen && (
+                <div className="absolute bottom-full mb-2 z-50 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 text-sm shadow-lg max-h-48">
+                  {versions.length === 0 ? (
+                    <div className="px-3 py-2 text-slate-500">Không có phiên bản.</div>
+                  ) : (
+                    versions.map((v) => {
+                      const isSelected = String(v.carPricingVersionId) === selectedVersionId
+                      return (
+                        <button
+                          key={v.carPricingVersionId}
+                          type="button"
+                          className={[
+                            'flex w-full items-center justify-between px-3 py-2 text-left',
+                            isSelected ? 'bg-slate-100 text-slate-900' : 'text-slate-700 hover:bg-slate-50',
+                          ].join(' ')}
+                          onClick={() => { setSelectedVersionId(String(v.carPricingVersionId)); setVersionOpen(false) }}
+                        >
+                          <span className="truncate">
+                            {v.versionName}
+                            {v.price ? (
+                              <span className="ml-2 text-xs text-slate-500">
+                                ({v.price.toLocaleString('vi-VN')}đ)
+                              </span>
+                            ) : null}
+                          </span>
+                          {isSelected && <span className="ml-3 text-[11px] font-semibold text-rose-500">Đã chọn</span>}
+                        </button>
+                      )
+                    })
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Chọn Màu xe */}
+          {selectedCar && (
+            <div ref={rootColorRef} className="relative">
+              <button
+                type="button"
+                onClick={() => !isDetailLoading && setColorOpen((v) => !v)}
+                className={[
+                  'h-11 w-full rounded-lg border bg-white px-3 pr-11 text-sm shadow-sm outline-none transition text-left',
+                  !selectedColorId ? 'text-slate-400' : 'text-slate-900',
+                  'border-slate-200 focus-visible:border-rose-300 focus-visible:ring-2 focus-visible:ring-rose-400/40',
+                  isDetailLoading ? 'opacity-60 cursor-not-allowed' : '',
+                ].join(' ')}
+              >
+                <span className="inline-flex items-center gap-2">
+                  {selectedColorId && colors.find(c => String(c.carColorId) === selectedColorId)?.hexCode && (
+                    <span
+                      className="inline-block h-4 w-4 rounded-full border border-slate-300"
+                      style={{ backgroundColor: colors.find(c => String(c.carColorId) === selectedColorId)?.hexCode }}
+                    />
+                  )}
+                  {isDetailLoading
+                    ? 'Đang tải màu xe...'
+                    : selectedColorName || '== Chọn màu xe =='}
+                </span>
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+              </button>
+
+              {colorOpen && (
+                <div className="absolute bottom-full mb-2 z-50 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 text-sm shadow-lg max-h-48">
+                  {colors.length === 0 ? (
+                    <div className="px-3 py-2 text-slate-500">Không có màu.</div>
+                  ) : (
+                    colors.map((c) => {
+                      const isSelected = String(c.carColorId) === selectedColorId
+                      return (
+                        <button
+                          key={c.carColorId}
+                          type="button"
+                          className={[
+                            'flex w-full items-center justify-between px-3 py-2 text-left',
+                            isSelected ? 'bg-slate-100 text-slate-900' : 'text-slate-700 hover:bg-slate-50',
+                          ].join(' ')}
+                          onClick={() => { setSelectedColorId(String(c.carColorId)); setColorOpen(false) }}
+                        >
+                          <span className="inline-flex items-center gap-2 truncate">
+                            {c.hexCode && (
+                              <span
+                                className="inline-block h-4 w-4 shrink-0 rounded-full border border-slate-300"
+                                style={{ backgroundColor: c.hexCode }}
+                              />
+                            )}
+                            <span className="truncate">{c.colorName}</span>
+                          </span>
+                          {isSelected && <span className="ml-3 text-[11px] font-semibold text-rose-500">Đã chọn</span>}
+                        </button>
+                      )
+                    })
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Các trường Trả góp — chỉ hiện khi mode = installment */}
+          {mode === 'installment' && (
+            <>
+              <div>
+                <label htmlFor={incomeId} className="sr-only">Thu nhập hàng tháng</label>
+                <input
+                  id={incomeId}
+                  inputMode="numeric"
+                  placeholder="Thu nhập hàng tháng (VNĐ)"
+                  value={formatNumber(monthlyIncome)}
+                  onChange={(e) => setMonthlyIncome(String(parseNumber(e.target.value)))}
+                  className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none transition focus-visible:border-rose-300 focus-visible:ring-2 focus-visible:ring-rose-400/40"
+                />
+              </div>
+
+              <div>
+                <label htmlFor={downPaymentId} className="sr-only">Số tiền trả trước</label>
+                <input
+                  id={downPaymentId}
+                  inputMode="numeric"
+                  placeholder="Số tiền trả trước (VNĐ)"
+                  value={formatNumber(downPayment)}
+                  onChange={(e) => setDownPayment(String(parseNumber(e.target.value)))}
+                  className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none transition focus-visible:border-rose-300 focus-visible:ring-2 focus-visible:ring-rose-400/40"
+                />
+              </div>
+
+              <div>
+                <label htmlFor={loanTermId} className="sr-only">Kỳ hạn vay (tháng)</label>
+                <select
+                  id={loanTermId}
+                  value={loanTermMonths}
+                  onChange={(e) => setLoanTermMonths(e.target.value)}
+                  className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition focus-visible:border-rose-300 focus-visible:ring-2 focus-visible:ring-rose-400/40"
+                >
+                  <option value="">== Chọn kỳ hạn vay ==</option>
+                  <option value="12">12 tháng</option>
+                  <option value="24">24 tháng</option>
+                  <option value="36">36 tháng</option>
+                  <option value="48">48 tháng</option>
+                  <option value="60">60 tháng</option>
+                  <option value="72">72 tháng</option>
+                  <option value="84">84 tháng</option>
+                </select>
+              </div>
+            </>
+          )}
+
+          {/* Ghi chú */}
+          <div>
+            <label htmlFor={noteId} className="sr-only">Ghi chú</label>
+            <textarea
+              id={noteId}
+              name="customerNote"
+              rows={3}
+              placeholder="Ghi chú / yêu cầu thêm (không bắt buộc)"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none transition focus-visible:border-rose-300 focus-visible:ring-2 focus-visible:ring-rose-400/40"
+            />
+          </div>
 
           {/* Submit */}
           <button

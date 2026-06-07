@@ -257,10 +257,6 @@ namespace SqlServer.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Color")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.Property<int>("Condition")
                         .HasColumnType("int");
 
@@ -355,6 +351,45 @@ namespace SqlServer.Migrations
                     b.ToTable("CarAccessories");
                 });
 
+            modelBuilder.Entity("CoreEntities.Models.CarColor", b =>
+                {
+                    b.Property<int>("CarColorId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CarColorId"));
+
+                    b.Property<int>("CarId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ColorName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("(getutcdate())");
+
+                    b.Property<string>("HexCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.HasKey("CarColorId");
+
+                    b.HasIndex("CarId", "ColorName")
+                        .IsUnique();
+
+                    b.ToTable("CarColors");
+                });
+
             modelBuilder.Entity("CoreEntities.Models.CarFeature", b =>
                 {
                     b.Property<int>("CarId")
@@ -424,12 +459,11 @@ namespace SqlServer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("InventoryId"));
 
-                    b.Property<int>("CarId")
+                    b.Property<int?>("CarColorId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Color")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<int>("CarId")
+                        .HasColumnType("int");
 
                     b.Property<string>("DisplayStatus")
                         .IsRequired()
@@ -447,10 +481,13 @@ namespace SqlServer.Migrations
 
                     b.HasKey("InventoryId");
 
+                    b.HasIndex("CarColorId");
+
                     b.HasIndex("CarId");
 
-                    b.HasIndex("ShowroomId", "CarId")
-                        .IsUnique();
+                    b.HasIndex("ShowroomId", "CarId", "CarColorId")
+                        .IsUnique()
+                        .HasFilter("[CarColorId] IS NOT NULL");
 
                     b.ToTable("CarInventories");
                 });
@@ -714,6 +751,81 @@ namespace SqlServer.Migrations
                     b.HasIndex("LinkedCarId");
 
                     b.ToTable("Consignments");
+                });
+
+            modelBuilder.Entity("CoreEntities.Models.ConsultRequest", b =>
+                {
+                    b.Property<int>("ConsultRequestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ConsultRequestId"));
+
+                    b.Property<int>("CarId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("(getdate())");
+
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CustomerNote")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("DownPayment")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<int?>("LoanTermMonths")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("MonthlyIncome")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("RequestType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("ShowroomId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ConsultRequestId")
+                        .HasName("PK_ConsultRequests");
+
+                    b.HasIndex("CarId");
+
+                    b.HasIndex("ShowroomId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ConsultRequests", (string)null);
                 });
 
             modelBuilder.Entity("CoreEntities.Models.ConsultationProfile", b =>
@@ -1488,6 +1600,17 @@ namespace SqlServer.Migrations
                     b.Navigation("Car");
                 });
 
+            modelBuilder.Entity("CoreEntities.Models.CarColor", b =>
+                {
+                    b.HasOne("CoreEntities.Models.Car", "Car")
+                        .WithMany("CarColors")
+                        .HasForeignKey("CarId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Car");
+                });
+
             modelBuilder.Entity("CoreEntities.Models.CarFeature", b =>
                 {
                     b.HasOne("CoreEntities.Models.Car", "Car")
@@ -1519,6 +1642,11 @@ namespace SqlServer.Migrations
 
             modelBuilder.Entity("CoreEntities.Models.CarInventory", b =>
                 {
+                    b.HasOne("CoreEntities.Models.CarColor", "CarColor")
+                        .WithMany("CarInventories")
+                        .HasForeignKey("CarColorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("CoreEntities.Models.Car", "Car")
                         .WithMany("CarInventories")
                         .HasForeignKey("CarId")
@@ -1532,6 +1660,8 @@ namespace SqlServer.Migrations
                         .IsRequired();
 
                     b.Navigation("Car");
+
+                    b.Navigation("CarColor");
 
                     b.Navigation("Showroom");
                 });
@@ -1611,6 +1741,32 @@ namespace SqlServer.Migrations
                         .HasForeignKey("LinkedCarId");
 
                     b.Navigation("LinkedCar");
+                });
+
+            modelBuilder.Entity("CoreEntities.Models.ConsultRequest", b =>
+                {
+                    b.HasOne("CoreEntities.Models.Car", "Car")
+                        .WithMany()
+                        .HasForeignKey("CarId")
+                        .IsRequired()
+                        .HasConstraintName("FK_ConsultRequests_Cars_CarId");
+
+                    b.HasOne("CoreEntities.Models.Showroom", "Showroom")
+                        .WithMany()
+                        .HasForeignKey("ShowroomId")
+                        .IsRequired()
+                        .HasConstraintName("FK_ConsultRequests_Showrooms_ShowroomId");
+
+                    b.HasOne("CoreEntities.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .HasConstraintName("FK_ConsultRequests_Users_UserId");
+
+                    b.Navigation("Car");
+
+                    b.Navigation("Showroom");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("CoreEntities.Models.ConsultationProfile", b =>
@@ -1821,6 +1977,8 @@ namespace SqlServer.Migrations
 
                     b.Navigation("CarAccessories");
 
+                    b.Navigation("CarColors");
+
                     b.Navigation("CarFeatures");
 
                     b.Navigation("CarImages");
@@ -1840,6 +1998,11 @@ namespace SqlServer.Migrations
                     b.Navigation("Reviews");
 
                     b.Navigation("UserActivities");
+                });
+
+            modelBuilder.Entity("CoreEntities.Models.CarColor", b =>
+                {
+                    b.Navigation("CarInventories");
                 });
 
             modelBuilder.Entity("CoreEntities.Models.ChatSession", b =>

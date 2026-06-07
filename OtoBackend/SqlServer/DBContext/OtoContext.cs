@@ -1,5 +1,4 @@
 ﻿using CoreEntities.Models;
-using LogicBusiness.DTOs;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -27,9 +26,16 @@ namespace SqlServer.DBContext
 
         public virtual DbSet<Booking> Bookings { get; set; }
 
+        // ============================================================
+        // ✨ ConsultRequest - bảng yêu cầu báo giá / mua trả góp
+        // ============================================================
+        public virtual DbSet<ConsultRequest> ConsultRequests { get; set; }
+
         public virtual DbSet<Car> Cars { get; set; }
 
         public virtual DbSet<CarImage> CarImages { get; set; }
+
+        public virtual DbSet<CarColor> CarColors { get; set; }
 
         public virtual DbSet<CarPricingVersion> CarPricingVersions { get; set; }
 
@@ -180,12 +186,62 @@ namespace SqlServer.DBContext
                     .HasConstraintName("FK__Bookings__UserId__282DF8C2");
             });
 
+            // ============================================================
+            // ✨ ConsultRequest — yêu cầu báo giá / trả góp
+            // Đặt cùng style với Booking. KHÔNG Cascade trên FK để tránh
+            // mất dữ liệu khi admin lỡ tay xóa Showroom/Car/User.
+            // ============================================================
+            modelBuilder.Entity<ConsultRequest>(entity =>
+            {
+                entity.HasKey(e => e.ConsultRequestId).HasName("PK_ConsultRequests");
+
+                entity.ToTable("ConsultRequests");
+
+                entity.Property(e => e.CustomerName).HasMaxLength(100);
+
+                entity.Property(e => e.Phone)
+                    .HasMaxLength(20)
+                    .IsUnicode(false); // varchar(20) - giống Bookings.Phone
+
+                entity.Property(e => e.RequestType).HasMaxLength(50);
+
+                entity.Property(e => e.Status)
+                    .HasMaxLength(50)
+                    .HasDefaultValue("Pending");
+
+                entity.Property(e => e.MonthlyIncome).HasColumnType("decimal(18, 2)");
+                entity.Property(e => e.DownPayment).HasColumnType("decimal(18, 2)");
+
+                entity.Property(e => e.CreatedAt)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasColumnType("datetime");
+
+                entity.HasOne(d => d.Car).WithMany()
+                    .HasForeignKey(d => d.CarId)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_ConsultRequests_Cars_CarId");
+
+                entity.HasOne(d => d.Showroom).WithMany()
+                    .HasForeignKey(d => d.ShowroomId)
+                    .OnDelete(DeleteBehavior.ClientSetNull) // 🔒 KHÔNG Cascade
+                    .HasConstraintName("FK_ConsultRequests_Showrooms_ShowroomId");
+
+                entity.HasOne(d => d.User).WithMany()
+                    .HasForeignKey(d => d.UserId)
+                    .HasConstraintName("FK_ConsultRequests_Users_UserId");
+                entity.HasOne(d => d.CarPricingVersion).WithMany()
+                    .HasForeignKey(d => d.CarPricingVersionId)
+                    .HasConstraintName("FK_ConsultRequests_CarPricingVersions_PricingVersionId");
+                entity.HasOne(d => d.CarColor).WithMany()
+                    .HasForeignKey(d => d.CarColorId)
+                    .HasConstraintName("FK_ConsultRequests_CarColors_CarColorId");
+            });
+
             modelBuilder.Entity<Car>(entity =>
             {
                 entity.HasKey(e => e.CarId).HasName("PK__Cars__68A0342EA480F904");
 
                 entity.Property(e => e.Brand).HasMaxLength(100);
-                entity.Property(e => e.Color).HasMaxLength(50);
                 entity.Property(e => e.CreatedAt)
                     .HasDefaultValueSql("(getdate())")
                     .HasColumnType("datetime");
@@ -579,9 +635,42 @@ namespace SqlServer.DBContext
                 .HasForeignKey(n => n.ShowroomId)
                 .OnDelete(DeleteBehavior.ClientSetNull); // Xóa Showroom thì ID trong thông báo thành Null
 
+            // ============================================================
+            // CarColor — bảng màu xe (1 xe có nhiều màu)
+            // ============================================================
+            modelBuilder.Entity<CarColor>(entity =>
+            {
+                entity.HasKey(e => e.CarColorId);
+                entity.Property(e => e.ColorName).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.HexCode).HasMaxLength(20);
+                entity.Property(e => e.CreatedAt)
+                      .HasDefaultValueSql("(getutcdate())")
+                      .HasColumnType("datetime");
+
+                entity.HasOne(cc => cc.Car)
+                      .WithMany(c => c.CarColors)
+                      .HasForeignKey(cc => cc.CarId)
+                      .OnDelete(DeleteBehavior.Cascade); // Xóa Car → xóa hết màu của nó
+
+                // 1 xe không nên có 2 màu trùng tên
+                entity.HasIndex(cc => new { cc.CarId, cc.ColorName }).IsUnique();
+            });
+
+            // ============================================================
+            // CarInventory — UNIQUE bao gồm CarColorId để phân biệt theo màu
+            // ============================================================
+            // Chú ý: SQL Server filtered unique index xem 2 hàng có CarColorId = NULL
+            // cùng (CarId, ShowroomId) là TRÙNG → đúng ý ta (kho cũ không màu chỉ có 1 record).
             modelBuilder.Entity<CarInventory>()
-                        .HasIndex(ci => new { ci.ShowroomId, ci.CarId })
+                        .HasIndex(ci => new { ci.ShowroomId, ci.CarId, ci.CarColorId })
                         .IsUnique();
+
+            // FK CarInventory → CarColor (nullable, SetNull khi xóa màu)
+            modelBuilder.Entity<CarInventory>()
+                        .HasOne(ci => ci.CarColor)
+                        .WithMany(cc => cc.CarInventories)
+                        .HasForeignKey(ci => ci.CarColorId)
+                        .OnDelete(DeleteBehavior.SetNull);
 
             OnModelCreatingPartial(modelBuilder);
         }

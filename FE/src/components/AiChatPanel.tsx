@@ -66,6 +66,7 @@ export function AiChatPanel() {
   const [expanded, setExpanded] = useState(false)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showNudge, setShowNudge] = useState(false) // Thêm state quản lý bong bóng gợi ý
   const [messages, setMessages] = useState<Turn[]>([
     {
       role: 'assistant',
@@ -75,10 +76,32 @@ export function AiChatPanel() {
   ])
   const listRef = useRef<HTMLDivElement>(null)
 
+  // ── Scroll to bottom ──
   useEffect(() => {
     if (!open) return
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages, open, loading])
+
+  // ── Timer tự động gợi ý chat (Nudge) ──
+  useEffect(() => {
+    // Nếu chat đang mở thì ẩn bong bóng và không hẹn giờ nữa
+    if (open) {
+      setShowNudge(false)
+      return
+    }
+
+    // Cứ mỗi 30 giây sẽ hiện bong bóng gọi khách 1 lần (Có thể thay đổi số 30000ms này)
+    const intervalId = setInterval(() => {
+      setShowNudge(true)
+
+      // Tự động ẩn bong bóng sau 8 giây để không cản trở màn hình
+      setTimeout(() => {
+        setShowNudge(false)
+      }, 8000)
+    }, 30000)
+
+    return () => clearInterval(intervalId)
+  }, [open])
 
   // Khi đóng panel thì reset expanded
   const handleClose = () => {
@@ -188,19 +211,16 @@ export function AiChatPanel() {
                 <button
                   type="button"
                   onClick={() => setExpanded((e) => !e)}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/90 hover:bg-white/10 transition"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/90 transition hover:bg-white/10"
                   aria-label={expanded ? 'Thu nhỏ khung chat' : 'Phóng to khung chat'}
                   title={expanded ? 'Thu nhỏ' : 'Phóng to'}
                 >
-                  {expanded
-                    ? <Minimize2 className="h-4 w-4" />
-                    : <Maximize2 className="h-4 w-4" />
-                  }
+                  {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                 </button>
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/90 hover:bg-white/10 transition"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/90 transition hover:bg-white/10"
                   aria-label="Đóng khung chat"
                 >
                   <X className="h-5 w-5" />
@@ -237,9 +257,7 @@ export function AiChatPanel() {
                         <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-zinc-500">
                           Xem nhanh
                         </p>
-                        <div
-                          className={`max-h-56 overflow-y-auto pr-0.5 ${cardGridClass}`}
-                        >
+                        <div className={`max-h-56 overflow-y-auto pr-0.5 ${cardGridClass}`}>
                           {m.cards.map((c) => (
                             <Link
                               key={c.carId}
@@ -257,7 +275,7 @@ export function AiChatPanel() {
                                 />
                               ) : (
                                 <div
-                                  className={`shrink-0 flex items-center justify-center rounded-lg bg-zinc-200/80 text-[10px] text-zinc-500 ${
+                                  className={`flex shrink-0 items-center justify-center rounded-lg bg-zinc-200/80 text-[10px] text-zinc-500 ${
                                     expanded ? 'h-16 w-20' : 'h-14 w-[4.5rem]'
                                   }`}
                                 >
@@ -334,16 +352,51 @@ export function AiChatPanel() {
           </div>
         ) : null}
 
-        {/* Nút mở chat */}
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-zinc-900 text-white shadow-[0_10px_30px_rgba(0,0,0,0.35)] ring-2 ring-white/30 transition hover:scale-105 hover:bg-zinc-800 active:scale-95"
-          aria-expanded={open}
-          aria-label={open ? 'Đóng tư vấn AI' : 'Mở tư vấn AI'}
-        >
-          {open ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
-        </button>
+        {/* Nút mở chat & Bong bóng nhắc nhở */}
+        <div className="pointer-events-auto relative">
+          
+          {/* Tooltip Gợi ý (Nudge) */}
+          {!open && showNudge && (
+            <div
+              className="absolute bottom-full right-0 mb-4 w-60 cursor-pointer rounded-2xl bg-white p-3 shadow-[0_10px_40px_rgba(0,0,0,0.15)] ring-1 ring-zinc-200/60 transition-all animate-bounce"
+              onClick={() => setOpen(true)}
+            >
+              {/* Nút X ẩn nhanh */}
+              <button
+                className="absolute right-2 top-2 p-1 text-zinc-400 hover:text-zinc-600"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowNudge(false)
+                }}
+              >
+                <X className="h-3 w-3" />
+              </button>
+              
+              <div className="flex items-start gap-3">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                  <Bot className="h-4 w-4" />
+                </span>
+                <div className="flex-1 pr-2">
+                  <p className="text-sm font-semibold text-zinc-800">Bạn cần tìm gì?</p>
+                  <p className="mt-0.5 text-xs text-zinc-600">Chat ngay, tôi có thể hỗ trợ bạn nhé!</p>
+                </div>
+              </div>
+              
+              {/* Mũi tên tam giác chĩa xuống nút */}
+              <div className="absolute -bottom-2 right-[18px] h-4 w-4 rotate-45 border-b border-r border-zinc-200/60 bg-white" />
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-900 text-white shadow-[0_10px_30px_rgba(0,0,0,0.35)] ring-2 ring-white/30 transition hover:scale-105 hover:bg-zinc-800 active:scale-95"
+            aria-expanded={open}
+            aria-label={open ? 'Đóng tư vấn AI' : 'Mở tư vấn AI'}
+          >
+            {open ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
+          </button>
+        </div>
       </div>
     </>
   )

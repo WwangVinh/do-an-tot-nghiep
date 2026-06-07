@@ -1,20 +1,21 @@
-﻿using LogicBusiness.Repositories;
-using LogicBusiness.Services.Admin;
-using LogicBusiness.Services.Customer;
-using LogicBusiness.Services.Shared;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
-using SqlServer.DBContext;
-using SqlServer.Repositories;
-using System.Text;
-using Microsoft.AspNetCore.SignalR;
+﻿
 using LogicBusiness.Interfaces.Admin;
 using LogicBusiness.Interfaces.Customer;
 using LogicBusiness.Interfaces.Repositories;
 using LogicBusiness.Interfaces.Shared;
+using LogicBusiness.Repositories;
+using LogicBusiness.Services.Admin;
+using LogicBusiness.Services.Customer;
+using LogicBusiness.Services.Shared;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using PayOS;
+using SqlServer.DBContext;
+using SqlServer.Repositories;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -114,6 +115,7 @@ builder.Services.AddScoped<ISystemSettingRepository, SystemSettingRepository>();
 builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
 builder.Services.AddScoped<IArticleRepository, ArticleRepository>();
 builder.Services.AddScoped<IAccessoryRepository, AccessoryRepository>();
+builder.Services.AddScoped<ICarColorRepository, CarColorRepository>();
 
 // Services
 builder.Services.AddScoped<IUserService, UserService>();
@@ -145,6 +147,9 @@ builder.Services.AddScoped<IArticleService, ArticleService>();
 builder.Services.AddScoped<IArticlePublicService, ArticlePublicService>();
 builder.Services.AddScoped<IAccessoryService, AccessoryService>();
 builder.Services.AddScoped<ICheckoutService, CheckoutService>();
+builder.Services.AddScoped<IConsultRequestRepository, ConsultRequestRepository>();
+builder.Services.AddScoped<IConsultRequestService, ConsultRequestService>();
+builder.Services.AddScoped<IConsultRequestAdminService, ConsultRequestAdminService>();
 
 builder.Services.AddHttpClient<IAiAdvisorService, AiAdvisorService>();
 

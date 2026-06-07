@@ -74,7 +74,7 @@ export function AdminSidebar({
   const canSeeConsignments = isInRole(userRole, ['Admin', 'Manager', 'ShowroomSales', 'Sales']) 
   const canSeeShowrooms   = isInRole(userRole, ['Admin'])
   const canSeeUsers       = isInRole(userRole, ['Admin', 'Manager'])
-  const canSeeReviews     = isInRole(userRole, ['Admin', 'Manager', 'Marketing'])
+  const canSeeReviews     = isInRole(userRole, ['Admin', 'Manager'])
   const canSeeNotifications = isInRole(userRole, ['Admin', 'Manager', 'Sales', 'ShowroomSales', 'Technician', 'Marketing', 'Content'])
   const canSeeBanners     = isInRole(userRole, ['Admin', 'Manager', 'Marketing', 'Content'])
   const canSeeArticles    = isInRole(userRole, ['Admin', 'Manager', 'Marketing', 'Content'])
